@@ -1,0 +1,7 @@
+{:lint-as {com.wsscode.pathom.connect/defresolver                   clojure.core/defn
+           com.wsscode.pathom.connect/defmutation                   clojure.core/defn
+           com.fulcrologic.fulcro.components/defsc                  clojure.core/defn
+           com.fulcrologic.fulcro.routing.dynamic-routing/defrouter clojure.core/defn
+           com.fulcrologic.fulcro.mutations/defmutation             clojure.core/defn
+           com.fulcrologic.fulcro.ui-state-machines/defstatemachine clojure.core/def
+           ghostwheel.core/>defn                                    clojure.core/defn}}

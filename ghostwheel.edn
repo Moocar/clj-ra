@@ -1,0 +1,4 @@
+#:ghostwheel.core{:check       true
+                  :num-tests   10
+                  :outstrument true
+                  :ignore-fx   true}

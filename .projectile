@@ -1,0 +1,11 @@
+-/.clj-kondo
+-/yarn.lock
+-/resources/public/js/
+-/resources/public/css/
+-/.shadow-cljs
+-/data/
+-/.cpcache/
+-/yarn-error.log
+-/deps.png
+-/package-lock.json
+-/trace.edn

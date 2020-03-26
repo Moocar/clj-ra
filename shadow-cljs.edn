@@ -1,0 +1,16 @@
+{:deps  {:aliases [:ui-dev :ui ;; :shadow-nrepl
+                   ]}
+ :nrepl {:port 9001}
+
+ :dev-http {8001 "resources/public"}
+
+ :builds {:main {:target            :browser
+                 :output-dir        "resources/public/js/main"
+                 :asset-path        "/js/main"
+                 :module-hash-names true
+                 :compiler-options  {:output-feature-set :es8}
+                 :modules           {:main {:init-fn ra.app.client/start}}
+                 :devtools          {:after-load  ra.app.client/refresh
+                                     :preloads    [com.fulcrologic.fulcro.inspect.websocket-preload]
+                                     ;; :preloads   [com.fulcrologic.fulcro.inspect.preload]
+                                     :repl-pprint true}}}}

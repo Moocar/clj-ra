@@ -1,0 +1,20 @@
+{
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;; Pathom
+
+ :ra.pathom/parser {}
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;; Server
+
+ :ra.server/manifest-edn {:resource-name "public/js/main/manifest.edn"}
+
+ :ra.server/main-js-path {:manifest-edn #ig/ref :ra.server/manifest-edn
+                          :asset-path   "/js/main"}
+
+ :ra.server/handler {:pathom-parser #ig/ref :ra.pathom/parser
+                     :main-js-path  #ig/ref :ra.server/main-js-path}
+ :ra.server/server  {:handler #ig/ref :ra.server/handler
+                     :port    #long #or [#env PORT 8081]}
+ }

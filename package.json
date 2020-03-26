@@ -1,0 +1,16 @@
+{
+  "name": "ra",
+  "version": "0.0.1",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "codemirror": "^5.40.0",
+    "d3": "^5.8.0",
+    "parinfer": "^3.12.0",
+    "parinfer-codemirror": "^1.4.2",
+    "react": "16.9.0",
+    "react-dom": "16.9.0",
+    "semantic-ui-react": "^0.88.2",
+    "shadow-cljs": "2.8.52",
+    "socket.io-client": "^2.3.0"
+  }
+}
