@@ -6,6 +6,7 @@
             [ghostwheel.core :as g :refer [=> >defn]]
             [integrant.core :as ig]
             [ra.model.game :as m-game]
+            [ra.model.player :as m-player]
             [io.aviso.exception :as aviso]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -74,6 +75,7 @@
 
 (defn make-resolvers []
   [m-game/resolvers
+   m-player/resolvers
    index-explorer])
 
 (defn process-error [env err]
@@ -110,6 +112,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Integrant
 
-(defmethod ig/init-key ::parser [_ _]
+(defmethod ig/init-key ::parser [_ extra-env]
   (make-serial-parser {:resolvers (make-resolvers)
-                       :extra-env {}}))
+                       :extra-env extra-env}))

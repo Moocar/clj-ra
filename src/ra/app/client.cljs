@@ -2,7 +2,13 @@
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
             [com.fulcrologic.fulcro.application :as app]
+            [com.fulcrologic.semantic-ui.elements.button.ui-button :refer [ui-button]]
             [ra.app.app :as client-app]
+            [ra.specs.tile :as tile]
+            [ra.specs.sun-disk :as sun-disk]
+            [ra.specs.player :as player]
+            [ra.specs.epoch :as epoch]
+            [ra.specs.game :as game]
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
 
 (defsc Tile [_ _]
@@ -30,13 +36,14 @@
            ::epoch/number
            {::epoch/ra-tiles (comp/get-query Tile)}
            {::epoch/auction-tiles (comp/get-query Tile)}
-           {::epoch/last-ra-invokee (comp/get-Query Player)}
+           {::epoch/last-ra-invokee (comp/get-query Player)}
            {::epoch/player-hands (comp/get-query PlayerHand)}]})
 
 (defsc Game [_ _]
   {:query [{::game/players (comp/get-query Player)}
-           {::game/epoch (comp/get-query Epoch)}
-           ::game/id]})
+           {::game/current-epoch (comp/get-query Epoch)}
+           ::game/id]
+   :ident (fn [] [:component/id :ra.app.game])})
 
 (defsc Root [this {::app/keys [active-remotes]}]
   {:query [[::app/active-remotes '_]]
@@ -44,6 +51,10 @@
   (dom/div {}
     (when (seq active-remotes)
       (dom/div :.ui.active.inline.loader))
+    (ui-button {:primary true
+                :onClick (fn []
+                           #_(comp/transact! this [(m-game/new-game {})]))}
+               "New Game")
     (dom/p "hi there")))
 
 (defn ^:export refresh []
