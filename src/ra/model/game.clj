@@ -8,7 +8,9 @@
             [ra.specs.game :as game]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.model.player :as m-player]))
+            [ra.model.player :as m-player]
+            [ghostwheel.core :as g]
+            [ra.date :as date]))
 
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
@@ -37,6 +39,14 @@
     (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]]))
   {})
 
+(pc/defmutation start-game [{:keys [::db/conn]} {game-id ::game/id}]
+  {::pc/params [::game/id]
+   ::pc/output []}
+  (if-let [started-at (::game/started-at (d/entity @conn [::game/id game-id]))]
+    (throw (ex-info "Game already started" {:started-at started-at}))
+    (d/transact! conn [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]]))
+  {})
+
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
                                {:keys [::game/id]}]
   {::pc/input #{::game/id}
@@ -53,7 +63,8 @@
       (d/transact! conn (m-tile/new-bag)))))
 
 (def resolvers
-  [new-game
-   join-game
+  [join-game
+   new-game
+   start-game
 
    game-resolver])
