@@ -18,7 +18,7 @@
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;; Server
 
- :ra.server/websockets   {}
+ :ra.server/websockets   {:pathom-parser #ig/ref :ra.pathom/parser}
  :ra.server/manifest-edn {:resource-name "public/js/main/manifest.edn"}
 
  :ra.server/main-js-path {:manifest-edn #ig/ref :ra.server/manifest-edn

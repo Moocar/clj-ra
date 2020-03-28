@@ -115,14 +115,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Websockets
 
-(defn query-parser
-  ""
-  [env query]
-  #p "got websocket query"
-  #p query
-  )
-
-(defrecord MyListener []
+#_(defrecord MyListener []
   fws-protocols/WSListener
   (client-added [this ws-net cid]
     (println "client added" cid)
@@ -130,15 +123,14 @@
   (client-dropped [this ws-net cid]
     (println "cliend dropped cid")))
 
-(defmethod ig/init-key ::websockets [_ _]
+(defmethod ig/init-key ::websockets [_ {:keys [pathom-parser]}]
   (let [ws (fws/start! (fws/make-websockets
-                        query-parser
+                        pathom-parser
                         {:http-server-adapter (get-sch-adapter)
                          :parser-accepts-env? true
                          ;; See Sente for CSRF instructions
                          :sente-options       {:csrf-token-fn nil}}))]
-    (println "adding listener")
-    (fws-protocols/add-listener ws (map->MyListener {}))
+    #_(fws-protocols/add-listener ws (map->MyListener {}))
     ws))
 
 (defmethod ig/halt-key! ::websockets [_ websockets]

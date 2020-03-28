@@ -13,7 +13,8 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [com.fulcrologic.fulcro.networking.websocket-protocols :as fws-protocols]))
 
 (def sun-disk-sets
   {2 [#{9 6 5 2}
@@ -97,13 +98,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mutations
 
-(pc/defmutation new-game [{:keys [::db/conn]} _]
+(defn notify-other-clients [{:keys [connected-uids cid websockets]}]
+  (let [other-cids (disj (:any @connected-uids) cid)]
+    (doseq [o other-cids]
+      (fws-protocols/push websockets o :refresh {:now :yes}))))
+
+(pc/defmutation new-game [{:keys [::db/conn] :as env} _]
   {::pc/params []
    ::pc/output [::game/id]}
   (let [tile-bag (find-all-tile-ids @conn)
         entity   {::game/id          (db/uuid)
                   ::game/tile-bag    tile-bag}]
     (d/transact! conn [entity])
+    (notify-other-clients env)
     entity))
 
 (pc/defmutation join-game [{:keys [::db/conn]} {game-id ::game/id player-id ::player/id}]
