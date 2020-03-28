@@ -5,6 +5,16 @@
             [ra.specs.tile.monument :as monument]
             [ra.specs.tile.river :as river]))
 
+(def q
+  [::tile/id
+   ::tile/type
+   ::tile/title
+   ::tile/scarab?
+   ::tile/disaster?
+   ::tile/civilization-type
+   ::tile/monument-type
+   ::tile/river-type])
+
 (def tile-specs
   {{::tile/type ::tile-type/ra
     ::tile/title "Ra"} 30
@@ -86,13 +96,14 @@
     ::tile/river-type ::river/flood} 12
    {::tile/type ::tile-type/river
     ::tile/title "Drought"
-    ::tile/disaster? true} 2
-   })
+    ::tile/disaster? true} 2})
 
 (defn new-bag []
   (let [id (atom 0)]
-    (reduce-kv (fn [coll tile num]
-                 (concat coll (map #(assoc tile ::tile/id %)
-                                   (repeatedly num #(swap! id inc)))))
-               []
-               tile-specs)))
+    (->> tile-specs
+         (reduce-kv (fn [coll tile num]
+                      (concat coll (map #(assoc tile ::tile/id %)
+                                        (repeatedly num #(swap! id inc)))))
+                    [])
+         shuffle
+         (take 8))))

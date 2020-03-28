@@ -42,6 +42,7 @@
 (defsc Game [_ _]
   {:query [{::game/players (comp/get-query Player)}
            {::game/current-epoch (comp/get-query Epoch)}
+;;           {::game/tile-bag (comp/get-query Tile)}
            ::game/id]
    :ident (fn [] [:component/id :ra.app.game])})
 

@@ -5,9 +5,15 @@
  :ra.db/conn {}
 
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;; Game ref data
+
+ :ra.model.game/ref-data {:ra.db/conn #ig/ref :ra.db/conn}
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;; Pathom
 
- :ra.pathom/parser {:ra.db/conn #ig/ref :ra.db/conn}
+ :ra.pathom/parser {:ra.db/conn #ig/ref :ra.db/conn
+                    :ref-data #ig/ref :ra.model.game/ref-data}
 
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;; Server
