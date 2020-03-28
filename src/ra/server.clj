@@ -124,17 +124,23 @@
     (println "cliend dropped cid")))
 
 (defmethod ig/init-key ::websockets [_ {:keys [pathom-parser]}]
-  (let [ws (fws/start! (fws/make-websockets
-                        pathom-parser
-                        {:http-server-adapter (get-sch-adapter)
-                         :parser-accepts-env? true
-                         ;; See Sente for CSRF instructions
-                         :sente-options       {:csrf-token-fn nil}}))]
-    #_(fws-protocols/add-listener ws (map->MyListener {}))
-    ws))
+  (let [parser (atom (delay pathom-parser))]
+    {:parser     parser
+     :websockets (fws/start! (fws/make-websockets
+                              (partial @@parser)
+                              {:http-server-adapter (get-sch-adapter)
+                               :parser-accepts-env? true
+                               :sente-options       {:csrf-token-fn nil}}))}))
 
-(defmethod ig/halt-key! ::websockets [_ websockets]
+(defmethod ig/halt-key! ::websockets [_ {:keys [websockets]}]
   (fws/stop! websockets))
+
+(defmethod ig/suspend-key! ::websockets [_ {:keys [parser]}]
+  (reset! parser (promise)))
+
+(defmethod ig/resume-key ::websockets [_ opts _ old-impl]
+  (deliver @(:parser old-impl) (:pathom-parser opts))
+  old-impl)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Server
@@ -176,7 +182,7 @@
                                e)))})
       (fmw/wrap-transit-params {:opts {:handlers (transit-reader-handlers)}})
       (wrap-transit-response)
-      (fws/wrap-api websockets)
+      (fws/wrap-api (:websockets websockets))
       wrap-keyword-params
       wrap-params
       (wrap-resource "public")
