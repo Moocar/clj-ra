@@ -7,3 +7,4 @@
 (s/def ::tiles (s/coll-of (s/keys :req [::tile/id])))
 (s/def ::sun-disks (s/coll-of rs/sun-disk))
 (s/def ::player (s/keys :req [::player/id]))
+(s/def ::seat nat-int?)

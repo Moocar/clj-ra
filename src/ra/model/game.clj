@@ -68,15 +68,18 @@
     (throw (ex-info "Game already started" {:started-at started-at}))
     (let [id-atom      (atom -1)
           num-players  (find-num-players @conn game-id)
-          player-hands (map (fn [player sun-disks dbid]
+          player-hands (map (fn [player sun-disks dbid i]
                               {::hand/sun-disks sun-disks
                                ::hand/player    (:db/id player)
+                               ::hand/seat      i
                                :db/id           dbid})
                             (::game/players (d/entity @conn [::game/id game-id]))
                             (shuffle (get sun-disk-sets num-players))
-                            (repeatedly #(swap! id-atom dec)))
+                            (repeatedly #(swap! id-atom dec))
+                            (range))
           epoch        {::epoch/number           1
                         ::epoch/current-sun-disk 1
+                        ::epoch/current-hand     (:db/id (first (shuffle player-hands)))
                         ::epoch/hands            (map :db/id player-hands)
                         :db/id                   (swap! id-atom dec)}]
       (d/transact! conn (concat
@@ -86,6 +89,25 @@
                           [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))
   {})
 
+(defn find-current-player [db {:keys [::game/id]}]
+  (d/q '[:find ?pid .
+         :in $ ?game-id
+         :where [?gid ::game/id ?game-id]
+         [?gid ::game/current-epoch ?eid]
+         [?eid ::epoch/current-hand ?hid]
+         [?hid ::hand/player ?pid]]
+       db id))
+
+(defn player-turn? [db {player-id ::player/id :as input}]
+  (= (::player/id (d/entity db (find-current-player db input))) player-id))
+
+(pc/defmutation draw-tile [{:keys [::db/conn]} input]
+  {::pc/params [::game/id ::player/id]
+   ::pc/output []}
+  (if (not (player-turn? @conn input))
+    (throw (ex-info "not your turn" {}))
+    {}))
+
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
                                {:keys [::game/id]}]
   {::pc/input #{::game/id}
@@ -93,6 +115,7 @@
                 {::game/players m-player/q}
                 {::game/current-epoch [::epoch/number
                                        ::epoch/current-sun-disk
+                                       {::epoch/current-hand [{::hand/player [::player/id]}]}
                                        {::epoch/hands [::hand/tiles
                                                        ::hand/sun-disks
                                                        {::hand/player [::player/id]}]}]}
@@ -107,7 +130,8 @@
       (d/transact! conn (m-tile/new-bag)))))
 
 (def resolvers
-  [join-game
+  [draw-tile
+   join-game
    new-game
    start-game
 
