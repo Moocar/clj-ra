@@ -28,11 +28,17 @@
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
          com.fulcrologic/fulcro {:mvn/version "3.1.19"}
 
+         ;; Websockets
+         ;; com.fulcrologic/fulcro-websockets {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro-websockets"}
+         com.fulcrologic/fulcro-websockets {:mvn/version "3.1.1"}
+         com.taoensso/sente                {:mvn/version "1.15.0"}
+
          ;; http server
-         ring/ring-core   {:mvn/version "1.8.0"}
-         http-kit         {:mvn/version "2.3.0"}
-         ring/ring-spec   {:mvn/version "0.0.4"}
-         hiccup           {:mvn/version "1.0.5"}
+         ring/ring-core {:mvn/version "1.8.0"}
+         http-kit       {:mvn/version "2.3.0"}
+         ring/ring-spec {:mvn/version "0.0.4"}
+         hiccup         {:mvn/version "1.0.5"}
+
 
          ;; Integrant
          integrant {:mvn/version "0.8.0"}

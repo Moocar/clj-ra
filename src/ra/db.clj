@@ -35,7 +35,9 @@
    })
 
 (defmethod ig/init-key ::conn [_ _]
-  (d/create-conn schema))
+  (let [conn (d/create-conn schema)]
+    #_(d/listen! conn (fn [x] #p x))
+    conn))
 
 (defmethod ig/suspend-key! ::conn [_ conn]
   conn)

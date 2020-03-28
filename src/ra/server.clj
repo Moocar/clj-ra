@@ -4,6 +4,10 @@
             [clojure.spec.alpha :as s]
             [cognitect.transit :as transit]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
+            [com.fulcrologic.fulcro.networking.websocket-protocols
+             :as
+             fws-protocols]
+            [com.fulcrologic.fulcro.networking.websockets :as fws]
             [com.fulcrologic.fulcro.server.api-middleware :as fmw :refer [wrap-api]]
             [hiccup.core :refer [html]]
             [integrant.core :as ig]
@@ -12,7 +16,10 @@
             [ra.specs :as rs]
             [ring.middleware.content-type :refer [wrap-content-type]]
             [ring.middleware.not-modified :refer [wrap-not-modified]]
-            [ring.middleware.resource :refer [wrap-resource]])
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+            [ring.middleware.resource :refer [wrap-resource]]
+            [taoensso.sente.server-adapters.http-kit :refer [get-sch-adapter]])
   (:import [com.cognitect.transit TransitFactory WriteHandler]
            com.fulcrologic.fulcro.algorithms.tempid.TempId
            [java.io ByteArrayOutputStream OutputStream]
@@ -106,6 +113,38 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Websockets
+
+(defn query-parser
+  ""
+  [env query]
+  #p "got websocket query"
+  #p query
+  )
+
+(defrecord MyListener []
+  fws-protocols/WSListener
+  (client-added [this ws-net cid]
+    (println "client added" cid)
+    (fws-protocols/push ws-net cid :x {:value 1}))
+  (client-dropped [this ws-net cid]
+    (println "cliend dropped cid")))
+
+(defmethod ig/init-key ::websockets [_ _]
+  (let [ws (fws/start! (fws/make-websockets
+                        query-parser
+                        {:http-server-adapter (get-sch-adapter)
+                         :parser-accepts-env? true
+                         ;; See Sente for CSRF instructions
+                         :sente-options       {:csrf-token-fn nil}}))]
+    (println "adding listener")
+    (fws-protocols/add-listener ws (map->MyListener {}))
+    ws))
+
+(defmethod ig/halt-key! ::websockets [_ websockets]
+  (fws/stop! websockets))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Server
 
 (defn index-html [{:keys [main-js-path]}]
@@ -132,7 +171,7 @@
 (defn transit-reader-handlers []
   {"zdt" (transit/read-handler date/tagged-value->zdt)})
 
-(defn make-middleware [{:keys [pathom-parser] :as config}]
+(defn make-middleware [{:keys [pathom-parser websockets] :as config}]
   (-> (spa-handler config)
       ;; not-found-handler
       (wrap-api {:uri    "/api"
@@ -145,6 +184,9 @@
                                e)))})
       (fmw/wrap-transit-params {:opts {:handlers (transit-reader-handlers)}})
       (wrap-transit-response)
+      (fws/wrap-api websockets)
+      wrap-keyword-params
+      wrap-params
       (wrap-resource "public")
       wrap-content-type
       wrap-not-modified))

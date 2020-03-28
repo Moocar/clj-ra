@@ -5,10 +5,10 @@
             [com.fulcrologic.semantic-ui.elements.button.ui-button :refer [ui-button]]
             [ra.app.app :as client-app]
             [ra.specs.tile :as tile]
-            [ra.specs.sun-disk :as sun-disk]
             [ra.specs.player :as player]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
+            [ra.model.game :as m-game]
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
 
 (defsc Tile [_ _]
@@ -17,13 +17,9 @@
            ::tile/disaster?
            ::tile/type]})
 
-(defsc SunDisk [_ _]
-  {:query [::sun-disk/number
-           ::sun-disk/used?]})
-
 (defsc PlayerHand [_ _]
   {:query [{::player/tiles (comp/get-query Tile)}
-           {::player/sun-disks (comp/get-query SunDisk)}
+           ::player/sun-disks
            ::player/id]})
 
 (defsc Player [_ _]
@@ -32,7 +28,7 @@
            ::player/score]})
 
 (defsc Epoch [_ _]
-  {:query [{::epoch/current-sun-disk (comp/get-query SunDisk)}
+  {:query [::epoch/current-sun-disk
            ::epoch/number
            {::epoch/ra-tiles (comp/get-query Tile)}
            {::epoch/auction-tiles (comp/get-query Tile)}
@@ -54,8 +50,8 @@
       (dom/div :.ui.active.inline.loader))
     (ui-button {:primary true
                 :onClick (fn []
-                           #_(comp/transact! this [(m-game/new-game {})]))}
-               "New Game")
+                           (comp/transact! this [(m-game/new-game {})]))}
+               "New Gamess")
     (dom/p "hi there")))
 
 (defn ^:export refresh []
