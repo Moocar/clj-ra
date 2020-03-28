@@ -30,6 +30,9 @@
       #{ 13 10 5}
       #{12 11 6}]})
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Queries
+
 (defn find-all-tile-ids [db]
   (d/q '[:find [?t ...]
          :where [?t ::tile/type]]
@@ -43,6 +46,47 @@
            db
            game-id)
       0))
+
+(defn find-current-player [db {:keys [::game/id]}]
+  (d/q '[:find ?pid .
+         :in $ ?game-id
+         :where [?gid ::game/id ?game-id]
+         [?gid ::game/current-epoch ?eid]
+         [?eid ::epoch/current-hand ?hid]
+         [?hid ::hand/player ?pid]]
+       db id))
+
+(defn sample-tile [db {:keys [::game/id]}]
+  (first
+   (d/q '[:find (sample 1 ?tid) .
+          :in $ ?game-id
+          :where [?gid ::game/id ?game-id]
+          [?gid ::game/tile-bag ?tid]]
+        db id)))
+
+(defn player-turn? [db {player-id ::player/id :as input}]
+  (= (::player/id (d/entity db (find-current-player db input))) player-id))
+
+(defn find-current-hand [db {game-id ::game/id}]
+  (get-in (d/entity db [::game/id game-id])
+          [::game/current-epoch ::epoch/current-hand]))
+
+(pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
+                               {:keys [::game/id]}]
+  {::pc/input #{::game/id}
+   ::pc/output [{::game/tile-bag m-tile/q}
+                {::game/players m-player/q}
+                {::game/current-epoch [::epoch/number
+                                       ::epoch/current-sun-disk
+                                       {::epoch/current-hand [{::hand/player [::player/id]}]}
+                                       {::epoch/hands [::hand/tiles
+                                                       ::hand/sun-disks
+                                                       {::hand/player [::player/id]}]}]}
+                ::game/id]}
+  (d/pull @conn parent-query [::game/id id]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Mutations
 
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
@@ -89,38 +133,17 @@
                           [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))
   {})
 
-(defn find-current-player [db {:keys [::game/id]}]
-  (d/q '[:find ?pid .
-         :in $ ?game-id
-         :where [?gid ::game/id ?game-id]
-         [?gid ::game/current-epoch ?eid]
-         [?eid ::epoch/current-hand ?hid]
-         [?hid ::hand/player ?pid]]
-       db id))
-
-(defn player-turn? [db {player-id ::player/id :as input}]
-  (= (::player/id (d/entity db (find-current-player db input))) player-id))
-
 (pc/defmutation draw-tile [{:keys [::db/conn]} input]
   {::pc/params [::game/id ::player/id]
    ::pc/output []}
-  (if (not (player-turn? @conn input))
-    (throw (ex-info "not your turn" {}))
-    {}))
-
-(pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
-                               {:keys [::game/id]}]
-  {::pc/input #{::game/id}
-   ::pc/output [{::game/tile-bag m-tile/q}
-                {::game/players m-player/q}
-                {::game/current-epoch [::epoch/number
-                                       ::epoch/current-sun-disk
-                                       {::epoch/current-hand [{::hand/player [::player/id]}]}
-                                       {::epoch/hands [::hand/tiles
-                                                       ::hand/sun-disks
-                                                       {::hand/player [::player/id]}]}]}
-                ::game/id]}
-  (d/pull @conn parent-query [::game/id id]))
+  (let [hand (find-current-hand @conn input)]
+    (if (not (player-turn? @conn input))
+      (throw (ex-info "not your turn" {}))
+      (do
+        (let [tile (sample-tile @conn input)]
+          (d/transact! conn #p [[:db/add (:db/id hand) ::hand/tiles tile]
+                                [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]]))
+        {}))))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t

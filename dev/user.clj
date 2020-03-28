@@ -8,7 +8,8 @@
             ra.integrant
             [ra.specs.player :as player]
             [ra.specs.hand :as hand]
-            [ra.specs.epoch :as epoch]))
+            [ra.specs.epoch :as epoch]
+            [ra.specs.tile :as tile]))
 
 (repl/disable-reload! (find-ns 'user))
 
@@ -38,16 +39,18 @@
     (parser {} `[(m-game/join-game {::player/id ~player2-id ::game/id ~game-id})])
     (pathom/entity-parse parser `[(m-game/start-game {::game/id ~game-id})])
     (let [current-hand-player-id (current-player parser game-id)]
+
+      (parser {} `[(m-game/draw-tile {::game/id ~game-id ::player/id ~current-hand-player-id})])
       (let [x (pathom/entity-parse
                parser
                `[{[::game/id ~game-id] [::game/id
                                         {::game/current-epoch [::epoch/number
                                                                ::epoch/current-sun-disk
                                                                {::epoch/current-hand [{::hand/player [::player/id]}]}
-                                                               {::epoch/hands [::hand/sun-disks]}]}
+                                                               {::epoch/hands [::hand/sun-disks
+                                                                               {::hand/tiles [::tile/title]}]}]}
                                         {::game/players [::player/name]}]}])]
-        #p x)
-      (parser {} `[(m-game/draw-tile {::game/id ~game-id ::player/id ~current-hand-player-id})]))
+        #p x))
 
     )
 
