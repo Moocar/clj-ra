@@ -11,16 +11,17 @@
 
    :ra.specs.player/id {:db/unique :db.unique/value}
 
-   :ra.specs.hand/sun-disks {:db/cardinality :db.cardinality/many}
-   :ra.specs.hand/player    {:db/valueType :db.type/ref}
-   :ra.specs.hand/tiles     {:db/cardinality :db.cardinality/many
-                             :db/valueType   :db.type/ref}
+   :ra.specs.hand/available-sun-disks {:db/cardinality :db.cardinality/many}
+   :ra.specs.hand/used-sun-disks      {:db/cardinality :db.cardinality/many}
+   :ra.specs.hand/player              {:db/valueType :db.type/ref}
+   :ra.specs.hand/tiles               {:db/cardinality :db.cardinality/many
+                                       :db/valueType   :db.type/ref}
 
-   :ra.specs.epoch/hands        {:db/cardinality :db.cardinality/many
-                                 :db/valueType   :db.type/ref}
+   :ra.specs.epoch/hands         {:db/cardinality :db.cardinality/many
+                                  :db/valueType   :db.type/ref}
    :ra.specs.epoch/auction-tiles {:db/cardinality :db.cardinality/many
                                   :db/valueType   :db.type/ref}
-   :ra.specs.epoch/current-hand {:db/valueType :db.type/ref}
+   :ra.specs.epoch/current-hand  {:db/valueType :db.type/ref}
 
    :ra.specs.game/id            {:db/unique :db.unique/value}
    :ra.specs.game/tile-bag      {:db/cardinality :db.cardinality/many

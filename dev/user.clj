@@ -40,7 +40,6 @@
     (pathom/entity-parse parser `[(m-game/start-game {::game/id ~game-id})])
     (let [current-hand-player-id (current-player parser game-id)]
 
-      (parser {} `[(m-game/draw-tile {::game/id ~game-id ::player/id ~current-hand-player-id})])
       (let [x (pathom/entity-parse
                parser
                `[{[::game/id ~game-id] [::game/id
@@ -48,8 +47,24 @@
                                                                ::epoch/current-sun-disk
                                                                {::epoch/auction-tiles [::tile/title]}
                                                                {::epoch/last-ra-invokee [{::hand/player [::player/name]}]}
-                                                               {::epoch/current-hand [{::hand/player [::player/id]}]}
-                                                               {::epoch/hands [::hand/sun-disks
+                                                               {::epoch/current-hand [{::hand/player [::player/id]}
+                                                                                      ::hand/seat]}
+                                                               {::epoch/hands [::hand/available-sun-disks
+                                                                               {::hand/tiles [::tile/title]}]}]}
+                                        {::game/players [::player/name]}]}])]
+        #p x)
+      (parser {} `[(m-game/draw-tile {::game/id ~game-id ::player/id ~current-hand-player-id})])
+      (let [x (pathom/entity-parse
+               parser
+               `[{[::game/id ~game-id] [::game/id
+                                        {::game/current-epoch [::epoch/number
+                                                               ::epoch/current-sun-disk
+                                                               ::epoch/in-auction?
+                                                               {::epoch/auction-tiles [::tile/title]}
+                                                               {::epoch/last-ra-invokee [{::hand/player [::player/name]}]}
+                                                               {::epoch/current-hand [{::hand/player [::player/id]}
+                                                                                      ::hand/seat]}
+                                                               {::epoch/hands [::hand/available-sun-disks
                                                                                {::hand/tiles [::tile/title]}]}]}
                                         {::game/players [::player/name]}]}])]
         #p x))

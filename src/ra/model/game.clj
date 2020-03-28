@@ -82,12 +82,14 @@
                 {::game/players m-player/q}
                 {::game/current-epoch [::epoch/number
                                        ::epoch/current-sun-disk
+                                       ::epoch/in-auction?
                                        {::epoch/last-ra-invokee [{::hand/player [::player/id
                                                                                  ::player/name]}]}
                                        {::epoch/current-hand [{::hand/player [::player/id
                                                                               ::player/name]}]}
                                        {::epoch/hands [::hand/tiles
-                                                       ::hand/sun-disks
+                                                       ::hand/available-sun-disks
+                                                       ::hand/used-sun-disks
                                                        {::hand/player [::player/id]}]}]}
                 ::game/id]}
   (d/pull @conn parent-query [::game/id id]))
@@ -120,7 +122,7 @@
     (let [id-atom      (atom -1)
           num-players  (find-num-players @conn game-id)
           player-hands (map (fn [player sun-disks dbid i]
-                              {::hand/sun-disks sun-disks
+                              {::hand/available-sun-disks sun-disks
                                ::hand/player    (:db/id player)
                                ::hand/seat      i
                                :db/id           dbid})
@@ -140,28 +142,57 @@
                           [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))
   {})
 
+;; TODO next is continue on draw normal tile, (maybe which player is next?) or focus on auctioning
+
 (defn draw-ra-tx [db input tile]
   (let [epoch (find-current-epoch db input)
         hand  (find-current-hand db input)]
     [[:db/add (:db/id epoch) ::epoch/auction-tiles tile]
      [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]
+     [:db/add (:db/id epoch) ::epoch/in-auction? true]
      [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]))
 
+(defn next-hand [hand]
+  (let [db (d/entity-db hand)
+        epoch (-> hand ::epoch/_current-hand first)
+        game-id (-> epoch ::game/_current-epoch first ::game/id)
+        num-players (find-num-players db game-id)]
+   (if (< (inc (::hand/seat hand)) num-players)
+     (d/entity db (d/q '[:find ?hid .
+                         :in $ ?epoch-id ?seat-num
+                         :where [?epoch-id ::epoch/hands ?hid]
+                         [?hid ::hand/seat ?seat-num]]
+                       db
+                       (:db/id epoch)
+                       (inc (::hand/seat hand))))
+     (d/entity db (d/q '[:find ?hid .
+                         :in $ ?epoch-id ?seat-num
+                         :where [?epoch-id ::epoch/hands ?hid]
+                         [?hid ::hand/seat ?seat-num]]
+                       db
+                       (:db/id epoch)
+                       0)))))
+
+#_(defn calc-next-hand [db epoch]
+  (loop []
+    (::hand/seat (::epoch/current-hand epoch))))
+
 (defn draw-normal-tile-tx [db input tile]
-  (let [hand (find-current-hand db input)]
+  (let [epoch (find-current-epoch db input)
+        hand (find-current-hand db input)]
     [[:db/add (:db/id hand) ::hand/tiles tile]
-     [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]]))
+     [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]
+     [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]]))
 
 (pc/defmutation draw-tile [{:keys [::db/conn]} input]
   {::pc/params [::game/id ::player/id]
    ::pc/output []}
   (if (not (player-turn? @conn input))
     (throw (ex-info "not your turn" {}))
-    (do
-      (let [tile (sample-tile @conn input)]
-        (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
-          (d/transact! conn (draw-ra-tx @conn input tile))
-          (d/transact! conn (draw-normal-tile-tx @conn input tile))))
+    (let [tile (sample-tile @conn input)]
+      (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
+        (d/transact! conn (draw-ra-tx @conn input tile))
+        (d/transact! conn (draw-normal-tile-tx @conn input tile)))
       {})))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
