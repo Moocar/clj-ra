@@ -46,6 +46,8 @@
                `[{[::game/id ~game-id] [::game/id
                                         {::game/current-epoch [::epoch/number
                                                                ::epoch/current-sun-disk
+                                                               {::epoch/auction-tiles [::tile/title]}
+                                                               {::epoch/last-ra-invokee [{::hand/player [::player/name]}]}
                                                                {::epoch/current-hand [{::hand/player [::player/id]}]}
                                                                {::epoch/hands [::hand/sun-disks
                                                                                {::hand/tiles [::tile/title]}]}]}

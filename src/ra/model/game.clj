@@ -12,7 +12,8 @@
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [ra.specs.tile.type :as tile-type]))
 
 (def sun-disk-sets
   {2 [#{9 6 5 2}
@@ -71,6 +72,9 @@
   (get-in (d/entity db [::game/id game-id])
           [::game/current-epoch ::epoch/current-hand]))
 
+(defn find-current-epoch [db {game-id ::game/id}]
+  (get-in (d/entity db [::game/id game-id]) [::game/current-epoch]))
+
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
                                {:keys [::game/id]}]
   {::pc/input #{::game/id}
@@ -78,7 +82,10 @@
                 {::game/players m-player/q}
                 {::game/current-epoch [::epoch/number
                                        ::epoch/current-sun-disk
-                                       {::epoch/current-hand [{::hand/player [::player/id]}]}
+                                       {::epoch/last-ra-invokee [{::hand/player [::player/id
+                                                                                 ::player/name]}]}
+                                       {::epoch/current-hand [{::hand/player [::player/id
+                                                                              ::player/name]}]}
                                        {::epoch/hands [::hand/tiles
                                                        ::hand/sun-disks
                                                        {::hand/player [::player/id]}]}]}
@@ -133,17 +140,29 @@
                           [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))
   {})
 
+(defn draw-ra-tx [db input tile]
+  (let [epoch (find-current-epoch db input)
+        hand  (find-current-hand db input)]
+    [[:db/add (:db/id epoch) ::epoch/auction-tiles tile]
+     [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]
+     [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]))
+
+(defn draw-normal-tile-tx [db input tile]
+  (let [hand (find-current-hand db input)]
+    [[:db/add (:db/id hand) ::hand/tiles tile]
+     [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]]))
+
 (pc/defmutation draw-tile [{:keys [::db/conn]} input]
   {::pc/params [::game/id ::player/id]
    ::pc/output []}
-  (let [hand (find-current-hand @conn input)]
-    (if (not (player-turn? @conn input))
-      (throw (ex-info "not your turn" {}))
-      (do
-        (let [tile (sample-tile @conn input)]
-          (d/transact! conn #p [[:db/add (:db/id hand) ::hand/tiles tile]
-                                [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]]))
-        {}))))
+  (if (not (player-turn? @conn input))
+    (throw (ex-info "not your turn" {}))
+    (do
+      (let [tile (sample-tile @conn input)]
+        (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
+          (d/transact! conn (draw-ra-tx @conn input tile))
+          (d/transact! conn (draw-normal-tile-tx @conn input tile))))
+      {})))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t

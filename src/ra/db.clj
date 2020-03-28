@@ -18,6 +18,8 @@
 
    :ra.specs.epoch/hands        {:db/cardinality :db.cardinality/many
                                  :db/valueType   :db.type/ref}
+   :ra.specs.epoch/auction-tiles {:db/cardinality :db.cardinality/many
+                                  :db/valueType   :db.type/ref}
    :ra.specs.epoch/current-hand {:db/valueType :db.type/ref}
 
    :ra.specs.game/id            {:db/unique :db.unique/value}
