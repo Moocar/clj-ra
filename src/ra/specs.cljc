@@ -57,3 +57,6 @@
 (defn calendar? [c]
   #?(:clj (instance? java.util.Calendar c)
      :cljs non-empty-string?))
+
+(def sun-disk
+  #{1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16})

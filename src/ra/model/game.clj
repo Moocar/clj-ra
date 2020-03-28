@@ -2,39 +2,61 @@
   (:require [com.wsscode.pathom.connect :as pc]
             [com.wsscode.pathom.core :as p]
             [datascript.core :as d]
-            [integrant.core :as ig]
-            [ra.db :as db]
-            [ra.model.tile :as m-tile]
-            [ra.specs.game :as game]
-            [ra.specs.player :as player]
-            [ra.specs.tile :as tile]
-            [ra.model.player :as m-player]
             [ghostwheel.core :as g]
-            [ra.date :as date]))
+            [integrant.core :as ig]
+            [ra.date :as date]
+            [ra.db :as db]
+            [ra.model.player :as m-player]
+            [ra.model.tile :as m-tile]
+            [ra.specs.epoch :as epoch]
+            [ra.specs.game :as game]
+            [ra.specs.hand :as hand]
+            [ra.specs.player :as player]
+            [ra.specs.tile :as tile]))
+
+(def sun-disk-sets
+  {2 [#{9 6 5 2}
+      #{8 7 4 3}]
+   3 [#{13 8 5 2}
+      #{12 9 6 3}
+      #{11 10 7 4}]
+   4 [#{13 6 2}
+      #{12 7 3}
+      #{11 8 4}
+      #{10 9 5}]
+   5 [#{16 7 2}
+      #{15 8 3}
+      #{14 9 4}
+      #{ 13 10 5}
+      #{12 11 6}]})
+
+(defn find-all-tile-ids [db]
+  (d/q '[:find [?t ...]
+         :where [?t ::tile/type]]
+       db))
+
+(defn find-num-players [db game-id]
+  (or (d/q '[:find (count ?pid) .
+             :in $ ?game-id
+             :where [?gid ::game/id ?game-id]
+             [?gid ::game/players ?pid]]
+           db
+           game-id)
+      0))
 
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
    ::pc/output [::game/id]}
-  (let [tile-bag (d/q '[:find [?t ...]
-                        :where [?t ::tile/type]]
-                      @conn)
+  (let [tile-bag (find-all-tile-ids @conn)
         entity   {::game/id          (db/uuid)
                   ::game/tile-bag    tile-bag}]
     (d/transact! conn [entity])
     entity))
 
-(defn find-num-players [conn game-id]
-  (d/q '[:find (count ?pid) .
-         :in $ ?game-id
-         :where [?gid ::game/id ?game-id]
-         [?gid ::game/players ?pid]]
-       @conn
-       game-id))
-
 (pc/defmutation join-game [{:keys [::db/conn]} {game-id ::game/id player-id ::player/id}]
   {::pc/params [::game/id ::player/id]
    ::pc/output []}
-  (if (>= (find-num-players conn game-id) 5)
+  (if (>= (find-num-players @conn game-id) 5)
     (throw (ex-info "Maximum players already reached" {}))
     (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]]))
   {})
@@ -44,7 +66,24 @@
    ::pc/output []}
   (if-let [started-at (::game/started-at (d/entity @conn [::game/id game-id]))]
     (throw (ex-info "Game already started" {:started-at started-at}))
-    (d/transact! conn [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]]))
+    (let [id-atom      (atom -1)
+          num-players  (find-num-players @conn game-id)
+          player-hands (map (fn [player sun-disks dbid]
+                              {::hand/sun-disks sun-disks
+                               ::hand/player    (:db/id player)
+                               :db/id           dbid})
+                            (::game/players (d/entity @conn [::game/id game-id]))
+                            (shuffle (get sun-disk-sets num-players))
+                            (repeatedly #(swap! id-atom dec)))
+          epoch        {::epoch/number           1
+                        ::epoch/current-sun-disk 1
+                        ::epoch/hands            (map :db/id player-hands)
+                        :db/id                   (swap! id-atom dec)}]
+      (d/transact! conn (concat
+                         player-hands
+                         [epoch]
+                         [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
+                          [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))
   {})
 
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
@@ -52,6 +91,11 @@
   {::pc/input #{::game/id}
    ::pc/output [{::game/tile-bag m-tile/q}
                 {::game/players m-player/q}
+                {::game/current-epoch [::epoch/number
+                                       ::epoch/current-sun-disk
+                                       {::epoch/hands [::hand/tiles
+                                                       ::hand/sun-disks
+                                                       {::hand/player [::player/id]}]}]}
                 ::game/id]}
   (d/pull @conn parent-query [::game/id id]))
 

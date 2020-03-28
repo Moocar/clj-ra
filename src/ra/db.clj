@@ -6,13 +6,29 @@
   (java.util.UUID/randomUUID))
 
 (def schema
-  {:ra.specs.game/id {:db/unique :db.unique/value}
-   :ra.specs.game/tile-bag {:db/cardinality :db.cardinality/many
-                            :db/valueType :db.type/ref}
-   :ra.specs.game/players {:db/cardinality :db.cardinality/many
-                           :db/valueType :db.type/ref}
+  {
    :ra.specs.tile/id {:db/unique :db.unique/value}
-   :ra.specs.player/id {:db/unique :db.unique/value}})
+
+   :ra.specs.player/id {:db/unique :db.unique/value}
+
+   :ra.specs.hand/sun-disks {:db/cardinality :db.cardinality/many}
+   :ra.specs.hand/player    {:db/valueType :db.type/ref}
+   :ra.specs.hand/tiles     {:db/cardinality :db.cardinality/many
+                             :db/valueType   :db.type/ref}
+
+   :ra.specs.epoch/hands {:db/cardinality :db.cardinality/many
+                          :db/valueType   :db.type/ref}
+
+   :ra.specs.game/id       {:db/unique :db.unique/value}
+   :ra.specs.game/tile-bag {:db/cardinality :db.cardinality/many
+                            :db/valueType   :db.type/ref}
+   :ra.specs.game/players  {:db/cardinality :db.cardinality/many
+                            :db/valueType   :db.type/ref}
+   :ra.specs.game/current-epoch {:db/valueType   :db.type/ref}
+
+
+
+})
 
 (defmethod ig/init-key ::conn [_ _]
   (d/create-conn schema))
