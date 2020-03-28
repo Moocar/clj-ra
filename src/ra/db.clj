@@ -11,7 +11,8 @@
                             :db/valueType :db.type/ref}
    :ra.specs.game/players {:db/cardinality :db.cardinality/many
                            :db/valueType :db.type/ref}
-   :ra.specs.tile/id {:db/unique :db.unique/value}})
+   :ra.specs.tile/id {:db/unique :db.unique/value}
+   :ra.specs.player/id {:db/unique :db.unique/value}})
 
 (defmethod ig/init-key ::conn [_ _]
   (d/create-conn schema))

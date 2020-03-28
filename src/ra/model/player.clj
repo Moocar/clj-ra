@@ -4,6 +4,10 @@
             [ra.db :as db]
             [datascript.core :as d]))
 
+(def q
+  [::player/name
+   ::player/id])
+
 (pc/defmutation new-player [{:keys [::db/conn]} {:keys [::player/name]}]
   {::pc/params [::player/name]
    ::pc/output [::player/id]}

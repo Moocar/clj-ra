@@ -7,7 +7,8 @@
             [ra.model.tile :as m-tile]
             [ra.specs.game :as game]
             [ra.specs.player :as player]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [ra.model.player :as m-player]))
 
 (pc/defmutation new-game [{:keys [::db/conn]} {:keys [::game/num-players]}]
   {::pc/params [::game/num-players]
@@ -21,11 +22,10 @@
     (d/transact! conn [entity])
     entity))
 
-(pc/defmutation join-game [{:keys [::db/conn]} {game-id ::game/id player-id ::player/-id}]
+(pc/defmutation join-game [{:keys [::db/conn]} {game-id ::game/id player-id ::player/id}]
   {::pc/params [::game/id ::player/id]
    ::pc/output []}
-  (d/transact! conn [[{::game/id [::game/id game-id]
-                       ::game/players [[::player/id player-id]]}]])
+  (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]])
   {})
 
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
@@ -33,11 +33,9 @@
   {::pc/input #{::game/id}
    ::pc/output [::game/num-players
                 {::game/tile-bag m-tile/q}
+                {::game/players m-player/q}
                 ::game/id]}
   (d/pull (d/db conn) parent-query [::game/id id]))
-
-(def resolvers
-  [new-game game-resolver])
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t
@@ -45,3 +43,9 @@
                    @conn)]
     (when (empty? tiles)
       (d/transact! conn (m-tile/new-bag)))))
+
+(def resolvers
+  [new-game
+   join-game
+
+   game-resolver])
