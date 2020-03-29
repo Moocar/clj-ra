@@ -66,30 +66,26 @@
     (ui-button {:content  "Submit"
                 :primary true
                 :onClick  (fn []
-                            (comp/transact! this [(m-user/save input)]))})))
+                            (comp/transact! this [(m-user/save input)] {:refresh [:current-user]}))})))
 
 (def ui-user-details (comp/factory UserDetails {:keyfn ::user/id}))
 
-(defsc Root [this {:keys [::app/active-remotes :current-user :current-game]}]
-  {:query [[::app/active-remotes '_]
-           {:current-user (comp/get-query UserDetails)}
-           {:current-game (comp/get-query Game)}]
+(defsc Root [this {:keys [:current-user :current-game]}]
+  {:query [{[:current-user '_] (comp/get-query UserDetails)}
+           {[:current-game '_] (comp/get-query Game)}]
    :initial-state {}}
-  (dom/div {}
-    (when (seq active-remotes)
-      (dom/div :.ui.active.inline.loader))
-    (if (nil? current-user)
-      (dom/p "loading")
-      (if (str/blank? (::user/name current-user))
-        (ui-user-details current-user)
-        (dom/div {}
-          (dom/p (str "hi there " (::user/name current-user)))
-          (if (nil? current-game)
-            (ui-button {:primary true
-                        :onClick (fn []
-                                   (comp/transact! this [(m-game/new-game {})]))}
-                       "New Gamess")
-            (dom/p "we have a game?")))))))
+  (if (nil? current-user)
+    (dom/p "loadings")
+    (if (str/blank? (::user/name current-user))
+      (ui-user-details current-user)
+      (dom/div {}
+        (dom/p (str "hi there " (::user/name current-user)))
+        (if (nil? current-game)
+          (ui-button {:primary true
+                      :onClick (fn []
+                                 (comp/transact! this [(m-game/new-game {})]))}
+                     "New Gamess")
+          (dom/p "we have a game?"))))))
 
 (defn init-user-local-storage []
   (if-let [user-id (-> js/window .-localStorage (.getItem "user.id"))]

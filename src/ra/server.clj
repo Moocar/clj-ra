@@ -127,7 +127,7 @@
   (let [parser (atom (delay pathom-parser))]
     {:parser     parser
      :websockets (fws/start! (fws/make-websockets
-                              (partial @@parser)
+                              (fn [env query] (@@parser env query))
                               {:http-server-adapter (get-sch-adapter)
                                :parser-accepts-env? true
                                :sente-options       {:csrf-token-fn nil}}))}))
@@ -141,6 +141,9 @@
 (defmethod ig/resume-key ::websockets [_ opts _ old-impl]
   (deliver @(:parser old-impl) (:pathom-parser opts))
   old-impl)
+
+(defmethod ig/resolve-key ::websockets [_ {:keys [websockets]}]
+  websockets)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Server
@@ -182,7 +185,7 @@
                                e)))})
       (fmw/wrap-transit-params {:opts {:handlers (transit-reader-handlers)}})
       (wrap-transit-response)
-      (fws/wrap-api (:websockets websockets))
+      (fws/wrap-api websockets)
       wrap-keyword-params
       wrap-params
       (wrap-resource "public")
@@ -206,6 +209,7 @@
   (s/keys :req-un [::manifest-edn ::asset-path]))
 
 (defmethod ig/init-key ::handler [_ config]
+  (println "handler reinit" (:pathom-parser config))
   (make-middleware config))
 
 (defmethod ig/init-key ::server [_ {:keys [handler port]}]

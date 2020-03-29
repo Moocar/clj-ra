@@ -9,7 +9,7 @@
                                {:keys [::user/id]}]
   {::pc/input #{::user/id}
    ::pc/output [::user/id ::user/name]}
-  (println "pulling user" id)
+  (println "pulling users" id)
   (d/pull @conn parent-query [::user/id id]))
 
 (pc/defmutation new-user [{:keys [::db/conn]} {:keys [::user/id]}]
@@ -18,9 +18,10 @@
   (d/transact! conn [{::user/id id}])
   {})
 
-(pc/defmutation save [{:keys [::db/conn]} {:keys [::user/id ::user/name]}]
+(pc/defmutation save [{:keys [::db/conn]} {:keys [::user/id ::user/name] :as input}]
   {::pc/params #{::user/id}
    ::pc/output []}
+  (println "saving user" input)
   (d/transact! conn [[:db/add [::user/id id] ::user/name name]])
   {})
 

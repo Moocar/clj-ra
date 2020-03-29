@@ -16,7 +16,7 @@
                     {:target [:current-user]})))
 
 (defmutation new-user [input]
-  (action [{:keys [state]}]
+  (action [{:keys [state app]}]
           (js/console.log "new user" input)
           (swap! state
                  (fn [s]
