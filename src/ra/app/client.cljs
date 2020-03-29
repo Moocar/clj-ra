@@ -52,7 +52,7 @@
            {::game/current-epoch (comp/get-query Epoch)}
 ;;           {::game/tile-bag (comp/get-query Tile)}
            ::game/id]
-   :ident (fn [] [:component/id :ra.app.game])})
+   :ident ::game/id})
 
 (defsc UserDetails [this {:keys [::user/name] :as input}]
   {:query [::user/id ::user/name]
@@ -70,22 +70,42 @@
 
 (def ui-user-details (comp/factory UserDetails {:keyfn ::user/id}))
 
-(defsc Root [this {:keys [::app/active-remotes :current-user]}]
+(defsc Root [this {:keys [::app/active-remotes :current-user :current-game]}]
   {:query [[::app/active-remotes '_]
-           {:current-user (comp/get-query UserDetails)}]
+           {:current-user (comp/get-query UserDetails)}
+           {:current-game (comp/get-query Game)}]
    :initial-state {}}
-  (if (nil? current-user)
-    (dom/p "loading")
-    (if (str/blank? (::user/name current-user))
-      (ui-user-details current-user)
-      (dom/div {}
-        (when (seq active-remotes)
-          (dom/div :.ui.active.inline.loader))
-        (ui-button {:primary true
-                    :onClick (fn []
-                               (comp/transact! this [(m-game/new-game {})]))}
-                   "New Gamess")
-        (dom/p (str "hi there " (::user/name current-user)))))))
+  (dom/div {}
+    (when (seq active-remotes)
+      (dom/div :.ui.active.inline.loader))
+    (if (nil? current-user)
+      (dom/p "loading")
+      (if (str/blank? (::user/name current-user))
+        (ui-user-details current-user)
+        (dom/div {}
+          (dom/p (str "hi there " (::user/name current-user)))
+          (if (nil? current-game)
+            (ui-button {:primary true
+                        :onClick (fn []
+                                   (comp/transact! this [(m-game/new-game {})]))}
+                       "New Gamess")
+            (dom/p "we have a game?")))))))
+
+(defn init-user-local-storage []
+  (if-let [user-id (-> js/window .-localStorage (.getItem "user.id"))]
+    (comp/transact! client-app/APP [(m-user/use-local-storage-user {:user-id (uuid user-id)})])
+    (comp/transact! client-app/APP [(m-user/init-local-storage {})])))
+
+(defn is-uuid? [s]
+  (re-find #"[a-f0-9]{8}(-[a-f0-9]{4}){4}[a-f0-9]{8}" s))
+
+(defn init-game-from-url []
+  (let [path (-> js/window .-location .-pathname)]
+    (when (str/starts-with? path "/game/")
+      (let [game-id (second (re-find #"/game/(.*)" path))]
+        (when (is-uuid? game-id)
+          (df/load! client-app/APP [::game/id (uuid game-id)] Game
+                    {:target [:current-game]}))))))
 
 (defn ^:export refresh []
   (js/console.log "refresh")
@@ -95,9 +115,5 @@
   (js/console.log "start")
   (js/console.log "mounting")
   (app/mount! client-app/APP Root "app")
-  (if-let [user-id (-> js/window .-localStorage (.getItem "user.id"))]
-    (comp/transact! client-app/APP [(m-user/use-local-storage-user {:user-id (uuid user-id)})])
-    (comp/transact! client-app/APP [(m-user/init-local-storage {})]))
-  (let [url (-> js/window .-location .-href)]
-    (js/console.log "url" url))
-  (dr/initialize! client-app/APP))
+  (init-user-local-storage)
+  (init-game-from-url))
