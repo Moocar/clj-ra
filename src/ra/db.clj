@@ -7,6 +7,8 @@
 
 (def schema
   {
+   :ra.specs.user/id {:db/unique :db.unique/value}
+
    :ra.specs.tile/id {:db/unique :db.unique/value}
 
    :ra.specs.player/id {:db/unique :db.unique/value}

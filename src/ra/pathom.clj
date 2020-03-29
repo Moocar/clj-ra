@@ -5,9 +5,10 @@
             [edn-query-language.core :as eql]
             [ghostwheel.core :as g :refer [=> >defn]]
             [integrant.core :as ig]
+            [io.aviso.exception :as aviso]
             [ra.model.game :as m-game]
             [ra.model.player :as m-player]
-            [io.aviso.exception :as aviso]))
+            [ra.model.user :as m-user]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Dev tools
@@ -76,6 +77,7 @@
 (defn make-resolvers []
   [m-game/resolvers
    m-player/resolvers
+   m-user/resolvers
    index-explorer])
 
 (defn process-error [env err]
