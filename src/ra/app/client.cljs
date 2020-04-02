@@ -39,26 +39,55 @@
            ::player/id
            ::player/score]})
 
-(defsc Epoch [_ _]
+(defsc Epoch [_ {:keys [::epoch/number]}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            {::epoch/ra-tiles (comp/get-query Tile)}
            {::epoch/auction-tiles (comp/get-query Tile)}
            {::epoch/last-ra-invokee (comp/get-query Player)}
-           {::epoch/player-hands (comp/get-query PlayerHand)}]})
+           {::epoch/player-hands (comp/get-query PlayerHand)}]}
+  (dom/p number))
 
-(defsc Game [_ _]
+(def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))
+
+(defsc Game [this {:keys [::game/players
+                          ::game/current-epoch
+                          ::game/started-at
+                          ::game/id
+                          current-player] :as props}]
   {:query [{::game/players (comp/get-query Player)}
            {::game/current-epoch (comp/get-query Epoch)}
            ;;           {::game/tile-bag (comp/get-query Tile)}
            ::game/started-at
+           {[:current-player '_] (comp/get-query Player)}
            ::game/id]
-   :ident ::game/id})
+   :ident ::game/id}
+  (dom/div {}
+    (if (first (filter #(= (::player/id %) (::player/id current-player))
+                       players))
+      (dom/div {}
+        (dom/p "Game players")
+        (dom/ul
+         (map #(dom/li (::player/name %)) players))
+        (if started-at
+          (dom/div {}
+            (dom/p "game started")
+            (ui-epoch current-epoch))
+          (ui-button {:primary true
+                      :onClick (fn []
+                                 (comp/transact! this [(m-game/start-game (select-keys props [::game/id]))]))}
+                     "Start Game")))
+      (ui-button {:primary true
+                  :onClick (fn []
+                             (comp/transact! this [(m-game/join-game {::game/id id ::player/id (::player/id current-player)})]))}
+                 "Join Game"))))
+
+(def ui-game (comp/factory Game {:keyfn ::game/id}))
 
 (defsc PlayerDetails [this {:keys [::player/name] :as input}]
-  {:query [::player/id ::player/name]
+  {:query         [::player/id ::player/name]
    :initial-state {::player/name ""}
-   :ident ::player/id}
+   :ident         ::player/id}
   (dom/div {}
     (ui-input {:label    "Your Name"
                :value    name
@@ -86,31 +115,7 @@
                       :onClick (fn []
                                  (comp/transact! this [(m-game/new-game {})]))}
                      "New Game")
-          (dom/div {}
-            (if (first (filter #(= (::player/id %) (::player/id current-player))
-                               (::game/players current-game)))
-              (dom/div {}
-                (dom/p "Game players")
-                (dom/ul
-                 (map #(dom/li (::player/name %)) (::game/players current-game)))
-                (if (::game/started-at current-game)
-                  (dom/div {}
-                    (dom/p "game started")
-                    (dom/p (::epoch/number (::game/current-epoch current-game))))
-                  (ui-button {:primary true
-                              :onClick (fn []
-                                         (comp/transact! this [(m-game/start-game current-game)]))}
-                             "Start Game")))
-              (ui-button {:primary true
-                          :onClick (fn []
-                                     (comp/transact! this [(m-game/join-game (merge current-player current-game))]))}
-                         "Join Game"))
-            #_(if (::game/started-at current-game)
-              (dom/p (str "Epoch: " (::epoch/number (::game/current-epoch current-game))))
-              (ui-button {:primary true
-                          :onClick (fn []
-                                     (comp/transact! this [(m-game/start-game current-game)]))}
-                         "Start Game"))))))))
+          (ui-game (merge current-game {:current-player current-player})))))))
 
 (defn init-player-local-storage []
   (if-let [player-id (-> js/window .-localStorage (.getItem "player.id"))]
