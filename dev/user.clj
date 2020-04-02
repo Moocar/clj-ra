@@ -9,7 +9,10 @@
             [ra.specs.player :as player]
             [ra.specs.hand :as hand]
             [ra.specs.epoch :as epoch]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [datascript.core :as d]
+            [ra.core :refer [uuid]]
+            [ra.db :as db]))
 
 (repl/disable-reload! (find-ns 'user))
 
@@ -29,6 +32,9 @@
            `[{[::game/id ~game-id]
               [{::game/current-epoch [{::epoch/current-hand [{::hand/player [::player/id]}]}]}]}])
           [::game/current-epoch ::epoch/current-hand ::hand/player ::player/id]))
+
+(defn d [game-id]
+  (datascript.core/touch (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/id (ra.core/uuid game-id)])))
 
 (comment
   (let [parser     (::pathom/parser (s))
@@ -70,5 +76,7 @@
         #p x))
 
     )
+
+
 
   )

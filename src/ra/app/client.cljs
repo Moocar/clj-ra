@@ -15,11 +15,11 @@
             [ra.specs.player :as player]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
-            [ra.specs.user :as user]
+            [ra.specs.player :as player]
             [ra.model.game :as m-game]
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [com.fulcrologic.fulcro.mutations :as m]
-            [ra.model.user :as m-user]
+            [ra.model.player :as m-player]
             [clojure.string :as str]
             [com.fulcrologic.fulcro.data-fetch :as df]))
 
@@ -50,47 +50,72 @@
 (defsc Game [_ _]
   {:query [{::game/players (comp/get-query Player)}
            {::game/current-epoch (comp/get-query Epoch)}
-;;           {::game/tile-bag (comp/get-query Tile)}
+           ;;           {::game/tile-bag (comp/get-query Tile)}
+           ::game/started-at
            ::game/id]
    :ident ::game/id})
 
-(defsc UserDetails [this {:keys [::user/name] :as input}]
-  {:query [::user/id ::user/name]
-   :initial-state {::user/name ""}
-   :ident ::user/id}
+(defsc PlayerDetails [this {:keys [::player/name] :as input}]
+  {:query [::player/id ::player/name]
+   :initial-state {::player/name ""}
+   :ident ::player/id}
   (dom/div {}
     (ui-input {:label    "Your Name"
                :value    name
                :onChange (fn [evt _]
-                           (m/set-string! this ::user/name :event evt))})
+                           (m/set-string! this ::player/name :event evt))})
     (ui-button {:content  "Submit"
                 :primary true
                 :onClick  (fn []
-                            (comp/transact! this [(m-user/save input)] {:refresh [:current-user]}))})))
+                            (comp/transact! this [(m-player/save input)] {:refresh [:current-player]}))})))
 
-(def ui-user-details (comp/factory UserDetails {:keyfn ::user/id}))
+(def ui-player-details (comp/factory PlayerDetails {:keyfn ::player/id}))
 
-(defsc Root [this {:keys [:current-user :current-game]}]
-  {:query [{[:current-user '_] (comp/get-query UserDetails)}
+(defsc Root [this {:keys [:current-player :current-game]}]
+  {:query [{[:current-player '_] (comp/get-query PlayerDetails)}
            {[:current-game '_] (comp/get-query Game)}]
    :initial-state {}}
-  (if (nil? current-user)
+  (if (nil? current-player)
     (dom/p "loadings")
-    (if (str/blank? (::user/name current-user))
-      (ui-user-details current-user)
+    (if (str/blank? (::player/name current-player))
+      (ui-player-details current-player)
       (dom/div {}
-        (dom/p (str "hi there " (::user/name current-user)))
+        (dom/p (str "hi there " (::player/name current-player)))
         (if (nil? current-game)
           (ui-button {:primary true
                       :onClick (fn []
                                  (comp/transact! this [(m-game/new-game {})]))}
-                     "New Gamess")
-          (dom/p "we have a game?"))))))
+                     "New Game")
+          (dom/div {}
+            (if (first (filter #(= (::player/id %) (::player/id current-player))
+                               (::game/players current-game)))
+              (dom/div {}
+                (dom/p "Game players")
+                (dom/ul
+                 (map #(dom/li (::player/name %)) (::game/players current-game)))
+                (if (::game/started-at current-game)
+                  (dom/div {}
+                    (dom/p "game started")
+                    (dom/p (::epoch/number (::game/current-epoch current-game))))
+                  (ui-button {:primary true
+                              :onClick (fn []
+                                         (comp/transact! this [(m-game/start-game current-game)]))}
+                             "Start Game")))
+              (ui-button {:primary true
+                          :onClick (fn []
+                                     (comp/transact! this [(m-game/join-game (merge current-player current-game))]))}
+                         "Join Game"))
+            #_(if (::game/started-at current-game)
+              (dom/p (str "Epoch: " (::epoch/number (::game/current-epoch current-game))))
+              (ui-button {:primary true
+                          :onClick (fn []
+                                     (comp/transact! this [(m-game/start-game current-game)]))}
+                         "Start Game"))))))))
 
-(defn init-user-local-storage []
-  (if-let [user-id (-> js/window .-localStorage (.getItem "user.id"))]
-    (comp/transact! client-app/APP [(m-user/use-local-storage-user {:user-id (uuid user-id)})])
-    (comp/transact! client-app/APP [(m-user/init-local-storage {})])))
+(defn init-player-local-storage []
+  (if-let [player-id (-> js/window .-localStorage (.getItem "player.id"))]
+    (comp/transact! client-app/APP [(m-player/use-local-storage-player {:player-id (uuid player-id)})])
+    (comp/transact! client-app/APP [(m-player/init-local-storage {})])))
 
 (defn is-uuid? [s]
   (re-find #"[a-f0-9]{8}(-[a-f0-9]{4}){4}[a-f0-9]{8}" s))
@@ -111,5 +136,5 @@
   (js/console.log "start")
   (js/console.log "mounting")
   (app/mount! client-app/APP Root "app")
-  (init-user-local-storage)
+  (init-player-local-storage)
   (init-game-from-url))

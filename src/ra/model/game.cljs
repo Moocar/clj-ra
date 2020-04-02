@@ -23,11 +23,10 @@
   (remote [env] true
           (-> env
               (m/returning (game-component))
-              (m/with-target [:current-game])))
-  (ok-action [{:keys [result] :as env}]
-             (let [game-id (get-in result [:body `new-game ::game/id])]
-               (-> js/window
-                   .-history
-                   (.pushState #js{:game-id game-id}
-                               "Ra in progress"
-                               (str "/game/" (str game-id)))))))
+              (m/with-target [:current-game]))))
+
+(defmutation start-game [_]
+  (remote [env] true
+          (-> env
+              (m/returning (game-component))
+              (m/with-target [:current-game]))))

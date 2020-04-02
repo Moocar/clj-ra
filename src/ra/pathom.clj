@@ -8,7 +8,7 @@
             [io.aviso.exception :as aviso]
             [ra.model.game :as m-game]
             [ra.model.player :as m-player]
-            [ra.model.user :as m-user]))
+            [ra.model.player :as m-player]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Dev tools
@@ -77,7 +77,7 @@
 (defn make-resolvers []
   [m-game/resolvers
    m-player/resolvers
-   m-user/resolvers
+   m-player/resolvers
    index-explorer])
 
 (defn process-error [env err]
