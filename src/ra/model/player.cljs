@@ -29,16 +29,16 @@
 
 (defmutation use-local-storage-player [{:keys [player-id]}]
   (action [{:keys [state app]}]
-          (js/console.log "got player id" player-id)
           (df/load! app [::player/id player-id] (player-component)
                     {:post-action (fn [{:keys [result state]}]
-                                    (let [{:keys [body]} result]
-                                      (if (::player/name body)
+                                    (let [{:keys [body]} result
+                                          data (get body [::player/id player-id])]
+                                      (if (::player/name data)
                                         (swap! state
                                                (fn [s]
                                                  (-> s
-                                                     (merge/merge-component (player-component) body)
-                                                     (assoc :current-player [::player/id (::player/id body)]))))
+                                                     (merge/merge-component (player-component) data)
+                                                     (assoc :current-player [::player/id player-id]))))
                                         (comp/transact! app [(init-local-storage {})]))))})))
 
 (defmutation save [_]
