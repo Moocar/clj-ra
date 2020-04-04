@@ -98,7 +98,7 @@
                                                                                  ::player/name]}]}
                                        {::epoch/current-hand [{::hand/player [::player/id
                                                                               ::player/name]}]}
-                                       {::epoch/hands [::hand/tiles
+                                       {::epoch/hands [{::hand/tiles [::tile/title]}
                                                        ::hand/available-sun-disks
                                                        ::hand/used-sun-disks
                                                        ::hand/my-go?

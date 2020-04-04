@@ -8,6 +8,8 @@
             [com.fulcrologic.semantic-ui.elements.input.ui-input :refer [ui-input]]
             [com.fulcrologic.semantic-ui.collections.form.ui-form-field :refer [ui-form-field]]
             [com.fulcrologic.semantic-ui.modules.modal.ui-modal :refer [ui-modal]]
+            [com.fulcrologic.semantic-ui.views.card.ui-card :refer [ui-card]]
+            [com.fulcrologic.semantic-ui.views.card.ui-card-group :refer [ui-card-group]]
             [com.fulcrologic.semantic-ui.modules.modal.ui-modal-actions :refer [ui-modal-actions]]
             [com.fulcrologic.semantic-ui.modules.modal.ui-modal-header :refer [ui-modal-header]]
             [com.fulcrologic.semantic-ui.modules.modal.ui-modal-content :refer [ui-modal-content]]
@@ -25,11 +27,16 @@
             [com.fulcrologic.fulcro.data-fetch :as df]
             [ra.specs.hand :as hand]))
 
-(defsc Tile [_ _]
+(defsc Tile [_ {:keys [::tile/title] :as tile}]
   {:query [::tile/id
            ::tile/title
            ::tile/disaster?
-           ::tile/type]})
+           ::tile/type]}
+  (ui-card {:style {:height "50"
+                    :width "50"}}
+           title))
+
+(def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 
 (defsc Player [_ {:keys [::player/name]}]
   {:query [::player/name
@@ -38,24 +45,35 @@
 
 (def ui-player (comp/factory Player {:keyfn ::player/id}))
 
-(defsc Hand [this {:keys [::hand/available-sun-disks ::hand/seat ::hand/player ::hand/my-go?]}]
+(defsc Hand [this {:keys [::hand/available-sun-disks
+                          ::hand/tiles
+                          ::hand/seat
+                          ::hand/player
+                          ::hand/my-go?]}]
   {:query [::hand/available-sun-disks
            ::hand/my-go?
            ::hand/seat
+           {::hand/tiles (comp/get-query Tile)}
            {::hand/player (comp/get-query Player)}]}
   (dom/div {}
     (ui-player player)
     (dom/p "seat: " seat)
     (dom/p (str "Available sun disks: " (str/join ", " available-sun-disks)))
+    (ui-card-group {} (map ui-tile tiles))
     (when my-go?
-      (ui-button {:primary true
+      (ui-button {:style {:marginTop "10"}
+                  :primary true
                   :onClick (fn []
                              (comp/transact! this [(m-game/draw-tile player)]))}
                  "Draw Tile"))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
 
-(defsc Epoch [_ {:keys [::epoch/number ::epoch/current-sun-disk ::epoch/hands ::epoch/current-hand]}]
+(defsc Epoch [_ {:keys [::epoch/number
+                        ::epoch/auction-tiles
+                        ::epoch/current-sun-disk
+                        ::epoch/hands
+                        ::epoch/current-hand]}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            {::epoch/current-hand [::hand/seat]}
@@ -66,6 +84,7 @@
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (dom/p (str "Middle Sun Disk: " current-sun-disk))
+    (ui-card-group {} (map ui-tile auction-tiles))
     (dom/ul
      (map (fn [{:keys [::hand/seat] :as hand}]
             (if (= seat (::hand/seat current-hand))
