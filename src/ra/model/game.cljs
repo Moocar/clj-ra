@@ -30,3 +30,10 @@
           (-> env
               (m/returning (game-component))
               (m/with-target [:current-game]))))
+
+(defmutation draw-tile [input]
+  (remote [{:keys [state] :as env}]
+          (-> env
+              (m/with-params (merge input {::game/id (get-in @state [:current-game 1])}))
+              (m/returning (game-component))
+              (m/with-target [:current-game]))))

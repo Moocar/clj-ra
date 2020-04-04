@@ -101,11 +101,21 @@
                                        {::epoch/hands [::hand/tiles
                                                        ::hand/available-sun-disks
                                                        ::hand/used-sun-disks
+                                                       ::hand/my-go?
                                                        {::hand/player [::player/id]}]}]}
                 ::game/id]}
-  (-> (d/pull @conn (strip-globals parent-query) [::game/id id])
-      ;; TODO add zdt encoding to websocket transit
-      (update-when ::game/started-at str)))
+  (let [result (d/pull @conn (strip-globals parent-query) [::game/id id])]
+   (-> result
+       ;; TODO add zdt encoding to websocket transit
+       (update-when ::game/started-at str)
+       (update ::game/current-epoch
+               (fn [epoch]
+                 (update epoch ::epoch/hands
+                         (fn [hands]
+                           (map (fn [hand]
+                                  (assoc hand ::hand/my-go? (= (::hand/seat hand)
+                                                               (::hand/seat (::epoch/current-hand epoch)))))
+                                hands))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mutations
@@ -205,16 +215,17 @@
      [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]
      [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]]))
 
-(pc/defmutation draw-tile [{:keys [::db/conn]} input]
+(pc/defmutation draw-tile [{:keys [::db/conn]} {:keys [::game/id] :as input}]
   {::pc/params [::game/id ::player/id]
-   ::pc/output []}
+   ::pc/output [::game/id]}
+  #p input
   (if (not (player-turn? @conn input))
     (throw (ex-info "not your turn" {}))
     (let [tile (sample-tile @conn input)]
       (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
         (d/transact! conn (draw-ra-tx @conn input tile))
         (d/transact! conn (draw-normal-tile-tx @conn input tile)))
-      {})))
+      {::game/id id})))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t

@@ -34,18 +34,24 @@
 (defsc Player [_ {:keys [::player/name]}]
   {:query [::player/name
            ::player/id]}
-  (dom/p name))
+  (dom/p (dom/strong name)))
 
 (def ui-player (comp/factory Player {:keyfn ::player/id}))
 
-(defsc Hand [_ {:keys [::hand/available-sun-disks ::hand/seat ::hand/player]}]
+(defsc Hand [this {:keys [::hand/available-sun-disks ::hand/seat ::hand/player ::hand/my-go?]}]
   {:query [::hand/available-sun-disks
+           ::hand/my-go?
            ::hand/seat
            {::hand/player (comp/get-query Player)}]}
   (dom/div {}
     (ui-player player)
     (dom/p "seat: " seat)
-    (dom/p (str "Available sun disks: " (str/join ", " available-sun-disks)))))
+    (dom/p (str "Available sun disks: " (str/join ", " available-sun-disks)))
+    (when my-go?
+      (ui-button {:primary true
+                  :onClick (fn []
+                             (comp/transact! this [(m-game/draw-tile player)]))}
+                 "Draw Tile"))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
 
