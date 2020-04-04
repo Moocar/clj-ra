@@ -22,7 +22,8 @@
             [com.fulcrologic.fulcro.mutations :as m]
             [ra.model.player :as m-player]
             [clojure.string :as str]
-            [com.fulcrologic.fulcro.data-fetch :as df]))
+            [com.fulcrologic.fulcro.data-fetch :as df]
+            [ra.specs.hand :as hand]))
 
 (defsc Tile [_ _]
   {:query [::tile/id
@@ -30,27 +31,42 @@
            ::tile/disaster?
            ::tile/type]})
 
-(defsc PlayerHand [_ _]
-  {:query [{::player/tiles (comp/get-query Tile)}
-           ::player/sun-disks
-           ::player/id]})
-
-(defsc Player [_ _]
+(defsc Player [_ {:keys [::player/name]}]
   {:query [::player/name
-           ::player/id
-           ::player/score]})
+           ::player/id]}
+  (dom/p name))
 
-(defsc Epoch [_ {:keys [::epoch/number ::epoch/current-sun-disk]}]
+(def ui-player (comp/factory Player {:keyfn ::player/id}))
+
+(defsc Hand [_ {:keys [::hand/available-sun-disks ::hand/seat ::hand/player]}]
+  {:query [::hand/available-sun-disks
+           ::hand/seat
+           {::hand/player (comp/get-query Player)}]}
+  (dom/div {}
+    (ui-player player)
+    (dom/p "seat: " seat)
+    (dom/p (str "Available sun disks: " (str/join ", " available-sun-disks)))))
+
+(def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
+
+(defsc Epoch [_ {:keys [::epoch/number ::epoch/current-sun-disk ::epoch/hands ::epoch/current-hand]}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
+           {::epoch/current-hand [::hand/seat]}
            {::epoch/ra-tiles (comp/get-query Tile)}
            {::epoch/auction-tiles (comp/get-query Tile)}
            {::epoch/last-ra-invokee (comp/get-query Player)}
-           {::epoch/player-hands (comp/get-query PlayerHand)}]}
+           {::epoch/hands (comp/get-query Hand)}]}
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (dom/p (str "Middle Sun Disk: " current-sun-disk))
-    ))
+    (dom/ul
+     (map (fn [{:keys [::hand/seat] :as hand}]
+            (if (= seat (::hand/seat current-hand))
+              (dom/div {:style {:background-color "pink"}}
+                (ui-hand hand))
+              (ui-hand hand)))
+          hands))))
 
 (def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))
 
@@ -70,9 +86,6 @@
     (if (first (filter #(= (::player/id %) (::player/id current-player))
                        players))
       (dom/div {}
-        (dom/p "Game players")
-        (dom/ul
-         (map #(dom/li (::player/name %)) players))
         (if started-at
           (dom/div {}
             (dom/p "game started")
