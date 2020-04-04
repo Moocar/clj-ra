@@ -8,3 +8,12 @@
   (if (contains? m k)
     (apply update m k f args)
     m))
+
+(defn remove-keys
+  [k-pred m]
+  (reduce-kv (fn [a k v]
+               (if (k-pred k)
+                 a
+                 (assoc a k v)))
+             {}
+             m))

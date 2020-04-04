@@ -4,6 +4,7 @@
             [com.fulcrologic.fulcro.application :as app]
             [com.fulcrologic.semantic-ui.elements.button.ui-button :refer [ui-button]]
             [com.fulcrologic.semantic-ui.collections.form.ui-form :refer [ui-form]]
+            [com.fulcrologic.semantic-ui.elements.label.ui-label :refer [ui-label]]
             [com.fulcrologic.semantic-ui.elements.input.ui-input :refer [ui-input]]
             [com.fulcrologic.semantic-ui.collections.form.ui-form-field :refer [ui-form-field]]
             [com.fulcrologic.semantic-ui.modules.modal.ui-modal :refer [ui-modal]]
@@ -39,14 +40,17 @@
            ::player/id
            ::player/score]})
 
-(defsc Epoch [_ {:keys [::epoch/number]}]
+(defsc Epoch [_ {:keys [::epoch/number ::epoch/current-sun-disk]}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            {::epoch/ra-tiles (comp/get-query Tile)}
            {::epoch/auction-tiles (comp/get-query Tile)}
            {::epoch/last-ra-invokee (comp/get-query Player)}
            {::epoch/player-hands (comp/get-query PlayerHand)}]}
-  (dom/p number))
+  (dom/div {}
+    (dom/p (str "Epoch: " number))
+    (dom/p (str "Middle Sun Disk: " current-sun-disk))
+    ))
 
 (def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))
 
@@ -88,9 +92,10 @@
   {:query         [::player/id ::player/name]
    :initial-state {::player/name ""}
    :ident         ::player/id}
+  (js/console.log "input" input)
   (dom/div {}
     (ui-input {:label    "Your Name"
-               :value    name
+               :value    (or name "")
                :onChange (fn [evt _]
                            (m/set-string! this ::player/name :event evt))})
     (ui-button {:content  "Submit"
@@ -100,22 +105,26 @@
 
 (def ui-player-details (comp/factory PlayerDetails {:keyfn ::player/id}))
 
-(defsc Root [this {:keys [:current-player :current-game]}]
+(defsc Root [this {:keys [:current-player :current-game :ui/error-occurred]}]
   {:query [{[:current-player '_] (comp/get-query PlayerDetails)}
-           {[:current-game '_] (comp/get-query Game)}]
+           {[:current-game '_] (comp/get-query Game)}
+           :ui/error-occurred]
    :initial-state {}}
-  (if (nil? current-player)
-    (dom/p "loadings")
-    (if (str/blank? (::player/name current-player))
-      (ui-player-details current-player)
-      (dom/div {}
-        (dom/p (str "hi there " (::player/name current-player)))
-        (if (nil? current-game)
-          (ui-button {:primary true
-                      :onClick (fn []
-                                 (comp/transact! this [(m-game/new-game {})]))}
-                     "New Game")
-          (ui-game (merge current-game {:current-player current-player})))))))
+  (dom/div {}
+    (if (nil? current-player)
+      (dom/p "loadings")
+      (if (str/blank? (::player/name current-player))
+        (ui-player-details current-player)
+        (dom/div {}
+          (dom/p (str "hi there " (::player/name current-player)))
+          (if (nil? current-game)
+            (ui-button {:primary true
+                        :onClick (fn []
+                                   (comp/transact! this [(m-game/new-game {})]))}
+                       "New Game")
+            (ui-game (merge current-game {:current-player current-player}))))))
+    (when error-occurred
+      (ui-label {:color "red"} "ERROR!"))))
 
 (defn init-player-local-storage []
   (if-let [player-id (-> js/window .-localStorage (.getItem "player.id"))]

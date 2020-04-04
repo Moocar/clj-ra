@@ -6,7 +6,7 @@
             [integrant.core :as ig]
             [ra.date :as date]
             [ra.db :as db]
-            [ra.core :refer [update-when]]
+            [ra.core :refer [update-when remove-keys]]
             [ra.model.player :as m-player]
             [ra.model.tile :as m-tile]
             [ra.specs.epoch :as epoch]
@@ -77,6 +77,14 @@
 (defn find-current-epoch [db {game-id ::game/id}]
   (get-in (d/entity db [::game/id game-id]) [::game/current-epoch]))
 
+(defn strip-globals [q]
+  (remove (fn [j]
+            (and (map? j)
+                 (vector? (key (first j)))
+                 (= 2 (count (key (first j))))
+                 (= '_ (second (key (first j))))))
+          q))
+
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
                                {:keys [::game/id]}]
   {::pc/input #{::game/id}
@@ -95,7 +103,7 @@
                                                        ::hand/used-sun-disks
                                                        {::hand/player [::player/id]}]}]}
                 ::game/id]}
-  (-> (d/pull @conn parent-query [::game/id id])
+  (-> (d/pull @conn (strip-globals parent-query) [::game/id id])
       ;; TODO add zdt encoding to websocket transit
       (update-when ::game/started-at str)))
 
@@ -130,27 +138,29 @@
    ::pc/output [::game/id]}
   (if-let [started-at (::game/started-at (d/entity @conn [::game/id game-id]))]
     (throw (ex-info "Game already started" {:started-at started-at}))
-    (let [id-atom      (atom -1)
-          num-players  (find-num-players @conn game-id)
-          player-hands (map (fn [player sun-disks dbid i]
-                              {::hand/available-sun-disks sun-disks
-                               ::hand/player    (:db/id player)
-                               ::hand/seat      i
-                               :db/id           dbid})
-                            (::game/players (d/entity @conn [::game/id game-id]))
-                            (shuffle (get #p sun-disk-sets #p num-players))
-                            (repeatedly #(swap! id-atom dec))
-                            (range))
-          epoch        {::epoch/number           1
-                        ::epoch/current-sun-disk 1
-                        ::epoch/current-hand     (:db/id (first (shuffle player-hands)))
-                        ::epoch/hands            (map :db/id player-hands)
-                        :db/id                   (swap! id-atom dec)}]
-      (d/transact! conn (concat
-                         player-hands
-                         [epoch]
-                         [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
-                          [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))
+    (let [num-players  (find-num-players @conn game-id)]
+      (if (< num-players 2)
+        (throw (ex-info "Need at least two players" {}))
+        (let [id-atom      (atom -1)
+              player-hands (map (fn [player sun-disks dbid i]
+                                  {::hand/available-sun-disks sun-disks
+                                   ::hand/player              (:db/id player)
+                                   ::hand/seat                i
+                                   :db/id                     dbid})
+                                (::game/players (d/entity @conn [::game/id game-id]))
+                                (shuffle (get #p sun-disk-sets #p num-players))
+                                (repeatedly #(swap! id-atom dec))
+                                (range))
+              epoch        {::epoch/number           1
+                            ::epoch/current-sun-disk 1
+                            ::epoch/current-hand     (:db/id (first (shuffle player-hands)))
+                            ::epoch/hands            (map :db/id player-hands)
+                            :db/id                   (swap! id-atom dec)}]
+          (d/transact! conn (concat
+                             player-hands
+                             [epoch]
+                             [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
+                              [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))))
   {::game/id game-id})
 
 ;; TODO next is continue on draw normal tile, (maybe which player is next?) or focus on auctioning

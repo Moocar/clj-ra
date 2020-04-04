@@ -1,6 +1,6 @@
 {:paths ["src" "resources"]
  :deps  {org.clojure/clojure    {:mvn/version "1.10.1"}
-         org.clojure/core.async {:mvn/version "1.0.567"}
+         org.clojure/core.async {:mvn/version "1.1.587"}
 
          ;; For clojure spec
          org.clojure/spec.alpha {:mvn/version "0.2.187"}
@@ -26,7 +26,7 @@
 
          ;; Fulcro
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
-         com.fulcrologic/fulcro {:mvn/version "3.1.19"}
+         com.fulcrologic/fulcro {:mvn/version "3.2.0"}
 
          ;; Websockets
          ;; com.fulcrologic/fulcro-websockets {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro-websockets"}
