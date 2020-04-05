@@ -148,20 +148,22 @@
    ::pc/output [::game/id]}
   (if-let [started-at (::game/started-at (d/entity @conn [::game/id game-id]))]
     (throw (ex-info "Game already started" {:started-at started-at}))
-    (let [num-players  (find-num-players @conn game-id)]
+    (let [num-players (find-num-players @conn game-id)]
       (if (< num-players 2)
         (throw (ex-info "Need at least two players" {}))
         (let [id-atom      (atom -1)
               player-hands (map (fn [player sun-disks dbid i]
                                   {::hand/available-sun-disks sun-disks
                                    ::hand/player              (:db/id player)
+                                   ::hand/id                  (db/uuid)
                                    ::hand/seat                i
                                    :db/id                     dbid})
                                 (::game/players (d/entity @conn [::game/id game-id]))
                                 (shuffle (get #p sun-disk-sets #p num-players))
                                 (repeatedly #(swap! id-atom dec))
                                 (range))
-              epoch        {::epoch/number           1
+              epoch        {::epoch/id               (db/uuid)
+                            ::epoch/number           1
                             ::epoch/current-sun-disk 1
                             ::epoch/current-hand     (:db/id (first (shuffle player-hands)))
                             ::epoch/hands            (map :db/id player-hands)

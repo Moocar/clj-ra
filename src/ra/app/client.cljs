@@ -20,111 +20,13 @@
             [ra.specs.game :as game]
             [ra.specs.player :as player]
             [ra.model.game :as m-game]
+            [ra.app.game :as ui-game]
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [com.fulcrologic.fulcro.mutations :as m]
             [ra.model.player :as m-player]
             [clojure.string :as str]
             [com.fulcrologic.fulcro.data-fetch :as df]
             [ra.specs.hand :as hand]))
-
-(defsc Tile [_ {:keys [::tile/title] :as tile}]
-  {:query [::tile/id
-           ::tile/title
-           ::tile/disaster?
-           ::tile/type]}
-  (ui-card {:style {:height "50"
-                    :width "50"}}
-           title))
-
-(def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
-
-(defsc Player [_ {:keys [::player/name]}]
-  {:query [::player/name
-           ::player/id]}
-  (dom/p (dom/strong name)))
-
-(def ui-player (comp/factory Player {:keyfn ::player/id}))
-
-(defsc Hand [this {:keys [::hand/available-sun-disks
-                          ::hand/tiles
-                          ::hand/seat
-                          ::hand/player
-                          ::hand/my-go?]}]
-  {:query [::hand/available-sun-disks
-           ::hand/my-go?
-           ::hand/seat
-           {::hand/tiles (comp/get-query Tile)}
-           {::hand/player (comp/get-query Player)}]}
-  (dom/div {}
-    (ui-player player)
-    (dom/p "seat: " seat)
-    (dom/p (str "Available sun disks: " (str/join ", " available-sun-disks)))
-    (ui-card-group {} (map ui-tile tiles))
-    (when my-go?
-      (ui-button {:style {:marginTop "10"}
-                  :primary true
-                  :onClick (fn []
-                             (comp/transact! this [(m-game/draw-tile player)]))}
-                 "Draw Tile"))))
-
-(def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
-
-(defsc Epoch [_ {:keys [::epoch/number
-                        ::epoch/auction-tiles
-                        ::epoch/current-sun-disk
-                        ::epoch/hands
-                        ::epoch/current-hand]}]
-  {:query [::epoch/current-sun-disk
-           ::epoch/number
-           {::epoch/current-hand [::hand/seat]}
-           {::epoch/ra-tiles (comp/get-query Tile)}
-           {::epoch/auction-tiles (comp/get-query Tile)}
-           {::epoch/last-ra-invokee (comp/get-query Player)}
-           {::epoch/hands (comp/get-query Hand)}]}
-  (dom/div {}
-    (dom/p (str "Epoch: " number))
-    (dom/p (str "Middle Sun Disk: " current-sun-disk))
-    (ui-card-group {} (map ui-tile auction-tiles))
-    (dom/ul
-     (map (fn [{:keys [::hand/seat] :as hand}]
-            (if (= seat (::hand/seat current-hand))
-              (dom/div {:style {:background-color "pink"}}
-                (ui-hand hand))
-              (ui-hand hand)))
-          hands))))
-
-(def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))
-
-(defsc Game [this {:keys [::game/players
-                          ::game/current-epoch
-                          ::game/started-at
-                          ::game/id
-                          current-player] :as props}]
-  {:query [{::game/players (comp/get-query Player)}
-           {::game/current-epoch (comp/get-query Epoch)}
-           ;;           {::game/tile-bag (comp/get-query Tile)}
-           ::game/started-at
-           {[:current-player '_] (comp/get-query Player)}
-           ::game/id]
-   :ident ::game/id}
-  (dom/div {}
-    (if (first (filter #(= (::player/id %) (::player/id current-player))
-                       players))
-      (dom/div {}
-        (if started-at
-          (dom/div {}
-            (dom/p "game started")
-            (ui-epoch current-epoch))
-          (ui-button {:primary true
-                      :onClick (fn []
-                                 (comp/transact! this [(m-game/start-game (select-keys props [::game/id]))]))}
-                     "Start Game")))
-      (ui-button {:primary true
-                  :onClick (fn []
-                             (comp/transact! this [(m-game/join-game {::game/id id ::player/id (::player/id current-player)})]))}
-                 "Join Game"))))
-
-(def ui-game (comp/factory Game {:keyfn ::game/id}))
 
 (defsc PlayerDetails [this {:keys [::player/name] :as input}]
   {:query         [::player/id ::player/name]
@@ -145,7 +47,7 @@
 
 (defsc Root [this {:keys [:current-player :current-game :ui/error-occurred]}]
   {:query [{[:current-player '_] (comp/get-query PlayerDetails)}
-           {[:current-game '_] (comp/get-query Game)}
+           {[:current-game '_] (comp/get-query ui-game/Game)}
            :ui/error-occurred]
    :initial-state {}}
   (dom/div {}
@@ -160,7 +62,7 @@
                         :onClick (fn []
                                    (comp/transact! this [(m-game/new-game {})]))}
                        "New Game")
-            (ui-game (merge current-game {:current-player current-player}))))))
+            (ui-game/ui-game (merge current-game {:current-player current-player}))))))
     (when error-occurred
       (ui-label {:color "red"} "ERROR!"))))
 
@@ -177,7 +79,7 @@
     (when (str/starts-with? path "/game/")
       (let [game-id (second (re-find #"/game/(.*)" path))]
         (when (is-uuid? game-id)
-          (df/load! client-app/APP [::game/id (uuid game-id)] Game
+          (df/load! client-app/APP [::game/id (uuid game-id)] ui-game/Game
                     {:target [:current-game]}))))))
 
 (defn ^:export refresh []

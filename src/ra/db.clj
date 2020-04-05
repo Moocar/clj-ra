@@ -11,12 +11,14 @@
 
    :ra.specs.tile/id {:db/unique :db.unique/value}
 
+   :ra.specs.hand/id                  {:db/unique :db.unique/value}
    :ra.specs.hand/available-sun-disks {:db/cardinality :db.cardinality/many}
    :ra.specs.hand/used-sun-disks      {:db/cardinality :db.cardinality/many}
    :ra.specs.hand/player              {:db/valueType :db.type/ref}
    :ra.specs.hand/tiles               {:db/cardinality :db.cardinality/many
                                        :db/valueType   :db.type/ref}
 
+   :ra.specs.epoch/id            {:db/unique :db.unique/value}
    :ra.specs.epoch/hands         {:db/cardinality :db.cardinality/many
                                   :db/valueType   :db.type/ref}
    :ra.specs.epoch/auction-tiles {:db/cardinality :db.cardinality/many
@@ -28,11 +30,7 @@
                                  :db/valueType   :db.type/ref}
    :ra.specs.game/players       {:db/cardinality :db.cardinality/many
                                  :db/valueType   :db.type/ref}
-   :ra.specs.game/current-epoch {:db/valueType :db.type/ref}
-
-
-
-   })
+   :ra.specs.game/current-epoch {:db/valueType :db.type/ref}})
 
 (defmethod ig/init-key ::conn [_ _]
   (let [conn (d/create-conn schema)]
