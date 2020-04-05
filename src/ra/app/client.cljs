@@ -41,13 +41,13 @@
     (ui-button {:content  "Submit"
                 :primary true
                 :onClick  (fn []
-                            (comp/transact! this [(m-player/save input)] {:refresh [:current-player]}))})))
+                            (comp/transact! this [(m-player/save input)] {:refresh [:ui/current-player]}))})))
 
 (def ui-player-details (comp/factory PlayerDetails {:keyfn ::player/id}))
 
-(defsc Root [this {:keys [:current-player :current-game :ui/error-occurred]}]
-  {:query [{[:current-player '_] (comp/get-query PlayerDetails)}
-           {[:current-game '_] (comp/get-query ui-game/Game)}
+(defsc Root [this {:keys [:ui/current-player :ui/current-game :ui/error-occurred]}]
+  {:query [{[:ui/current-player '_] (comp/get-query PlayerDetails)}
+           {[:ui/current-game '_] (comp/get-query ui-game/Game)}
            :ui/error-occurred]
    :initial-state {}}
   (dom/div {}
@@ -62,7 +62,7 @@
                         :onClick (fn []
                                    (comp/transact! this [(m-game/new-game {})]))}
                        "New Game")
-            (ui-game/ui-game (merge current-game {:current-player current-player}))))))
+            (ui-game/ui-game (merge current-game {:ui/current-player current-player}))))))
     (when error-occurred
       (ui-label {:color "red"} "ERROR!"))))
 
@@ -80,7 +80,7 @@
       (let [game-id (second (re-find #"/game/(.*)" path))]
         (when (is-uuid? game-id)
           (df/load! client-app/APP [::game/id (uuid game-id)] ui-game/Game
-                    {:target [:current-game]}))))))
+                    {:target [:ui/current-game]}))))))
 
 (defn ^:export refresh []
   (js/console.log "refresh")

@@ -73,14 +73,6 @@
           :where [?gid ::game/tile-bag ?tid]]
         db (:db/id game))))
 
-(defn strip-globals [q]
-  (remove (fn [j]
-            (and (map? j)
-                 (vector? (key (first j)))
-                 (= 2 (count (key (first j))))
-                 (= '_ (second (key (first j))))))
-          q))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Resolvers
 
@@ -103,7 +95,7 @@
                                                        ::hand/my-go?
                                                        {::hand/player [::player/id]}]}]}
                 ::game/id]}
-  (let [result (d/pull @conn (strip-globals parent-query) [::game/id id])]
+  (let [result (d/pull @conn parent-query [::game/id id])]
    (-> result
        ;; TODO add zdt encoding to websocket transit
        (update-when ::game/started-at str)

@@ -106,12 +106,12 @@
                           ::game/current-epoch
                           ::game/started-at
                           ::game/id
-                          current-player] :as props}]
+                          ui/current-player] :as props}]
   {:query [{::game/players (comp/get-query Player)}
            {::game/current-epoch (comp/get-query Epoch)}
            ;;           {::game/tile-bag (comp/get-query Tile)}
            ::game/started-at
-           {[:current-player '_] (comp/get-query Player)}
+           {[:ui/current-player '_] (comp/get-query Player)}
            ::game/id]
    :ident ::game/id}
   (dom/div {}

@@ -16,7 +16,7 @@
                  (fn [s]
                    (-> s
                        (merge/merge-component (player-component) input)
-                       (assoc :current-player [::player/id (::player/id input)])))))
+                       (assoc :ui/current-player [::player/id (::player/id input)])))))
   (remote [env] true))
 
 (defmutation init-local-storage [_]
@@ -38,19 +38,8 @@
                                                (fn [s]
                                                  (-> s
                                                      (merge/merge-component (player-component) data)
-                                                     (assoc :current-player [::player/id player-id]))))
+                                                     (assoc :ui/current-player [::player/id player-id]))))
                                         (comp/transact! app [(init-local-storage {})]))))})))
 
 (defmutation save [_]
   (remote [env] true))
-
-#_(defmutation create-player [_]
-  (action [{:keys [app]}]
-          (let [new-id (random-uuid)]
-            (merge/merge-component!
-             app
-             (comp/registry-key->class :ra.app.client/PlayerDetails)
-             {::player/id   new-id
-              ::player/name ""}
-             :replace [:current-player])
-            (-> js/window .-localStorage (.setItem "player.id" new-id)))))

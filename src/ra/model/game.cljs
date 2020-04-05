@@ -10,7 +10,7 @@
   (remote [env] true
           (-> env
               (m/returning (game-component))
-              (m/with-target [:current-game])))
+              (m/with-target [:ui/current-game])))
   (ok-action [{:keys [result] :as env}]
              (let [game-id (get-in result [:body `new-game ::game/id])]
                (-> js/window
@@ -23,17 +23,17 @@
   (remote [env] true
           (-> env
               (m/returning (game-component))
-              (m/with-target [:current-game]))))
+              (m/with-target [:ui/current-game]))))
 
 (defmutation start-game [_]
   (remote [env] true
           (-> env
               (m/returning (game-component))
-              (m/with-target [:current-game]))))
+              (m/with-target [:ui/current-game]))))
 
 (defmutation draw-tile [input]
   (remote [{:keys [state] :as env}]
           (-> env
-              (m/with-params (merge input {::game/id (get-in @state [:current-game 1])}))
+              (m/with-params (merge input {::game/id (get-in @state [:ui/current-game 1])}))
               (m/returning (game-component))
-              (m/with-target [:current-game]))))
+              (m/with-target [:ui/current-game]))))
