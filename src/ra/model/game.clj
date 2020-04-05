@@ -34,48 +34,44 @@
       #{12 11 6}]})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Queries
+;; Small helpers
 
-(defn find-all-tile-ids [db]
+(defn hand->epoch [hand]
+  (first (::epoch/_current-hand hand)))
+
+(defn epoch->game [epoch]
+  (first (::game/_current-epoch epoch)))
+
+(defn hand->game [hand]
+  (hand->epoch hand)
+  (epoch->game (hand->epoch hand)))
+
+(defn current-hand [game]
+  (-> game
+      ::game/current-epoch
+      ::epoch/current-hand))
+
+(defn game->players [game]
+  (::game/players game))
+
+(defn hand-turn? [hand]
+  (= (:db/id hand)
+     (:db/id (current-hand (hand->game hand)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Bigger helpers
+
+(defn find-all-tiles [db]
   (d/q '[:find [?t ...]
          :where [?t ::tile/type]]
        db))
 
-(defn find-num-players [db game-id]
-  (or (d/q '[:find (count ?pid) .
-             :in $ ?game-id
-             :where [?gid ::game/id ?game-id]
-             [?gid ::game/players ?pid]]
-           db
-           game-id)
-      0))
-
-(defn find-current-player [db {:keys [::game/id]}]
-  (d/q '[:find ?pid .
-         :in $ ?game-id
-         :where [?gid ::game/id ?game-id]
-         [?gid ::game/current-epoch ?eid]
-         [?eid ::epoch/current-hand ?hid]
-         [?hid ::hand/player ?pid]]
-       db id))
-
-(defn sample-tile [db {:keys [::game/id]}]
+(defn sample-tile [db game]
   (first
    (d/q '[:find (sample 1 ?tid) .
-          :in $ ?game-id
-          :where [?gid ::game/id ?game-id]
-          [?gid ::game/tile-bag ?tid]]
-        db id)))
-
-(defn player-turn? [db {player-id ::player/id :as input}]
-  (= (::player/id (d/entity db (find-current-player db input))) player-id))
-
-(defn find-current-hand [db {game-id ::game/id}]
-  (get-in (d/entity db [::game/id game-id])
-          [::game/current-epoch ::epoch/current-hand]))
-
-(defn find-current-epoch [db {game-id ::game/id}]
-  (get-in (d/entity db [::game/id game-id]) [::game/current-epoch]))
+          :in $ ?gid
+          :where [?gid ::game/tile-bag ?tid]]
+        db (:db/id game))))
 
 (defn strip-globals [q]
   (remove (fn [j]
@@ -84,6 +80,9 @@
                  (= 2 (count (key (first j))))
                  (= '_ (second (key (first j))))))
           q))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Resolvers
 
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
                                {:keys [::game/id]}]
@@ -125,19 +124,25 @@
     (doseq [o other-cids]
       (fws-protocols/push websockets o :refresh {::game/id game-id}))))
 
+(defn props->game-id [db props]
+  (cond
+    (::game/id props)  (::game/id props)
+    (::epoch/id props) (::game/id (epoch->game (d/entity db [::epoch/id (::epoch/id props)])))
+    (::hand/id props)  (::game/id (hand->game (d/entity db [::hand/id (::hand/id props)])))))
+
 (defn notify-clients [{:keys [::pc/mutate] :as mutation}]
   (assoc mutation
          ::pc/mutate
-         (fn [env params]
+         (fn [{:keys [::db/conn] :as env} params]
            (let [result (mutate env params)]
-             (when (contains? params ::game/id)
-               (notify-other-clients env (::game/id params)))
+             (when-let [game-id (props->game-id @conn params)]
+               (notify-other-clients env game-id))
              result))))
 
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
    ::pc/output [::game/id]}
-  (let [tile-bag (find-all-tile-ids @conn)
+  (let [tile-bag (find-all-tiles @conn)
         entity   {::game/id          (db/uuid)
                   ::game/tile-bag    tile-bag}]
     (d/transact! conn [entity])
@@ -148,59 +153,61 @@
   {::pc/params [::game/id ::player/id]
    ::pc/transform notify-clients
    ::pc/output [::game/id]}
-  (if (>= (find-num-players @conn game-id) 5)
-    (throw (ex-info "Maximum players already reached" {}))
-    (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]]))
+  (let [game (d/entity @conn [::game/id game-id])]
+    (if (>= (count (game->players game)) 5)
+      (throw (ex-info "Maximum players already reached" {}))
+      (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]])))
   {::game/id game-id})
 
 (pc/defmutation start-game [{:keys [::db/conn]} {game-id ::game/id}]
   {::pc/params [::game/id]
    ::pc/transform notify-clients
    ::pc/output [::game/id]}
-  (if-let [started-at (::game/started-at (d/entity @conn [::game/id game-id]))]
-    (throw (ex-info "Game already started" {:started-at started-at}))
-    (let [num-players (find-num-players @conn game-id)]
-      (if (< num-players 2)
-        (throw (ex-info "Need at least two players" {}))
-        (let [id-atom      (atom -1)
-              player-hands (map (fn [player sun-disks dbid i]
-                                  {::hand/available-sun-disks sun-disks
-                                   ::hand/player              (:db/id player)
-                                   ::hand/id                  (db/uuid)
-                                   ::hand/seat                i
-                                   :db/id                     dbid})
-                                (::game/players (d/entity @conn [::game/id game-id]))
-                                (shuffle (get #p sun-disk-sets #p num-players))
-                                (repeatedly #(swap! id-atom dec))
-                                (range))
-              epoch        {::epoch/id               (db/uuid)
-                            ::epoch/number           1
-                            ::epoch/current-sun-disk 1
-                            ::epoch/current-hand     (:db/id (first (shuffle player-hands)))
-                            ::epoch/hands            (map :db/id player-hands)
-                            :db/id                   (swap! id-atom dec)}]
-          (d/transact! conn (concat
-                             player-hands
-                             [epoch]
-                             [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
-                              [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))))
+  (let [game (d/entity @conn [::game/id game-id])]
+    (if-let [started-at (::game/started-at game)]
+      (throw (ex-info "Game already started" {:started-at started-at}))
+      (let [num-players (count (game->players game))]
+        (if (< num-players 2)
+          (throw (ex-info "Need at least two players" {}))
+          (let [id-atom      (atom -1)
+                player-hands (map (fn [player sun-disks dbid i]
+                                    {::hand/available-sun-disks sun-disks
+                                     ::hand/player              (:db/id player)
+                                     ::hand/id                  (db/uuid)
+                                     ::hand/seat                i
+                                     :db/id                     dbid})
+                                  (::game/players (d/entity @conn [::game/id game-id]))
+                                  (shuffle (get sun-disk-sets num-players))
+                                  (repeatedly #(swap! id-atom dec))
+                                  (range))
+                epoch        {::epoch/id               (db/uuid)
+                              ::epoch/number           1
+                              ::epoch/current-sun-disk 1
+                              ::epoch/current-hand     (:db/id (first (shuffle player-hands)))
+                              ::epoch/hands            (map :db/id player-hands)
+                              :db/id                   (swap! id-atom dec)}]
+            (d/transact! conn (concat
+                               player-hands
+                               [epoch]
+                               [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
+                                [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]])))))))
   {::game/id game-id})
 
 ;; TODO next is continue on draw normal tile, (maybe which player is next?) or focus on auctioning
 
-(defn draw-ra-tx [db input tile]
-  (let [epoch (find-current-epoch db input)
-        hand  (find-current-hand db input)]
-    [[:db/add (:db/id epoch) ::epoch/auction-tiles tile]
-     [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]
+(defn draw-ra-tx [hand tile]
+  (let [epoch (hand->epoch hand)
+        game (epoch->game epoch)]
+    [[:db/retract (:db/id game) ::game/tile-bag tile]
+     [:db/add (:db/id epoch) ::epoch/ra-tiles tile]
      [:db/add (:db/id epoch) ::epoch/in-auction? true]
      [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]))
 
 (defn next-hand [hand]
   (let [db (d/entity-db hand)
         epoch (-> hand ::epoch/_current-hand first)
-        game-id (-> epoch ::game/_current-epoch first ::game/id)
-        num-players (find-num-players db game-id)]
+        game (hand->game hand)
+        num-players (count (game->players game))]
    (if (< (inc (::hand/seat hand)) num-players)
      (d/entity db (d/q '[:find ?hid .
                          :in $ ?epoch-id ?seat-num
@@ -217,29 +224,26 @@
                        (:db/id epoch)
                        0)))))
 
-#_(defn calc-next-hand [db epoch]
-  (loop []
-    (::hand/seat (::epoch/current-hand epoch))))
-
-(defn draw-normal-tile-tx [db input tile]
-  (let [epoch (find-current-epoch db input)
-        hand (find-current-hand db input)]
-    [[:db/add (:db/id hand) ::hand/tiles tile]
-     [:db/retract [::game/id (::game/id input)] ::game/tile-bag tile]
+(defn draw-normal-tile-tx [hand tile]
+  (let [epoch (hand->epoch hand)
+        game (epoch->game epoch)]
+    [[:db/retract (:db/id game) ::game/tile-bag tile]
+     [:db/add (:db/id epoch) ::epoch/auction-tiles tile]
      [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]]))
 
-(pc/defmutation draw-tile [{:keys [::db/conn]} {:keys [::game/id] :as input}]
-  {::pc/params [::game/id ::player/id]
+(pc/defmutation draw-tile [{:keys [::db/conn]} input]
+  {::pc/params [::hand/id]
    ::pc/transform notify-clients
    ::pc/output [::game/id]}
-  #p input
-  (if (not (player-turn? @conn input))
-    (throw (ex-info "not your turn" {}))
-    (let [tile (sample-tile @conn input)]
-      (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
-        (d/transact! conn (draw-ra-tx @conn input tile))
-        (d/transact! conn (draw-normal-tile-tx @conn input tile)))
-      {::game/id id})))
+  (let [hand (d/entity @conn [::hand/id (::hand/id input)])
+        game (hand->game hand)]
+    (if (not (hand-turn? hand))
+      (throw (ex-info "not your turn" {}))
+      (let [tile (sample-tile @conn game)]
+        (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
+          (d/transact! conn (draw-ra-tx hand tile))
+          (d/transact! conn (draw-normal-tile-tx hand tile)))
+        {::game/id (::game/id (hand->game hand))}))))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t

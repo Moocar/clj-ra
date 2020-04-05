@@ -48,6 +48,7 @@
 (defsc Hand [this {:keys [::hand/available-sun-disks
                           ::hand/tiles
                           ::hand/seat
+                          ::hand/id
                           ::hand/player
                           ::hand/my-go?]}]
   {:query [::hand/available-sun-disks
@@ -66,13 +67,14 @@
       (ui-button {:style {:marginTop "10"}
                   :primary true
                   :onClick (fn []
-                             (comp/transact! this [(m-game/draw-tile player)]))}
+                             (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
                  "Draw Tile"))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
 
 (defsc Epoch [_ {:keys [::epoch/number
                         ::epoch/auction-tiles
+                        ::epoch/ra-tiles
                         ::epoch/current-sun-disk
                         ::epoch/hands
                         ::epoch/current-hand]}]
@@ -88,6 +90,7 @@
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (dom/p (str "Middle Sun Disk: " current-sun-disk))
+    (ui-card-group {} (map ui-tile ra-tiles))
     (ui-card-group {} (map ui-tile auction-tiles))
     (dom/ul
      (map (fn [{:keys [::hand/seat] :as hand}]

@@ -106,4 +106,4 @@
                                         (repeatedly num #(swap! id inc)))))
                     [])
          shuffle
-         (take 8))))
+         (take 64))))
