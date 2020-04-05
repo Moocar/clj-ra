@@ -120,23 +120,33 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mutations
 
-(defn notify-other-clients [{:keys [connected-uids cid websockets]}]
+(defn notify-other-clients [{:keys [connected-uids cid websockets]} game-id]
   (let [other-cids (disj (:any @connected-uids) cid)]
     (doseq [o other-cids]
-      (fws-protocols/push websockets o :refresh {:now :yes}))))
+      (fws-protocols/push websockets o :refresh {::game/id game-id}))))
 
-(pc/defmutation new-game [{:keys [::db/conn] :as env} _]
+(defn notify-clients [{:keys [::pc/mutate] :as mutation}]
+  (assoc mutation
+         ::pc/mutate
+         (fn [env params]
+           (let [result (mutate env params)]
+             (when (contains? params ::game/id)
+               (notify-other-clients env (::game/id params)))
+             result))))
+
+(pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
    ::pc/output [::game/id]}
   (let [tile-bag (find-all-tile-ids @conn)
         entity   {::game/id          (db/uuid)
                   ::game/tile-bag    tile-bag}]
     (d/transact! conn [entity])
-    (notify-other-clients env)
     entity))
 
-(pc/defmutation join-game [{:keys [::db/conn]} {game-id ::game/id player-id ::player/id}]
+(pc/defmutation join-game [{:keys [::db/conn]}
+                           {game-id ::game/id player-id ::player/id}]
   {::pc/params [::game/id ::player/id]
+   ::pc/transform notify-clients
    ::pc/output [::game/id]}
   (if (>= (find-num-players @conn game-id) 5)
     (throw (ex-info "Maximum players already reached" {}))
@@ -145,6 +155,7 @@
 
 (pc/defmutation start-game [{:keys [::db/conn]} {game-id ::game/id}]
   {::pc/params [::game/id]
+   ::pc/transform notify-clients
    ::pc/output [::game/id]}
   (if-let [started-at (::game/started-at (d/entity @conn [::game/id game-id]))]
     (throw (ex-info "Game already started" {:started-at started-at}))
@@ -219,6 +230,7 @@
 
 (pc/defmutation draw-tile [{:keys [::db/conn]} {:keys [::game/id] :as input}]
   {::pc/params [::game/id ::player/id]
+   ::pc/transform notify-clients
    ::pc/output [::game/id]}
   #p input
   (if (not (player-turn? @conn input))

@@ -53,8 +53,10 @@
   {:query [::hand/available-sun-disks
            ::hand/my-go?
            ::hand/seat
+           ::hand/id
            {::hand/tiles (comp/get-query Tile)}
-           {::hand/player (comp/get-query Player)}]}
+           {::hand/player (comp/get-query Player)}]
+   :ident ::hand/id}
   (dom/div {}
     (ui-player player)
     (dom/p "seat: " seat)
@@ -76,11 +78,13 @@
                         ::epoch/current-hand]}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
+           ::epoch/id
            {::epoch/current-hand [::hand/seat]}
            {::epoch/ra-tiles (comp/get-query Tile)}
            {::epoch/auction-tiles (comp/get-query Tile)}
            {::epoch/last-ra-invokee (comp/get-query Player)}
-           {::epoch/hands (comp/get-query Hand)}]}
+           {::epoch/hands (comp/get-query Hand)}]
+   :ident ::epoch/id}
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (dom/p (str "Middle Sun Disk: " current-sun-disk))
@@ -88,7 +92,7 @@
     (dom/ul
      (map (fn [{:keys [::hand/seat] :as hand}]
             (if (= seat (::hand/seat current-hand))
-              (dom/div {:style {:background-color "pink"}}
+              (dom/div {:style {:backgroundColor "pink"}}
                 (ui-hand hand))
               (ui-hand hand)))
           hands))))

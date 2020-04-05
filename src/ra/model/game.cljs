@@ -4,7 +4,7 @@
             [ra.specs.game :as game]))
 
 (defn game-component []
-  (comp/registry-key->class :ra.app.client/Game))
+  (comp/registry-key->class :ra.app.game/Game))
 
 (defmutation new-game [_]
   (remote [env] true

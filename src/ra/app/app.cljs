@@ -3,7 +3,9 @@
             [com.fulcrologic.fulcro.networking.websockets :as fws]
             [com.fulcrologic.fulcro.application :as app]
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
-            [com.fulcrologic.fulcro.components :as comp]))
+            [com.fulcrologic.fulcro.components :as comp]
+            [ra.specs.game :as game]
+            [com.fulcrologic.fulcro.data-fetch :as df]))
 
 (defmutation hide-error [_]
   (action [{:keys [state app]}]
@@ -19,5 +21,7 @@
    {:remotes {;; :remote (http/fulcro-http-remote {:url "/api"})
               :remote (fws/fulcro-websocket-remote
                        {:push-handler (fn [{:keys [topic msg] :as all}]
-                                        (js/console.log "received" all))
+                                        (let [{:keys [::game/id]} msg]
+                                          (js/console.log "firing load!" all)
+                                          (df/load! APP [::game/id id] (comp/registry-key->class :ra.app.game/Game))))
                         :global-error-callback #(comp/transact! APP [(show-error {})] )})}}))
