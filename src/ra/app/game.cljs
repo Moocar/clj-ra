@@ -64,11 +64,17 @@
     (dom/p (str "Available sun disks: " (str/join ", " available-sun-disks)))
     (ui-card-group {} (map ui-tile tiles))
     (when my-go?
-      (ui-button {:style {:marginTop "10"}
-                  :primary true
-                  :onClick (fn []
-                             (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
-                 "Draw Tile"))))
+      (dom/div {}
+        (ui-button {:style   {:marginTop "10"}
+                    :primary true
+                    :onClick (fn []
+                               (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
+                   "Draw Tile")
+        (ui-button {:style   {:marginTop "10"}
+                    :primary true
+                    :onClick (fn []
+                               (comp/transact! this [(m-game/invoke-ra {::hand/id id})]))}
+                   "Invoke Ra")))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
 

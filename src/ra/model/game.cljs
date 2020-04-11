@@ -37,3 +37,9 @@
               (m/with-params (merge input {::game/id (get-in @state [:ui/current-game 1])}))
               (m/returning (game-component))
               (m/with-target [:ui/current-game]))))
+
+(defmutation invoke-ra [_]
+  (remote [{:keys [state] :as env}]
+          (-> env
+              (m/returning (game-component))
+              (m/with-target [:ui/current-game]))))

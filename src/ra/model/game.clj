@@ -1,21 +1,66 @@
 (ns ra.model.game
-  (:require [com.wsscode.pathom.connect :as pc]
+  (:require [com.fulcrologic.fulcro.networking.websocket-protocols
+             :as
+             fws-protocols]
+            [com.wsscode.pathom.connect :as pc]
             [com.wsscode.pathom.core :as p]
             [datascript.core :as d]
             [ghostwheel.core :as g]
             [integrant.core :as ig]
+            [ra.core :refer [remove-keys update-when]]
             [ra.date :as date]
             [ra.db :as db]
-            [ra.core :refer [update-when remove-keys]]
             [ra.model.player :as m-player]
             [ra.model.tile :as m-tile]
+            [ra.specs.auction :as auction]
+            [ra.specs.auction.reason :as auction-reason]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
-            [com.fulcrologic.fulcro.networking.websocket-protocols :as fws-protocols]))
+            [ra.specs.tile.type :as tile-type]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Rules
+
+;; Start Epoch
+;; - current hand = player with highest sun disk
+;; - Cannot be your turn if you have no tiles
+;;
+;; Actions
+;; - Draw Tile
+;; - Invoke Ra
+;; - Spend God Tile
+;;
+;; Draw Tile
+;; - If Ra token is drawn:
+;;   - If Ra track becomes full, epoch ends. New epoch created, and that becomes current epoch
+;;   - Start Auction minigame
+;; - Regardless, it is the player to the left's turn (unless they have no sun disks)
+;;
+;; Invoke Ra
+;; - Start Auction minigame
+;; - Then it is the player to the left's turn
+;;
+;; Spend God tiles
+;; - Can spend multiple god tiles at once
+;; - Player to left's turn
+;;
+;; Auction
+;; - Person who invoked Ra is "ra player"
+;; - track reason for auction. draw tile, or voluntary
+;; - need to track whether the auction track is full
+;; - 1st player is to the left of the ra player
+;; - Each player may wither bid or pass
+;; - At end of auction, if no players have sun disks, epoch ends
+;;
+;; Current hand logic:
+;; - if in auction, then
+;;   - if no bids, left of ra player
+;;   - else, loop until find player who can bid (has sun disk or sun disks > current bid)
+;; - else
+;;   - left of last hand to perform action. Store this when any action occurs
 
 (def sun-disk-sets
   {2 [#{9 6 5 2}
@@ -185,8 +230,6 @@
                                 [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]])))))))
   {::game/id game-id})
 
-;; TODO next is continue on draw normal tile, (maybe which player is next?) or focus on auctioning
-
 (defn draw-ra-tx [hand tile]
   (let [epoch (hand->epoch hand)
         game (epoch->game epoch)]
@@ -195,26 +238,27 @@
      [:db/add (:db/id epoch) ::epoch/in-auction? true]
      [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]))
 
-(defn next-hand [hand]
-  (let [db (d/entity-db hand)
-        epoch (-> hand ::epoch/_current-hand first)
-        game (hand->game hand)
+(defn find-hand-by-seat [db epoch seat]
+  (d/entity db (d/q '[:find ?hid .
+                      :in $ ?epoch-id ?seat-num
+                      :where [?epoch-id ::epoch/hands ?hid]
+                      [?hid ::hand/seat ?seat-num]]
+                    db
+                    (:db/id epoch)
+                    seat)))
+
+(defn next-hand [current-hand]
+  (let [db (d/entity-db current-hand)
+        epoch (hand->epoch current-hand)
+        game (hand->game current-hand)
         num-players (count (game->players game))]
-   (if (< (inc (::hand/seat hand)) num-players)
-     (d/entity db (d/q '[:find ?hid .
-                         :in $ ?epoch-id ?seat-num
-                         :where [?epoch-id ::epoch/hands ?hid]
-                         [?hid ::hand/seat ?seat-num]]
-                       db
-                       (:db/id epoch)
-                       (inc (::hand/seat hand))))
-     (d/entity db (d/q '[:find ?hid .
-                         :in $ ?epoch-id ?seat-num
-                         :where [?epoch-id ::epoch/hands ?hid]
-                         [?hid ::hand/seat ?seat-num]]
-                       db
-                       (:db/id epoch)
-                       0)))))
+    (loop [seat (inc (::hand/seat current-hand))]
+      (if (>= seat num-players)
+        (recur 0)
+        (let [hand (find-hand-by-seat db epoch seat)]
+          (if (empty? (::hand/available-sun-disks hand))
+            (recur (inc seat))
+            hand))))))
 
 (defn draw-normal-tile-tx [hand tile]
   (let [epoch (hand->epoch hand)
@@ -237,6 +281,31 @@
           (d/transact! conn (draw-normal-tile-tx hand tile)))
         {::game/id (::game/id (hand->game hand))}))))
 
+(defn auction-track-full? [epoch]
+  (= 8 (count (::epoch/auction-track epoch))))
+
+(defn start-auction-tx [{:keys [hand auction-reason epoch]}]
+  (let [auction-id -1]
+    [[:db/add auction-id ::auction/ra-hand (:db/id hand)]
+     [:db/add auction-id ::auction/reason auction-reason]
+     [:db/add auction-id ::auction/track-full? (auction-track-full? epoch)]
+     [:db/add (:db/id epoch) ::epoch/auction auction-id]]))
+
+(defn current-hand-tx [epoch hand]
+  [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]])
+
+(pc/defmutation invoke-ra [{:keys [::db/conn]} input]
+  {::pc/params #{::hand/id}
+   ::pc/transform notify-clients
+   ::pc/output [::game/id]}
+  (let [hand (d/entity @conn [::hand/id (::hand/id input)])
+        epoch (hand->epoch hand)]
+    (d/transact! conn (concat (start-auction-tx {:hand           hand
+                                                 :auction-reason ::auction-reason/invoke
+                                                 :epoch          epoch})
+                              (current-hand-tx epoch hand)))
+    {::game/id (::game/id (hand->game hand))}))
+
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t
                      :where [?t ::tile/type]]
@@ -246,6 +315,7 @@
 
 (def resolvers
   [draw-tile
+   invoke-ra
    join-game
    new-game
    start-game
