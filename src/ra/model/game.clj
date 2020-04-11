@@ -129,6 +129,8 @@
                 ::game/started-at
                 {::game/current-epoch [::epoch/number
                                        ::epoch/current-sun-disk
+                                       {::epoch/auction [::auction/reason
+                                                         {::auction/ra-hand [::hand/id]}]}
                                        ::epoch/in-auction?
                                        {::epoch/last-ra-invokee [{::hand/player [::player/id
                                                                                  ::player/name]}]}

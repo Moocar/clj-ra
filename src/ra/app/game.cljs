@@ -16,6 +16,7 @@
             [ra.app.app :as client-app]
             [ra.specs.tile :as tile]
             [ra.specs.player :as player]
+            [ra.specs.auction :as auction]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.player :as player]
@@ -78,15 +79,23 @@
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
 
+(defsc Auction [this {:keys [::auction/reason]}]
+  {:query [::auction/reason]}
+  (dom/p "Yes, an auction " (str reason)))
+
+(def ui-auction (comp/factory Auction))
+
 (defsc Epoch [_ {:keys [::epoch/number
                         ::epoch/auction-tiles
                         ::epoch/ra-tiles
                         ::epoch/current-sun-disk
+                        ::epoch/auction
                         ::epoch/hands
                         ::epoch/current-hand]}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            ::epoch/id
+           {::epoch/auction (comp/get-query Auction)}
            {::epoch/current-hand [::hand/seat]}
            {::epoch/ra-tiles (comp/get-query Tile)}
            {::epoch/auction-tiles (comp/get-query Tile)}
@@ -96,6 +105,8 @@
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (dom/p (str "Middle Sun Disk: " current-sun-disk))
+    (when auction
+      (ui-auction auction))
     (ui-card-group {} (map ui-tile ra-tiles))
     (ui-card-group {} (map ui-tile auction-tiles))
     (dom/ul

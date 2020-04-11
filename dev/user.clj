@@ -34,7 +34,14 @@
           [::game/current-epoch ::epoch/current-hand ::hand/player ::player/id]))
 
 (defn d [game-id]
-  (datascript.core/touch (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/id (ra.core/uuid game-id)])))
+  (some-> (datascript.core/touch (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/id (ra.core/uuid game-id)]))
+          :ra.specs.game/current-epoch
+          d/touch
+;;          :ra.specs.epoch/current-hand
+          ;;          d/touch
+          ;; :ra.specs.epoch/auction
+          ;;d/touch
+          ))
 
 (comment
   (let [parser     (::pathom/parser (s))
