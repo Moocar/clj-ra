@@ -28,15 +28,23 @@
             [ra.model.player :as m-player]
             [clojure.string :as str]
             [com.fulcrologic.fulcro.data-fetch :as df]
-            [ra.specs.hand :as hand]))
+            [ra.specs.hand :as hand]
+            [ra.specs.auction.bid :as bid]))
 
-(defn ui-sun-disk [v]
+(defn ui-clickable-sun-disk [{:keys [onClick value]}]
+  (ui-button {:circular true
+              :color    "brown"
+              :key      value
+              :onClick  (fn [_] (onClick))}
+            (str value)))
+
+(defn ui-sun-disk [{:keys [value]}]
   (ui-label {:circular true
              :color    "brown"
-             :key      v}
-            v))
+             :key      value}
+            (str value)))
 
-(defsc Tile [_ {:keys [::tile/title] :as tile}]
+(defsc Tile [_ {:keys [::tile/title]}]
   {:query [::tile/id
            ::tile/title
            ::tile/disaster?
@@ -54,12 +62,14 @@
 
 (def ui-player (comp/factory Player {:keyfn ::player/id}))
 
-(defsc Hand [this {:keys [::hand/available-sun-disks
-                          ::hand/tiles
-                          ::hand/seat
-                          ::hand/id
-                          ::hand/player
-                          ::hand/my-go?]}]
+(defsc Hand [this
+             {:keys [::hand/available-sun-disks
+                     ::hand/tiles
+                     ::hand/seat
+                     ::hand/id
+                     ::hand/player
+                     ::hand/my-go?]}
+             {:keys [onClickSunDisk]}]
   {:query [::hand/available-sun-disks
            ::hand/my-go?
            ::hand/seat
@@ -70,9 +80,14 @@
   (ui-segment {}
               (dom/span (ui-player player) " - "
                         (str "seat: " seat))
-    (ui-segment {:compact true}
-      (dom/div {}
-        (map ui-sun-disk available-sun-disks)))
+              (ui-segment {:compact true}
+                          (dom/div {}
+                            (map (fn [sun-disk]
+                                   (if onClickSunDisk
+                                     (ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
+                                                             :value sun-disk})
+                                     (ui-sun-disk {:value sun-disk})))
+                                 available-sun-disks)))
     (ui-segment {:compact true}
                 (ui-card-group {} (map ui-tile tiles)))
     (when my-go?
@@ -90,19 +105,28 @@
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
 
-(defsc Auction [this {:keys [::auction/reason]}]
-  {:query [::auction/reason]}
-  (dom/p "Yes, an auction " (str reason)))
+(defsc Auction [this {:keys [::auction/reason ::auction/bids]}]
+  {:query [::auction/reason
+           {::auction/bids [{::bid/hand [{::hand/player [::player/name]}]}
+                            ::bid/sun-disk]}]}
+  (ui-segment {:compact true}
+              (dom/h3 "bids")
+              (dom/div {}
+                (map (fn [{:keys [::bid/hand ::bid/sun-disk]}]
+                       (dom/div {}
+                         (ui-sun-disk {:value sun-disk})
+                         (get-in hand [::hand/player ::player/name])))
+                     bids))))
 
 (def ui-auction (comp/factory Auction))
 
-(defsc Epoch [_ {:keys [::epoch/number
-                        ::epoch/auction-tiles
-                        ::epoch/ra-tiles
-                        ::epoch/current-sun-disk
-                        ::epoch/auction
-                        ::epoch/hands
-                        ::epoch/current-hand]}]
+(defsc Epoch [this {:keys [::epoch/number
+                           ::epoch/auction-tiles
+                           ::epoch/ra-tiles
+                           ::epoch/current-sun-disk
+                           ::epoch/auction
+                           ::epoch/hands
+                           ::epoch/current-hand]}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            ::epoch/id
@@ -119,7 +143,7 @@
                 (dom/strong "Ra track")
                 (ui-card-group {} (map ui-tile ra-tiles)))
     (ui-segment {:compact "true"}
-                (ui-sun-disk current-sun-disk))
+                (ui-sun-disk {:value current-sun-disk}))
     (ui-segment {:compact true}
                 (dom/strong "Aucion track")
                 (ui-card-group {} (map ui-tile auction-tiles)))
@@ -129,7 +153,13 @@
                 (dom/h3 "Seats")
                 (ui-segment-group {:horizontal true}
                                   (map (fn [{:keys [::hand/seat] :as hand}]
-                                         (ui-hand hand)
+                                         (ui-hand
+                                          (if auction
+                                            (comp/computed hand {:onClickSunDisk (fn [sun-disk]
+                                                                                   (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})])
+                                                                                   (js/console.log "sun disk clicked" sun-disk))})
+                                            hand))
+
                         #_(if (= seat (::hand/seat current-hand))
                           (ui-segment dom/div {:style {:backgroundColor "pink"}}
                             (ui-hand hand))

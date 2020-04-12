@@ -18,6 +18,11 @@
    :ra.specs.hand/tiles               {:db/cardinality :db.cardinality/many
                                        :db/valueType   :db.type/ref}
 
+   :ra.specs.bid/hand {:db/valueType   :db.type/ref}
+
+   :ra.specs.auction/bids {:db/cardinality :db.cardinality/many
+                           :db/valueType   :db.type/ref}
+
    :ra.specs.epoch/auction {:db/valueType   :db.type/ref}
 
    :ra.specs.epoch/id            {:db/unique :db.unique/value}

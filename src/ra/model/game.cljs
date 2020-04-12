@@ -43,3 +43,9 @@
           (-> env
               (m/returning (game-component))
               (m/with-target [:ui/current-game]))))
+
+(defmutation bid [_]
+  (remote [{:keys [state] :as env}]
+          (-> env
+              (m/returning (game-component))
+              (m/with-target [:ui/current-game]))))

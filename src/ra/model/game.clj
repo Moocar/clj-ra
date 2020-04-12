@@ -13,6 +13,7 @@
             [ra.model.player :as m-player]
             [ra.model.tile :as m-tile]
             [ra.specs.auction :as auction]
+            [ra.specs.auction.bid :as bid]
             [ra.specs.auction.reason :as auction-reason]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
@@ -308,6 +309,27 @@
                               (current-hand-tx epoch hand)))
     {::game/id (::game/id (hand->game hand))}))
 
+(defn play-bid-tx [{:keys [hand auction sun-disk]}]
+  (let [bid-id -1]
+    [[:db/add (:db/id auction) ::auction/bids bid-id]
+     [:db/add bid-id ::bid/hand (:db/id hand)]
+     [:db/add bid-id ::bid/sun-disk sun-disk]
+     [:db/retract (:db/id hand) ::hand/available-sun-disks sun-disk]]))
+
+(pc/defmutation bid [{:keys [::db/conn]} {:keys [sun-disk] :as input}]
+  {::pc/params    #{::hand/id :sun-disk}
+   ::pc/transform notify-clients
+   ::pc/output    [::game/id]}
+  (let [hand    (d/entity @conn [::hand/id (::hand/id input)])
+        epoch   (hand->epoch hand)
+        auction (::epoch/auction epoch)]
+    (if (not (::epoch/auction epoch))
+      (throw (ex-info "Not in auction" {}))
+      (d/transact! conn (play-bid-tx {:hand     hand
+                                      :sun-disk sun-disk
+                                      :auction  auction})))
+    {::game/id (::game/id (hand->game hand))}))
+
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t
                      :where [?t ::tile/type]]
@@ -316,7 +338,8 @@
       (d/transact! conn (m-tile/new-bag)))))
 
 (def resolvers
-  [draw-tile
+  [bid
+   draw-tile
    invoke-ra
    join-game
    new-game
