@@ -12,7 +12,9 @@
             [ra.specs.tile :as tile]
             [datascript.core :as d]
             [ra.core :refer [uuid]]
-            [ra.db :as db]))
+            [ra.db :as db]
+            [ra.specs.auction :as auction]
+            [ra.specs.auction.bid :as bid]))
 
 (repl/disable-reload! (find-ns 'user))
 
@@ -33,10 +35,35 @@
               [{::game/current-epoch [{::epoch/current-hand [{::hand/player [::player/id]}]}]}]}])
           [::game/current-epoch ::epoch/current-hand ::hand/player ::player/id]))
 
+(defn print-game [{::game/keys [current-epoch id] :as g}]
+  (println "game-id: " id)
+  (let [{::epoch/keys [auction current-sun-disk number hands current-hand] :as epoch} (d/touch current-epoch)]
+    (println "current epoch:" number)
+    (println "current-sun disk:" current-sun-disk)
+    (println "current-hand" (::hand/seat current-hand))
+    (println)
+    (when auction
+      (let [{::auction/keys [ra-hand reason track-full? bids]} auction]
+        (println "Auction")
+        (println (d/touch auction))
+        (println "Ra hand" (::hand/seat ra-hand))
+        (println "Ra reason" reason)
+        (println "track full?" track-full?)
+        (println "Bids" (map (fn [{bid-hand ::bid/hand sun-disk ::bid/sun-disk}]
+                               [(::hand/seat bid-hand) sun-disk])
+                             bids))
+        (println)))
+    (println "hands")
+    (doseq [hand (sort-by ::hand/seat hands)]
+      (let [{::hand/keys [available-sun-disks seat] :as hand} (d/touch hand)]
+        (println "------hand" seat)
+        (println "available sun disks:" (sort (vec available-sun-disks))))))
+  (println ))
+
 (defn d [game-id]
   (some-> (datascript.core/touch (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/id (ra.core/uuid game-id)]))
-          :ra.specs.game/current-epoch
-          d/touch
+          ;; :ra.specs.game/current-epoch
+          ;; d/touch
 ;;          :ra.specs.epoch/current-hand
           ;;          d/touch
           ;; :ra.specs.epoch/auction

@@ -325,9 +325,11 @@
         auction (::epoch/auction epoch)]
     (if (not (::epoch/auction epoch))
       (throw (ex-info "Not in auction" {}))
-      (d/transact! conn (play-bid-tx {:hand     hand
-                                      :sun-disk sun-disk
-                                      :auction  auction})))
+      (d/transact! conn (concat
+                         (play-bid-tx {:hand     hand
+                                       :sun-disk sun-disk
+                                       :auction  auction})
+                         (current-hand-tx epoch hand))))
     {::game/id (::game/id (hand->game hand))}))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
