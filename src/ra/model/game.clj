@@ -266,20 +266,6 @@
   (do-start-game conn game-id)
   {::game/id game-id})
 
-(defn move-tile-tx [tile from to]
-  (let [[from-entity from-attr] from
-        [to-entity to-attr]     to]
-    [[:db/retract (:db/id from-entity) from-attr (:db/id tile)]
-     [:db/add (:db/id to-entity) to-attr (:db/id tile)]]))
-
-(defn draw-ra-tx [hand tile]
-  (let [epoch (hand->epoch hand)
-        game  (epoch->game epoch)]
-    (concat
-     (move-tile-tx tile [game ::game/tile-bag] [epoch ::epoch/ra-tiles])
-     [[:db/add (:db/id epoch) ::epoch/in-auction? true]
-      [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]])))
-
 (defn find-hand-by-seat [db epoch seat]
   (d/entity db (d/q '[:find ?hid .
                       :in $ ?epoch-id ?seat-num
@@ -302,6 +288,49 @@
             (recur (inc seat))
             hand))))))
 
+(defn current-hand-tx [epoch hand]
+  [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]])
+
+(defn auction-track-full? [epoch]
+  (= 8 (count (::epoch/auction-track epoch))))
+
+(defn start-auction-tx [{:keys [hand auction-reason epoch]}]
+  (let [auction-id -1]
+    [[:db/add auction-id ::auction/ra-hand (:db/id hand)]
+     [:db/add auction-id ::auction/reason auction-reason]
+     [:db/add auction-id ::auction/track-full? (auction-track-full? epoch)]
+     [:db/add (:db/id epoch) ::epoch/auction auction-id]]))
+
+(defn invoke-ra-tx [hand reason]
+  (let [epoch (hand->epoch hand)]
+    (concat (start-auction-tx {:hand           hand
+                               :auction-reason reason
+                               :epoch          epoch})
+            (current-hand-tx epoch hand))))
+
+(pc/defmutation invoke-ra [{:keys [::db/conn]} input]
+  {::pc/params #{::hand/id}
+   ::pc/transform notify-clients
+   ::pc/output [::game/id]}
+  (let [hand (d/entity @conn [::hand/id (::hand/id input)])]
+    (d/transact! conn (invoke-ra-tx hand ::auction-reason/invoke))
+    {::game/id (::game/id (hand->game hand))}))
+
+(defn move-tile-tx [tile from to]
+  (let [[from-entity from-attr] from
+        [to-entity to-attr]     to]
+    [[:db/retract (:db/id from-entity) from-attr (:db/id tile)]
+     [:db/add (:db/id to-entity) to-attr (:db/id tile)]]))
+
+(defn draw-ra-tx [hand tile]
+  (let [epoch (hand->epoch hand)
+        game  (epoch->game epoch)]
+    (concat
+     (move-tile-tx tile [game ::game/tile-bag] [epoch ::epoch/ra-tiles])
+     [[:db/add (:db/id epoch) ::epoch/in-auction? true]
+      [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]
+     (invoke-ra-tx hand ::auction-reason/draw))))
+
 (defn draw-normal-tile-tx [hand tile]
   (let [epoch (hand->epoch hand)
         game  (epoch->game epoch)]
@@ -322,31 +351,6 @@
           (d/transact! conn (draw-ra-tx hand {:db/id tile}))
           (d/transact! conn (draw-normal-tile-tx hand {:db/id tile})))
         {::game/id (::game/id (hand->game hand))}))))
-
-(defn auction-track-full? [epoch]
-  (= 8 (count (::epoch/auction-track epoch))))
-
-(defn start-auction-tx [{:keys [hand auction-reason epoch]}]
-  (let [auction-id -1]
-    [[:db/add auction-id ::auction/ra-hand (:db/id hand)]
-     [:db/add auction-id ::auction/reason auction-reason]
-     [:db/add auction-id ::auction/track-full? (auction-track-full? epoch)]
-     [:db/add (:db/id epoch) ::epoch/auction auction-id]]))
-
-(defn current-hand-tx [epoch hand]
-  [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]])
-
-(pc/defmutation invoke-ra [{:keys [::db/conn]} input]
-  {::pc/params #{::hand/id}
-   ::pc/transform notify-clients
-   ::pc/output [::game/id]}
-  (let [hand (d/entity @conn [::hand/id (::hand/id input)])
-        epoch (hand->epoch hand)]
-    (d/transact! conn (concat (start-auction-tx {:hand           hand
-                                                 :auction-reason ::auction-reason/invoke
-                                                 :epoch          epoch})
-                              (current-hand-tx epoch hand)))
-    {::game/id (::game/id (hand->game hand))}))
 
 (defn move-sun-disk-tx [sun-disk from to]
   (let [[from-entity from-attr] from
