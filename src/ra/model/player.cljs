@@ -29,6 +29,7 @@
 
 (defmutation use-local-storage-player [{:keys [player-id]}]
   (action [{:keys [state app]}]
+          (js/console.log "use local storage")
           (df/load! app [::player/id player-id] (player-component)
                     {:post-action (fn [{:keys [result state]}]
                                     (let [{:keys [body]} result
@@ -41,5 +42,7 @@
                                                      (assoc :ui/current-player [::player/id player-id]))))
                                         (comp/transact! app [(init-local-storage {})]))))})))
 
-(defmutation save [_]
+(defmutation save [input]
+  (action [{:keys [state]}]
+          (swap! state assoc-in [::player/id (::player/id input) ::player/name] (::player/name input)))
   (remote [env] true))

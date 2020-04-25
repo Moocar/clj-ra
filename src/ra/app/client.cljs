@@ -28,20 +28,22 @@
             [com.fulcrologic.fulcro.data-fetch :as df]
             [ra.specs.hand :as hand]))
 
-(defsc PlayerDetails [this {:keys [::player/name] :as input}]
-  {:query         [::player/id ::player/name]
-   :initial-state {::player/name ""}
+(defsc PlayerDetails [this {:keys [::player/id ::player/temp-name] :as input}]
+  {:query         [::player/id ::player/temp-name ::player/name]
+   :initial-state {::player/temp-name ""}
    :ident         ::player/id}
-  (js/console.log "input" input)
   (dom/div {}
     (ui-input {:label    "Your Name"
-               :value    (or name "")
+               :value    (or temp-name "")
                :onChange (fn [evt _]
-                           (m/set-string! this ::player/name :event evt))})
+                           (m/set-string! this ::player/temp-name :event evt))})
     (ui-button {:content  "Submit"
                 :primary true
                 :onClick  (fn []
-                            (comp/transact! this [(m-player/save input)] {:refresh [:ui/current-player]}))})))
+                            (comp/transact! this [(m-player/save
+                                                   {::player/id id
+                                                    ::player/name temp-name})]
+                                            {:refresh [:ui/current-player]}))})))
 
 (def ui-player-details (comp/factory PlayerDetails {:keyfn ::player/id}))
 
