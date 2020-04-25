@@ -135,7 +135,7 @@
               (dom/h3 "bids")
               (dom/div {}
                 (map (fn [{:keys [::bid/hand ::bid/sun-disk]}]
-                       (dom/div {}
+                       (dom/span {}
                          (ui-sun-disk {:value sun-disk})
                          (get-in hand [::hand/player ::player/name])))
                      bids))))

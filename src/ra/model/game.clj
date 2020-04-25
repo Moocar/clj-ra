@@ -363,6 +363,13 @@
   (and (not= winning-bid bid)
        (not (nil? (::bid/sun-disk bid)))))
 
+(defn auction-track->hand-tx [epoch hand]
+  (concat
+   [[:db/retract (:db/id epoch) ::epoch/auction-tiles]]
+   (mapv (fn [tile]
+           [:db/add (:db/id hand) ::hand/tiles (:db/id tile)])
+         (::epoch/auction-tiles epoch))))
+
 (defn last-bid-tx [{:keys [auction new-bid]}]
   (let [epoch (auction->epoch auction)
         winning-bid (winning-bid auction new-bid)
@@ -372,10 +379,12 @@
              [:db/add (:db/id (::bid/hand bid)) ::hand/available-sun-disks (::bid/sun-disk bid)])
            other-bids)
      ;; TODO have flag "in auction" so frontend can show last bid that was played
-     [[:db/retract (:db/id epoch) ::epoch/auction (::db/id auction)]]
+     [[:db/retract (:db/id epoch) ::epoch/auction (:db/id auction)]]
      (when winning-bid
-       [[:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
-        [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]]))))
+       (concat
+        (auction-track->hand-tx epoch (::bid/hand winning-bid))
+        [[:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
+         [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]])))))
 
 (pc/defmutation bid [{:keys [::db/conn]} {:keys [sun-disk] :as input}]
   {::pc/params    #{::hand/id :sun-disk}
