@@ -181,14 +181,22 @@
                (notify-other-clients env game-id))
              result))))
 
+(defn do-new-game [conn game-id]
+  (let [tile-bag (find-all-tiles @conn)
+        entity   {::game/id       game-id
+                  ::game/tile-bag tile-bag}]
+    (d/transact! conn [entity])
+    entity))
+
+(defn do-clear-game [conn game-id]
+  (d/transact! conn [[:db/retract [::game/id game-id] ::game/started-at]
+                     [:db/retract [::game/id game-id] ::game/tile-bag]
+                     [:db/retract [::game/id game-id] ::game/current-epoch]]))
+
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
    ::pc/output [::game/id]}
-  (let [tile-bag (find-all-tiles @conn)
-        entity   {::game/id          (db/uuid)
-                  ::game/tile-bag    tile-bag}]
-    (d/transact! conn [entity])
-    entity))
+  (do-new-game conn (db/uuid)))
 
 (pc/defmutation join-game [{:keys [::db/conn]}
                            {game-id ::game/id player-id ::player/id}]
@@ -201,10 +209,7 @@
       (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]])))
   {::game/id game-id})
 
-(pc/defmutation start-game [{:keys [::db/conn]} {game-id ::game/id}]
-  {::pc/params [::game/id]
-   ::pc/transform notify-clients
-   ::pc/output [::game/id]}
+(defn do-start-game [conn game-id]
   (let [game (d/entity @conn [::game/id game-id])]
     (if-let [started-at (::game/started-at game)]
       (throw (ex-info "Game already started" {:started-at started-at}))
@@ -232,7 +237,21 @@
                                player-hands
                                [epoch]
                                [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
-                                [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]])))))))
+                                [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))))))
+
+(pc/defmutation start-game [{:keys [::db/conn]} {game-id ::game/id}]
+  {::pc/params [::game/id]
+   ::pc/transform notify-clients
+   ::pc/output [::game/id]}
+  (do-start-game conn game-id)
+  {::game/id game-id})
+
+(pc/defmutation reset [{:keys [::db/conn]} {game-id ::game/id}]
+  {::pc/params [::game/id]
+   ::pc/transform notify-clients
+   ::pc/output [::game/id]}
+  (do-clear-game conn game-id)
+  (do-start-game conn game-id)
   {::game/id game-id})
 
 (defn draw-ra-tx [hand tile]
@@ -313,10 +332,12 @@
 
 (defn play-bid-tx [{:keys [hand auction sun-disk]}]
   (let [bid-id -1]
-    [[:db/add (:db/id auction) ::auction/bids bid-id]
-     [:db/add bid-id ::bid/hand (:db/id hand)]
-     (when sun-disk [:db/add bid-id ::bid/sun-disk sun-disk])
-     [:db/retract (:db/id hand) ::hand/available-sun-disks sun-disk]]))
+    (concat
+     [[:db/add (:db/id auction) ::auction/bids bid-id]
+      [:db/add bid-id ::bid/hand (:db/id hand)]]
+     (when sun-disk
+       [[:db/add bid-id ::bid/sun-disk sun-disk]
+        [:db/retract (:db/id hand) ::hand/available-sun-disks sun-disk]]))))
 
 (pc/defmutation bid [{:keys [::db/conn]} {:keys [sun-disk] :as input}]
   {::pc/params    #{::hand/id :sun-disk}
@@ -348,5 +369,6 @@
    join-game
    new-game
    start-game
+   reset
 
    game-resolver])

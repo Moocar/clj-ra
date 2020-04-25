@@ -82,16 +82,16 @@
                         (str "seat: " seat))
               (ui-segment {:compact true}
                           (dom/div {}
-                            (conj
+                            (concat
                              (map (fn [sun-disk]
-                                    (if (and onClickSunDisk (> sun-disk highest-bid))
+                                    (if (and my-go? onClickSunDisk (> sun-disk highest-bid))
                                       (ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
                                                               :value   sun-disk})
                                       (ui-sun-disk {:value sun-disk})))
                                   available-sun-disks)
-                             (when onClickSunDisk
-                               (ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
-                                                       :value   "Pass"})))))
+                             (when (and onClickSunDisk my-go?)
+                               [(ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
+                                                         :value   "Pass"})]))))
     (ui-segment {:compact true}
                 (ui-card-group {} (map ui-tile tiles)))
     (when my-go?
@@ -194,6 +194,10 @@
       (dom/div {}
         (if started-at
           (dom/div {}
+            (ui-button {:primary true
+                        :onClick (fn []
+                                   (comp/transact! this [(m-game/reset {::game/id id})]))}
+                       "Reset")
             (ui-epoch current-epoch))
           (ui-button {:primary true
                       :onClick (fn []

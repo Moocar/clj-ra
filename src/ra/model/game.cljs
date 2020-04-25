@@ -31,6 +31,12 @@
               (m/returning (game-component))
               (m/with-target [:ui/current-game]))))
 
+(defmutation reset [_]
+  (remote [env] true
+          (-> env
+              (m/returning (game-component))
+              (m/with-target [:ui/current-game]))))
+
 (defmutation draw-tile [input]
   (remote [{:keys [state] :as env}]
           (-> env
