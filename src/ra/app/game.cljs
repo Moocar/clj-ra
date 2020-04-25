@@ -69,7 +69,7 @@
                      ::hand/id
                      ::hand/player
                      ::hand/my-go?]}
-             {:keys [onClickSunDisk]}]
+             {:keys [onClickSunDisk highest-bid]}]
   {:query [::hand/available-sun-disks
            ::hand/my-go?
            ::hand/seat
@@ -82,12 +82,16 @@
                         (str "seat: " seat))
               (ui-segment {:compact true}
                           (dom/div {}
-                            (map (fn [sun-disk]
-                                   (if onClickSunDisk
-                                     (ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
-                                                             :value sun-disk})
-                                     (ui-sun-disk {:value sun-disk})))
-                                 available-sun-disks)))
+                            (conj
+                             (map (fn [sun-disk]
+                                    (if (and onClickSunDisk (> sun-disk highest-bid))
+                                      (ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
+                                                              :value   sun-disk})
+                                      (ui-sun-disk {:value sun-disk})))
+                                  available-sun-disks)
+                             (when onClickSunDisk
+                               (ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
+                                                       :value   "Pass"})))))
     (ui-segment {:compact true}
                 (ui-card-group {} (map ui-tile tiles)))
     (when my-go?
@@ -104,6 +108,9 @@
                    "Invoke Ra")))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
+
+(defn highest-bid [{:keys [::auction/bids]}]
+  (apply max (or (seq (map ::bid/sun-disk bids)) [0])))
 
 (defsc Auction [this {:keys [::auction/reason ::auction/bids]}]
   {:query [::auction/reason
@@ -156,8 +163,9 @@
                                          (ui-hand
                                           (if auction
                                             (comp/computed hand {:onClickSunDisk (fn [sun-disk]
-                                                                                   (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})])
-                                                                                   (js/console.log "sun disk clicked" sun-disk))})
+                                                                                   (js/console.log "sun disk clicked" sun-disk)
+                                                                                   (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
+                                                                 :highest-bid (highest-bid auction)})
                                             hand))
 
                         #_(if (= seat (::hand/seat current-hand))

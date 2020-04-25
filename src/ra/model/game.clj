@@ -131,7 +131,9 @@
                 {::game/current-epoch [::epoch/number
                                        ::epoch/current-sun-disk
                                        {::epoch/auction [::auction/reason
-                                                         {::auction/ra-hand [::hand/id]}]}
+                                                         {::auction/ra-hand [::hand/id]}
+                                                         {::auction/bids [{::bid/hand [::hand/id]}
+                                                                          ::bid/sun-disk]}]}
                                        ::epoch/in-auction?
                                        {::epoch/last-ra-invokee [{::hand/player [::player/id
                                                                                  ::player/name]}]}
@@ -313,7 +315,7 @@
   (let [bid-id -1]
     [[:db/add (:db/id auction) ::auction/bids bid-id]
      [:db/add bid-id ::bid/hand (:db/id hand)]
-     [:db/add bid-id ::bid/sun-disk sun-disk]
+     (when sun-disk [:db/add bid-id ::bid/sun-disk sun-disk])
      [:db/retract (:db/id hand) ::hand/available-sun-disks sun-disk]]))
 
 (pc/defmutation bid [{:keys [::db/conn]} {:keys [sun-disk] :as input}]
