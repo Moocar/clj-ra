@@ -100,6 +100,12 @@
 (defn game->players [game]
   (::game/players game))
 
+(defn auction->epoch [auction]
+  (first (::epoch/_auction auction)))
+
+(defn auction->game [auction]
+  (epoch->game (auction->epoch auction)))
+
 (defn hand-turn? [hand]
   (= (:db/id hand)
      (:db/id (current-hand (hand->game hand)))))
@@ -339,6 +345,32 @@
        [[:db/add bid-id ::bid/sun-disk sun-disk]
         [:db/retract (:db/id hand) ::hand/available-sun-disks sun-disk]]))))
 
+(defn last-bid? [{:keys [::auction/bids] :as auction}]
+  (let [game (auction->game auction)
+        num-players (count (game->players game))]
+    (= (inc (count bids)) num-players)))
+
+(defn winning-bid [{:keys [::auction/bids]} new-bid]
+  (last (sort-by ::bid/sun-disk (remove #(nil? (::bid/sun-disk %)) (conj bids new-bid)))))
+
+(defn not-winning-bid [bid winning-bid]
+  (and (not= winning-bid bid)
+       (not (nil? (::bid/sun-disk bid)))))
+
+(defn last-bid-tx [{:keys [auction new-bid]}]
+  (let [epoch (auction->epoch auction)
+        winning-bid (winning-bid auction new-bid)
+        other-bids  (filter #(not-winning-bid % winning-bid) (conj (::auction/bids auction) new-bid))]
+    (concat
+     (mapv (fn [bid]
+             [:db/add (:db/id (::bid/hand bid)) ::hand/available-sun-disks (::bid/sun-disk bid)])
+           other-bids)
+     ;; TODO have flag "in auction" so frontend can show last bid that was played
+     ;;[[:db/retract (:db/id epoch) ::epoch/auction (::db/id auction)]]
+     (when winning-bid
+       [[:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
+        [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]]))))
+
 (pc/defmutation bid [{:keys [::db/conn]} {:keys [sun-disk] :as input}]
   {::pc/params    #{::hand/id :sun-disk}
    ::pc/transform notify-clients
@@ -352,7 +384,11 @@
                          (play-bid-tx {:hand     hand
                                        :sun-disk sun-disk
                                        :auction  auction})
-                         (current-hand-tx epoch hand))))
+                         (current-hand-tx epoch hand)
+                         (when (last-bid? auction)
+                           (let [new-bid {::bid/hand     hand
+                                          ::bid/sun-disk sun-disk}]
+                             (last-bid-tx {:auction auction :new-bid new-bid}))))))
     {::game/id (::game/id (hand->game hand))}))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
