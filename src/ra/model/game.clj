@@ -266,13 +266,19 @@
   (do-start-game conn game-id)
   {::game/id game-id})
 
+(defn move-tile-tx [tile from to]
+  (let [[from-entity from-attr] from
+        [to-entity to-attr]     to]
+    [[:db/retract (:db/id from-entity) from-attr (:db/id tile)]
+     [:db/add (:db/id to-entity) to-attr (:db/id tile)]]))
+
 (defn draw-ra-tx [hand tile]
   (let [epoch (hand->epoch hand)
-        game (epoch->game epoch)]
-    [[:db/retract (:db/id game) ::game/tile-bag tile]
-     [:db/add (:db/id epoch) ::epoch/ra-tiles tile]
-     [:db/add (:db/id epoch) ::epoch/in-auction? true]
-     [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]))
+        game  (epoch->game epoch)]
+    (concat
+     (move-tile-tx tile [game ::game/tile-bag] [epoch ::epoch/ra-tiles])
+     [[:db/add (:db/id epoch) ::epoch/in-auction? true]
+      [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]])))
 
 (defn find-hand-by-seat [db epoch seat]
   (d/entity db (d/q '[:find ?hid .
@@ -298,10 +304,10 @@
 
 (defn draw-normal-tile-tx [hand tile]
   (let [epoch (hand->epoch hand)
-        game (epoch->game epoch)]
-    [[:db/retract (:db/id game) ::game/tile-bag tile]
-     [:db/add (:db/id epoch) ::epoch/auction-tiles tile]
-     [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]]))
+        game  (epoch->game epoch)]
+    (concat
+     (move-tile-tx tile [game ::game/tile-bag] [epoch ::epoch/auction-tiles])
+     [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]])))
 
 (pc/defmutation draw-tile [{:keys [::db/conn]} input]
   {::pc/params [::hand/id]
@@ -313,8 +319,8 @@
       (throw (ex-info "not your turn" {}))
       (let [tile (sample-tile @conn game)]
         (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
-          (d/transact! conn (draw-ra-tx hand tile))
-          (d/transact! conn (draw-normal-tile-tx hand tile)))
+          (d/transact! conn (draw-ra-tx hand {:db/id tile}))
+          (d/transact! conn (draw-normal-tile-tx hand {:db/id tile})))
         {::game/id (::game/id (hand->game hand))}))))
 
 (defn auction-track-full? [epoch]
@@ -342,14 +348,21 @@
                               (current-hand-tx epoch hand)))
     {::game/id (::game/id (hand->game hand))}))
 
+(defn move-sun-disk-tx [sun-disk from to]
+  (let [[from-entity from-attr] from
+        [to-entity to-attr] to]
+    [[:db/retract (:db/id from-entity) from-attr sun-disk]
+     [:db/add (:db/id to-entity) to-attr sun-disk]]))
+
 (defn play-bid-tx [{:keys [hand auction sun-disk]}]
   (let [bid-id -1]
     (concat
      [[:db/add (:db/id auction) ::auction/bids bid-id]
       [:db/add bid-id ::bid/hand (:db/id hand)]]
      (when sun-disk
-       [[:db/add bid-id ::bid/sun-disk sun-disk]
-        [:db/retract (:db/id hand) ::hand/available-sun-disks sun-disk]]))))
+       (move-sun-disk-tx sun-disk
+                         [hand ::hand/available-sun-disks]
+                         [{:db/id bid-id} ::bid/sun-disk])))))
 
 (defn last-bid? [{:keys [::auction/bids] :as auction}]
   (let [game (auction->game auction)
