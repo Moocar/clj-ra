@@ -39,9 +39,9 @@
               :onClick  (fn [_] (onClick))}
             (str value)))
 
-(defn ui-sun-disk [{:keys [value]}]
+(defn ui-sun-disk [{:keys [value used?]}]
   (ui-label {:circular true
-             :color    "brown"
+             :color    (if used? "gray" "brown")
              :key      value}
             (str value)))
 
@@ -73,6 +73,7 @@
 
 (defsc Hand [this
              {:keys [::hand/available-sun-disks
+                     ::hand/used-sun-disks
                      ::hand/tiles
                      ::hand/seat
                      ::hand/id
@@ -80,6 +81,7 @@
                      ::hand/my-go?] :as hand}
              {:keys [onClickSunDisk highest-bid auction]}]
   {:query [::hand/available-sun-disks
+           ::hand/used-sun-disks
            ::hand/my-go?
            ::hand/seat
            ::hand/id
@@ -98,6 +100,9 @@
                                                               :value   sun-disk})
                                       (ui-sun-disk {:value sun-disk})))
                                   available-sun-disks)
+                             (map (fn [sun-disk]
+                                    (ui-sun-disk {:value sun-disk :used? true}))
+                                  used-sun-disks)
                              (when (and onClickSunDisk my-go? (can-pass? auction hand))
                                [(ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
                                                          :value   "Pass"})]))))

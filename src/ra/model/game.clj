@@ -157,12 +157,13 @@
        (update-when ::game/started-at str)
        (update ::game/current-epoch
                (fn [epoch]
-                 (update epoch ::epoch/hands
-                         (fn [hands]
-                           (map (fn [hand]
-                                  (assoc hand ::hand/my-go? (= (::hand/seat hand)
-                                                               (::hand/seat (::epoch/current-hand epoch)))))
-                                hands))))))))
+                 (-> epoch
+                     (update ::epoch/hands
+                             (fn [hands]
+                               (map (fn [hand]
+                                      (assoc hand ::hand/my-go? (= (::hand/seat hand)
+                                                                   (::hand/seat (::epoch/current-hand epoch)))))
+                                    hands)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mutations
@@ -366,7 +367,7 @@
              [:db/add (:db/id (::bid/hand bid)) ::hand/available-sun-disks (::bid/sun-disk bid)])
            other-bids)
      ;; TODO have flag "in auction" so frontend can show last bid that was played
-     ;;[[:db/retract (:db/id epoch) ::epoch/auction (::db/id auction)]]
+     [[:db/retract (:db/id epoch) ::epoch/auction (::db/id auction)]]
      (when winning-bid
        [[:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
         [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]]))))
