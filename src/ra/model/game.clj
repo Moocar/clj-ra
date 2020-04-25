@@ -183,7 +183,7 @@
          ::pc/mutate
          (fn [{:keys [::db/conn] :as env} params]
            (let [result (mutate env params)]
-             (when-let [game-id (props->game-id @conn params)]
+             (when-let [game-id (::game/id result)]
                (notify-other-clients env game-id))
              result))))
 
