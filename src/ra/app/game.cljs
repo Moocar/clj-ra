@@ -29,7 +29,8 @@
             [clojure.string :as str]
             [com.fulcrologic.fulcro.data-fetch :as df]
             [ra.specs.hand :as hand]
-            [ra.specs.auction.bid :as bid]))
+            [ra.specs.auction.bid :as bid]
+            [ra.specs.auction.reason :as auction-reason]))
 
 (defn ui-clickable-sun-disk [{:keys [onClick value]}]
   (ui-button {:circular true
@@ -62,14 +63,22 @@
 
 (def ui-player (comp/factory Player {:keyfn ::player/id}))
 
+(defn all-passes? [{:keys [::auction/bids]}]
+  (empty? (filter ::bid/sun-disk bids)))
+
+(defn can-pass? [{:keys [::auction/ra-hand ::auction/reason] :as auction} hand]
+  (or (not= (::hand/id ra-hand) (::hand/id hand))
+      (not= reason ::auction-reason/invoke)
+      (not (all-passes? auction))))
+
 (defsc Hand [this
              {:keys [::hand/available-sun-disks
                      ::hand/tiles
                      ::hand/seat
                      ::hand/id
                      ::hand/player
-                     ::hand/my-go?]}
-             {:keys [onClickSunDisk highest-bid]}]
+                     ::hand/my-go?] :as hand}
+             {:keys [onClickSunDisk highest-bid auction]}]
   {:query [::hand/available-sun-disks
            ::hand/my-go?
            ::hand/seat
@@ -84,12 +93,12 @@
                           (dom/div {}
                             (concat
                              (map (fn [sun-disk]
-                                    (if (and my-go? onClickSunDisk (> sun-disk highest-bid))
+                                    (if (and my-go? onClickSunDisk (> sun-disk highest-bid) )
                                       (ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
                                                               :value   sun-disk})
                                       (ui-sun-disk {:value sun-disk})))
                                   available-sun-disks)
-                             (when (and onClickSunDisk my-go?)
+                             (when (and onClickSunDisk my-go? (can-pass? auction hand))
                                [(ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
                                                          :value   "Pass"})]))))
     (ui-segment {:compact true}
@@ -114,6 +123,7 @@
 
 (defsc Auction [this {:keys [::auction/reason ::auction/bids]}]
   {:query [::auction/reason
+           {::auction/ra-hand [::hand/id]}
            {::auction/bids [{::bid/hand [{::hand/player [::player/name]}]}
                             ::bid/sun-disk]}]}
   (ui-segment {:compact true}
@@ -150,9 +160,9 @@
                 (dom/strong "Ra track")
                 (ui-card-group {} (map ui-tile ra-tiles)))
     (ui-segment {:compact "true"}
-                (ui-sun-disk {:value current-sun-disk}))
+      (ui-sun-disk {:value current-sun-disk}))
     (ui-segment {:compact true}
-                (dom/strong "Aucion track")
+                (dom/strong "Auction track")
                 (ui-card-group {} (map ui-tile auction-tiles)))
     (when auction
       (ui-auction auction))
@@ -165,11 +175,12 @@
                                             (comp/computed hand {:onClickSunDisk (fn [sun-disk]
                                                                                    (js/console.log "sun disk clicked" sun-disk)
                                                                                    (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
-                                                                 :highest-bid (highest-bid auction)})
+                                                                 :highest-bid    (highest-bid auction)
+                                                                 :auction        auction})
                                             hand))
 
                         #_(if (= seat (::hand/seat current-hand))
-                          (ui-segment dom/div {:style {:backgroundColor "pink"}}
+                            (ui-segment dom/div {:style {:backgroundColor "pink"}}
                             (ui-hand hand))
                           (ui-hand hand)))
                       hands)))))
