@@ -196,9 +196,14 @@
     entity))
 
 (defn do-clear-game [conn game-id]
-  (d/transact! conn [[:db/retract [::game/id game-id] ::game/started-at]
-                     [:db/retract [::game/id game-id] ::game/tile-bag]
-                     [:db/retract [::game/id game-id] ::game/current-epoch]]))
+  (d/transact! conn
+               (concat
+                [[:db/retract [::game/id game-id] ::game/started-at]
+                 [:db/retract [::game/id game-id] ::game/tile-bag]
+                 [:db/retract [::game/id game-id] ::game/current-epoch]]
+                (mapv (fn [tile-id]
+                             [:db/add [::game/id game-id] ::game/tile-bag tile-id])
+                            (find-all-tiles @conn)))))
 
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
