@@ -43,12 +43,12 @@
     (println "current-hand" (::hand/seat current-hand))
     (println)
     (when auction
-      (let [{::auction/keys [ra-hand reason track-full? bids]} auction]
+      (let [{::auction/keys [ra-hand reason tiles-full? bids]} auction]
         (println "Auction")
         (println (d/touch auction))
         (println "Ra hand" (::hand/seat ra-hand))
         (println "Ra reason" reason)
-        (println "track full?" track-full?)
+        (println "tiles full?" tiles-full?)
         (println "Bids" (map (fn [{bid-hand ::bid/hand sun-disk ::bid/sun-disk}]
                                [(::hand/seat bid-hand) sun-disk])
                              bids))

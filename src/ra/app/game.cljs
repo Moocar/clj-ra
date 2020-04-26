@@ -66,10 +66,14 @@
 (defn all-passes? [{:keys [::auction/bids]}]
   (empty? (filter ::bid/sun-disk bids)))
 
-(defn can-pass? [{:keys [::auction/ra-hand ::auction/reason] :as auction} hand]
+(defn can-pass? [{:keys [::auction/ra-hand ::auction/reason ::auction/tiles-full?] :as auction} hand]
   (or (not= (::hand/id ra-hand) (::hand/id hand))
       (not= reason ::auction-reason/invoke)
-      (not (all-passes? auction))))
+      (not (all-passes? auction))
+      tiles-full?))
+
+(defn auction-tiles-full? [epoch]
+  (= 8 (count (::epoch/auction-tiles epoch))))
 
 (defsc Hand [this
              {:keys [::hand/available-sun-disks
@@ -79,7 +83,7 @@
                      ::hand/id
                      ::hand/player
                      ::hand/my-go?] :as hand}
-             {:keys [onClickSunDisk highest-bid auction]}]
+             {:keys [onClickSunDisk highest-bid auction epoch]}]
   {:query [::hand/available-sun-disks
            ::hand/used-sun-disks
            ::hand/my-go?
@@ -108,13 +112,14 @@
                                                          :value   "Pass"})]))))
     (ui-segment {:compact true}
                 (ui-card-group {} (map ui-tile tiles)))
-    (when my-go?
+    (when (and my-go? (not auction))
       (dom/div {}
-        (ui-button {:style   {:marginTop "10"}
-                    :primary true
-                    :onClick (fn []
-                               (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
-                   "Draw Tile")
+        (when-not (auction-tiles-full? epoch)
+          (ui-button {:style   {:marginTop "10"}
+                      :primary true
+                      :onClick (fn []
+                                 (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
+                     "Draw Tile"))
         (ui-button {:style   {:marginTop "10"}
                     :primary true
                     :onClick (fn []
@@ -129,6 +134,7 @@
 (defsc Auction [this {:keys [::auction/reason ::auction/bids]}]
   {:query [::auction/reason
            {::auction/ra-hand [::hand/id]}
+           ::auction/tiles-full?
            {::auction/bids [{::bid/hand [{::hand/player [::player/name]}]}
                             ::bid/sun-disk]}]}
   (ui-segment {:compact true}
@@ -148,7 +154,8 @@
                            ::epoch/current-sun-disk
                            ::epoch/auction
                            ::epoch/hands
-                           ::epoch/current-hand]}]
+                           ::epoch/current-hand]
+                    :as props}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            ::epoch/id
@@ -159,6 +166,7 @@
            {::epoch/last-ra-invokee (comp/get-query Player)}
            {::epoch/hands (comp/get-query Hand)}]
    :ident ::epoch/id}
+  (js/console.log props)
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (ui-segment {:compact true}
@@ -182,7 +190,7 @@
                                                                                    (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
                                                                  :highest-bid    (highest-bid auction)
                                                                  :auction        auction})
-                                            hand))
+                                            (comp/computed hand {:epoch props})))
 
                         #_(if (= seat (::hand/seat current-hand))
                             (ui-segment dom/div {:style {:backgroundColor "pink"}}

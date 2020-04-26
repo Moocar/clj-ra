@@ -79,6 +79,12 @@
       #{13 10 5}
       #{12 11 6}]})
 
+(def ras-per-epoch
+  {2 6
+   3 8
+   4 9
+   5 10})
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Small helpers
 
@@ -137,6 +143,7 @@
                 {::game/current-epoch [::epoch/number
                                        ::epoch/current-sun-disk
                                        {::epoch/auction [::auction/reason
+                                                         ::auction/tiles-full?
                                                          {::auction/ra-hand [::hand/id]}
                                                          {::auction/bids [{::bid/hand [::hand/id]}
                                                                           ::bid/sun-disk]}]}
@@ -291,14 +298,14 @@
 (defn current-hand-tx [epoch hand]
   [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]])
 
-(defn auction-track-full? [epoch]
-  (= 8 (count (::epoch/auction-track epoch))))
+(defn auction-tiles-full? [epoch]
+  (= 8 (count (::epoch/auction-tiles epoch))))
 
 (defn start-auction-tx [{:keys [hand auction-reason epoch]}]
   (let [auction-id -1]
     [[:db/add auction-id ::auction/ra-hand (:db/id hand)]
      [:db/add auction-id ::auction/reason auction-reason]
-     [:db/add auction-id ::auction/track-full? (auction-track-full? epoch)]
+     [:db/add auction-id ::auction/tiles-full? (auction-tiles-full? epoch)]
      [:db/add (:db/id epoch) ::epoch/auction auction-id]]))
 
 (defn invoke-ra-tx [hand reason]
@@ -346,10 +353,10 @@
         game (hand->game hand)]
     (if (not (hand-turn? hand))
       (throw (ex-info "not your turn" {}))
-      (let [tile (sample-tile @conn game)]
-        (if (= (::tile/type (d/entity @conn tile)) ::tile-type/ra)
-          (d/transact! conn (draw-ra-tx hand {:db/id tile}))
-          (d/transact! conn (draw-normal-tile-tx hand {:db/id tile})))
+      (let [tile (d/entity @conn (sample-tile @conn game))]
+        (if (= (::tile/type tile) ::tile-type/ra)
+          (d/transact! conn (draw-ra-tx hand tile))
+          (d/transact! conn (draw-normal-tile-tx hand tile)))
         {::game/id (::game/id (hand->game hand))}))))
 
 (defn move-sun-disk-tx [sun-disk from to]
@@ -380,12 +387,15 @@
   (and (not= winning-bid bid)
        (not (nil? (::bid/sun-disk bid)))))
 
-(defn auction-track->hand-tx [epoch hand]
+(defn auction-tiles->hand-tx [epoch hand]
   (concat
    [[:db/retract (:db/id epoch) ::epoch/auction-tiles]]
    (mapv (fn [tile]
            [:db/add (:db/id hand) ::hand/tiles (:db/id tile)])
          (::epoch/auction-tiles epoch))))
+
+(defn discard-auction-tiles-tx [epoch]
+  [[:db/retract (:db/id epoch) ::epoch/auction-tiles]])
 
 (defn last-bid-tx [{:keys [auction new-bid]}]
   (let [epoch (auction->epoch auction)
@@ -397,11 +407,13 @@
            other-bids)
      ;; TODO have flag "in auction" so frontend can show last bid that was played
      [[:db/retract (:db/id epoch) ::epoch/auction (:db/id auction)]]
-     (when winning-bid
+     (if winning-bid
        (concat
-        (auction-track->hand-tx epoch (::bid/hand winning-bid))
+        (auction-tiles->hand-tx epoch (::bid/hand winning-bid))
         [[:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
-         [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]])))))
+         [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]])
+       (when (::auction/tiles-full? auction)
+         (discard-auction-tiles-tx epoch))))))
 
 (pc/defmutation bid [{:keys [::db/conn]} {:keys [sun-disk] :as input}]
   {::pc/params    #{::hand/id :sun-disk}
