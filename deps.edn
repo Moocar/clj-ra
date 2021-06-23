@@ -1,78 +1,78 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure    {:mvn/version "1.10.1"}
-         org.clojure/core.async {:mvn/version "1.1.587"}
+ :deps  {org.clojure/clojure    {:mvn/version "1.10.3"}
+         org.clojure/core.async {:mvn/version "1.3.618"}
 
          ;; For clojure spec
-         org.clojure/spec.alpha {:mvn/version "0.2.187"}
-         expound                {:mvn/version "0.8.4"}
+         org.clojure/spec.alpha {:mvn/version "0.2.194"}
+         expound/expound        {:mvn/version "0.8.9"}
          gnl/ghostwheel         {:mvn/version "0.3.9"}
-         edn-query-language/eql {:mvn/version "0.0.9"}
+         edn-query-language/eql {:mvn/version "2021.02.28"}
 
          ;; For Graphql requests
          ;; com.wsscode/pathom     {:local/root "/Users/amarcar/dev/github/wilkerlucio/pathom"}
-         com.wsscode/pathom {:mvn/version "2.2.31"}
-         camel-snake-kebab  {:mvn/version "0.4.1"}
+         com.wsscode/pathom                  {:mvn/version "2.3.1"}
+         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.2"}
 
          ;; Logging
-         org.clojure/tools.logging      {:mvn/version "1.0.0"}
+         org.clojure/tools.logging      {:mvn/version "1.1.0"}
          ch.qos.logback/logback-core    {:mvn/version "1.2.3"}
          ch.qos.logback/logback-classic {:mvn/version "1.2.3"}
-         org.slf4j/slf4j-api            {:mvn/version "1.7.30"}
-         org.slf4j/jul-to-slf4j         {:mvn/version "1.7.30"}
+         org.slf4j/slf4j-api            {:mvn/version "1.7.31"}
+         org.slf4j/jul-to-slf4j         {:mvn/version "1.7.31"}
 
          ;; For http requests
-         clj-http {:mvn/version "3.10.1"}
-         cheshire {:mvn/version "5.10.0"}
+         clj-http/clj-http {:mvn/version "3.12.2"}
+         cheshire/cheshire {:mvn/version "5.10.0"}
 
          ;; Fulcro
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
-         com.fulcrologic/fulcro {:mvn/version "3.2.3"}
+         com.fulcrologic/fulcro {:mvn/version "3.4.22"}
 
          ;; Websockets
          ;; com.fulcrologic/fulcro-websockets {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro-websockets"}
-         com.fulcrologic/fulcro-websockets {:mvn/version "3.1.1"}
-         com.taoensso/sente                {:mvn/version "1.15.0"}
+         com.fulcrologic/fulcro-websockets {:mvn/version "3.3.0"}
+         com.taoensso/sente                {:mvn/version "1.16.2"}
 
          ;; http server
-         ring/ring-core {:mvn/version "1.8.0"}
-         http-kit       {:mvn/version "2.3.0"}
-         ring/ring-spec {:mvn/version "0.0.4"}
-         hiccup         {:mvn/version "1.0.5"}
+         ring/ring-core    {:mvn/version "1.9.3"}
+         http-kit/http-kit {:mvn/version "2.5.3"}
+         ring/ring-spec    {:mvn/version "0.0.4"}
+         hiccup/hiccup     {:mvn/version "1.0.5"}
 
 
          ;; Integrant
-         integrant {:mvn/version "0.8.0"}
-         aero      {:mvn/version "1.1.6"}
+         integrant/integrant {:mvn/version "0.8.0"}
+         aero/aero           {:mvn/version "1.1.6"}
 
          ;; Crux DB
-         datascript {:mvn/version "0.18.11"}
+         datascript/datascript {:mvn/version "1.2.1"}
+
+         ;; Debugging
+         hashp/hashp {:mvn/version "0.2.1"}
 
          ;; Error handling
-         io.aviso/pretty {:mvn/version "0.1.37"}
+         io.aviso/pretty {:mvn/version "1.1"}
          }
 
  :aliases {:server-dev {:extra-paths ["dev"]
                         :extra-deps  {
                                       ;; Clojure Spec
-                                      org.clojure/test.check {:mvn/version "1.0.0"}
+                                      org.clojure/test.check {:mvn/version "1.1.0"}
 
-                                      org.clojure/tools.namespace {:mvn/version "1.0.0"}
-                                      com.wsscode/pathom-viz      {:mvn/version "1.0.8"}
+                                      org.clojure/tools.namespace {:mvn/version "1.1.0"}
+                                      com.wsscode/pathom-viz      {:mvn/version "1.0.9"}
 
                                       ;; Integrant reloaded
-                                      integrant/repl {:mvn/version "0.3.1"}
-
-                                      ;; Debugging
-                                      hashp {:mvn/version "0.1.1"}
-                                      }
+                                      integrant/repl {:mvn/version "0.3.2"}}
                         :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
 
-           :ui {:extra-deps {org.clojure/clojurescript           {:mvn/version "1.10.741"}
+           :ui {:extra-deps {org.clojure/clojurescript           {:mvn/version "1.10.866"}
                              kibu/pushy                          {:mvn/version "0.3.8"}
-                             thheller/shadow-cljs                {:mvn/version "2.8.101"}
-                             com.fulcrologic/semantic-ui-wrapper {:mvn/version "1.0.1"}}}
+                             thheller/shadow-cljs                {:mvn/version "2.14.5"}
+                             com.fulcrologic/semantic-ui-wrapper {:mvn/version "2.0.1"}}}
 
-           :ui-dev {:extra-deps {binaryage/devtools {:mvn/version "1.0.0"}}}}}
+           :ui-dev {:extra-deps {binaryage/devtools {:mvn/version "1.0.3"}}
+                    :jvm-opts   ["-Dnashorn.args=--no-deprecation-warning"]}}}
 
 ;; Run server with clj -Anrepl:server:server-dev
 

@@ -1,5 +1,5 @@
 ((clojure-mode
-  (cider-clojure-cli-global-options . "-A:server-dev:ghostwheel")
+  (cider-clojure-cli-global-options . "-A:server-dev")
   ;;(eval . (cider-register-cljs-repl-type 'super-cljs "(do (foo) (bar))"))
   ;;(cider-default-cljs-repl . super-cljs)
   (cider-ns-refresh-before-fn . "integrant.repl/suspend")
@@ -11,8 +11,34 @@
 
   (eval . (define-clojure-indent
             (div '(1))
+            (select '(1))
+            (ui-table '(1))
+            (ui-table-row '(1))
+            (ui-table-body '(1))
+            (ui-table-header '(1))
+            (ui-segment '(1))
+            (ui-list '(1))
+            (ui-list-item '(1))
+            (ui-list-content '(1))
+            (ui-list-header '(1))
+            (ui-modal '(1))
+            (ui-modal-header '(1))
+            (ui-modal-content '(1))
+            (ui-modal-actions '(1))
+	    (ui-dropdown '(1))
+	    (ui-dropdown-item '(1))
+	    (ui-dropdown-menu '(1))
+            (ui-form '(1))
+            (ui-form-input '(1))
+            (ui-form-select '(1))
+            (ui-tab-pane '(1))
             (table '(1))
+	    (com.fulcrologic.fulcro.components/transact! 1)
+	    (comp/transact! 1)
+	    (com.fulcrologic.fulcro.algorithms.normalized-state/swap!-> 1)
+	    (defmutation '(2 :form :form (:defn)))
             (>defn  '(:defn (1)))))
+
   (fill-column . 80)
 
   (cljr-magic-require-namespaces . (("io"    . "clojure.java.io")
@@ -41,7 +67,9 @@
                                     ("app" . "com.fulcrologic.fulcro.application"))))
 
  (clojurescript-mode
-  (cider-default-cljs-repl . shadow))
+  (cider-default-cljs-repl . shadow)
+  (cider-shadow-default-options . "main")
+  (cider-offer-to-open-cljs-app-in-browser . nil))
  (cider-repl-mode
   (cider-repl-history-file . "/Users/amarcar/dev/moocar.me/ra-game/.cider-repl-history"))
  )

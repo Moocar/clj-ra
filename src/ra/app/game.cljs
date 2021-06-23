@@ -1,4 +1,4 @@
-(ns ra.app.game
+ (ns ra.app.game
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
             [com.fulcrologic.fulcro.application :as app]
@@ -170,13 +170,17 @@
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (ui-segment {:compact true}
-                (dom/strong "Ra track")
-                (ui-card-group {} (map ui-tile ra-tiles)))
+      (dom/strong "Ra track")
+      (if (seq ra-tiles)
+        (ui-card-group {} (map ui-tile ra-tiles))
+        (dom/div "")))
     (ui-segment {:compact "true"}
       (ui-sun-disk {:value current-sun-disk}))
     (ui-segment {:compact true}
                 (dom/strong "Auction track")
-                (ui-card-group {} (map ui-tile auction-tiles)))
+                (if (seq auction-tiles)
+                  (ui-card-group {} (map ui-tile auction-tiles))
+                  (dom/div "")))
     (when auction
       (ui-auction auction))
     (ui-segment {:compact true}
