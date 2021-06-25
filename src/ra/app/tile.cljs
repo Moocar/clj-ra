@@ -8,7 +8,18 @@
             [com.fulcrologic.semantic-ui.elements.label.ui-label :refer [ui-label]]
             [com.fulcrologic.semantic-ui.views.card.ui-card-group
              :refer
-             [ui-card-group]]))
+             [ui-card-group]]
+            [ra.specs.tile.type :as tile-type]))
+
+(def type-background
+  {::tile-type/ra "red"
+   ::tile-type/god "gold"
+   ::tile-type/civilization "beige"
+   ::tile-type/monument "blue"
+   ::tile-type/gold "orange"
+   ::tile-type/pharoah "green"
+   ::tile-type/river "lightblue"
+   ::tile-type/flood "lightblue"})
 
 (defn ui-clickable-sun-disk [{:keys [onClick value]}]
   (ui-button {:circular true
@@ -23,14 +34,15 @@
              :key      value}
             (str value)))
 
-(defsc Tile [_ {:keys [::tile/title]}]
+(defsc Tile [_ props]
   {:query [::tile/id
            ::tile/title
            ::tile/disaster?
            ::tile/type]}
   (ui-card {:style {:height "50"
+                    :backgroundColor (type-background (::tile/type props))
                     :width "50"}}
-           title))
+           (::tile/title props)))
 
 (def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 
