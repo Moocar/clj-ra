@@ -77,7 +77,6 @@
            {::epoch/current-hand [::hand/seat]}
            {::epoch/ra-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/auction-tiles (comp/get-query ui-tile/Tile)}
-           {::epoch/last-ra-invokee (comp/get-query ui-player/Player)}
            {::epoch/hands (comp/get-query ui-hand/Hand)}]
    :ident ::epoch/id}
   (dom/div {}

@@ -142,7 +142,7 @@
 ;; Small helpers
 
 (defn hand->epoch [hand]
-  (first (::epoch/_current-hand hand)))
+  (last (sort-by ::epoch/number (::epoch/_current-hand hand))))
 
 (defn epoch->game [epoch]
   (first (::game/_current-epoch epoch)))
@@ -151,7 +151,6 @@
   (first (::hand/_tiles tile)))
 
 (defn hand->game [hand]
-  #_(hand->epoch hand)
   (epoch->game (hand->epoch hand)))
 
 (defn current-hand [game]
@@ -206,8 +205,6 @@
                                                                           ::bid/sun-disk]}]}
                                        ::epoch/in-auction?
                                        ::epoch/in-disaster?
-                                       {::epoch/last-ra-invokee [{::hand/player [::player/id
-                                                                                 ::player/name]}]}
                                        {::epoch/current-hand [{::hand/player [::player/id
                                                                               ::player/name]}]}
                                        {::epoch/hands [{::hand/tiles [::tile/title]}
@@ -430,11 +427,12 @@
                   hand-scores)
             [[:db/add (:db/id game) ::game/current-epoch new-epoch-id]
              {:db/id new-epoch-id
-              ::epoch/current-hand (:db/id (::epoch/current-hand epoch))
+              ::epoch/current-hand (:db/id (next-hand (::epoch/current-hand epoch)))
               ::epoch/current-sun-disk (::epoch/current-sun-disk epoch)
               ::epoch/hands (map :db/id hand-scores)
               ::epoch/id (db/uuid)
               ::epoch/number (inc (::epoch/number epoch))}
+             [:db/retract (:db/id epoch) ::epoch/current-hand (:db/id (::epoch/current-hand epoch))]
              [:db/add (:db/id game) ::game/current-epoch new-epoch-id]
              [:db/add (:db/id game) ::game/epochs new-epoch-id]])))
 
@@ -443,8 +441,7 @@
         game  (epoch->game epoch)]
     (concat
      (move-tile-tx tile [game ::game/tile-bag] [epoch ::epoch/ra-tiles])
-     [[:db/add (:db/id epoch) ::epoch/in-auction? true]
-      [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]
+     [[:db/add (:db/id epoch) ::epoch/in-auction? true]]
      (invoke-ra-tx hand ::auction-reason/draw)
      (when (last-ra? epoch)
        (finish-epoch-tx epoch)))))
@@ -468,7 +465,8 @@
     (when (::epoch/in-disaster? epoch)
       (throw (ex-info "Waiting for players to discard disaster tiles" {})))
     (if (not (hand-turn? hand))
-      (throw (ex-info "not your turn" {}))
+      (throw (ex-info "not your turn" {:current-hand (::epoch/current-hand epoch)
+                                       :tried-hand hand}))
       (let [tile (d/entity @conn (sample-tile @conn game))]
         (if (= (::tile/type tile) ::tile-type/ra)
           (d/transact! conn (draw-ra-tx hand tile))
@@ -570,6 +568,7 @@
        (when (::auction/tiles-full? auction)
          [(discard-auction-tiles-op epoch)])))))
 
+;; TODO when all players use up tiles, trigger end of epoch
 (defn bid-tx
   "Moves the sun-disk from the hand to the middle of the board and triggers an end
   to the auction if it's the last bid"
