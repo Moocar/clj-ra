@@ -48,6 +48,7 @@
            ::hand/used-sun-disks
            ::hand/my-go?
            ::hand/seat
+           ::hand/score
            ::hand/id
            {::hand/tiles (comp/get-query ui-tile/Tile)}
            {::hand/player (comp/get-query ui-player/Player)}]
@@ -58,7 +59,8 @@
                   (= seat (::hand/seat (::epoch/current-hand epoch)))
                   (assoc-in [:style :backgroundColor] "pink"))
       (dom/span (ui-player/ui-player player) " - "
-                (str "seat: " seat))
+                (str "seat: " seat) " - "
+                (str "score: " (::hand/score hand)))
       (ui-segment {:compact true}
         (dom/div {}
           (concat

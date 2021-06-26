@@ -224,7 +224,7 @@
                       (update ::epoch/auction-tiles #(sort-by :db/id %))
                       (update ::epoch/hands
                               (fn [hands]
-                                #p (score-hands hands)
+                                (score-hands hands)
                                 (map (fn [hand]
                                        (-> hand
                                            (assoc ::hand/my-go? (= (::hand/seat hand)
@@ -301,6 +301,7 @@
                                      ::hand/player              (:db/id player)
                                      ::hand/id                  (db/uuid)
                                      ::hand/seat                i
+                                     ::hand/score               5
                                      :db/id                     dbid})
                                   (::game/players (d/entity @conn [::game/id game-id]))
                                   (shuffle (get sun-disk-sets num-players))
