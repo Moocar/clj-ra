@@ -168,18 +168,20 @@
                                                        {::hand/player [::player/id]}]}]}
                 ::game/id]}
   (let [result (d/pull @conn parent-query [::game/id id])]
-   (-> result
-       ;; TODO add zdt encoding to websocket transit
-       (update-when ::game/started-at str)
-       (update ::game/current-epoch
-               (fn [epoch]
-                 (-> epoch
-                     (update ::epoch/hands
-                             (fn [hands]
-                               (map (fn [hand]
-                                      (assoc hand ::hand/my-go? (= (::hand/seat hand)
-                                                                   (::hand/seat (::epoch/current-hand epoch)))))
-                                    hands)))))))))
+    (-> result
+        ;; TODO add zdt encoding to websocket transit
+        (update-when ::game/started-at str)
+        (update ::game/current-epoch
+                (fn [epoch]
+                  (-> epoch
+                      (update ::epoch/auction-tiles #(sort-by :db/id %))
+                      (update ::epoch/hands
+                              (fn [hands]
+                                (map (fn [hand]
+                                       (-> hand
+                                           (assoc ::hand/my-go? (= (::hand/seat hand)
+                                                                   (::hand/seat (::epoch/current-hand epoch))))))
+                                     hands)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mutations
@@ -360,10 +362,12 @@
 
 (defn draw-normal-tile-tx [hand tile]
   (let [epoch (hand->epoch hand)
-        game  (epoch->game epoch)]
+        game  (epoch->game epoch)
+        last-tile (last (sort-by ::tile/auction-track-position (::epoch/auction-tiles epoch)))]
     (concat
      (move-tile-tx tile [game ::game/tile-bag] [epoch ::epoch/auction-tiles])
-     [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]])))
+     [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]
+      [:db/add (:db/id tile) ::tile/auction-track-position (inc (or (::tile/auction-track-position last-tile) 0))]])))
 
 (pc/defmutation draw-tile [{:keys [::db/conn]} input]
   {::pc/params [::hand/id]

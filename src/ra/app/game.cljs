@@ -22,7 +22,8 @@
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
-            [ra.specs.player :as player]))
+            [ra.specs.player :as player]
+            [ra.specs.tile :as tile]))
 
 (def players->ra-count
   {2 6
@@ -53,7 +54,7 @@
 (defn ui-auction-track [props]
   (ui-segment {:compact true}
     (dom/strong "Auction track")
-    (ui-card-group {} (concat (map ui-tile/ui-tile (::epoch/auction-tiles props))
+    (ui-card-group {} (concat (map ui-tile/ui-tile (sort-by ::tile/auction-track-position (::epoch/auction-tiles props)))
                               (map (fn [_] (ui-tile/ui-blank-ra-spot)) (range (- 8 (count (::epoch/auction-tiles props)))))))))
 
 (defsc Epoch [this {:keys [::epoch/number

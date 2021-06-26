@@ -42,6 +42,7 @@
            ::tile/title
            ::tile/disaster?
            ::tile/type
+           ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
   (ui-card (cond-> {:style (cond-> {:height          "50"
