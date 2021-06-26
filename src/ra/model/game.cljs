@@ -55,3 +55,9 @@
           (-> env
               (m/returning (game-component))
               (m/with-target [:ui/current-game]))))
+
+(defmutation discard-disaster-tiles [input]
+  (remote [{:keys [state] :as env}]
+          (-> env
+              (m/returning (game-component))
+              (m/with-target [:ui/current-game]))))

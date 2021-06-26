@@ -20,7 +20,8 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [clojure.set :as set]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Rules
@@ -155,6 +156,7 @@
                                                          {::auction/bids [{::bid/hand [::hand/id]}
                                                                           ::bid/sun-disk]}]}
                                        ::epoch/in-auction?
+                                       ::epoch/in-disaster?
                                        {::epoch/last-ra-invokee [{::hand/player [::player/id
                                                                                  ::player/name]}]}
                                        {::epoch/current-hand [{::hand/player [::player/id
@@ -368,7 +370,10 @@
    ::pc/transform notify-clients
    ::pc/output [::game/id]}
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])
-        game (hand->game hand)]
+        game (hand->game hand)
+        epoch (hand->epoch hand)]
+    (when (::epoch/in-disaster? epoch)
+      (throw (ex-info "Waiting for players to discard disaster tiles" {})))
     (if (not (hand-turn? hand))
       (throw (ex-info "not your turn" {}))
       (let [tile (d/entity @conn (sample-tile @conn game))]
@@ -466,7 +471,10 @@
          [:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
          ;; Set the current epoch's sun disk (middle of the board) to the
          ;; winning disk
-         [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]])
+         [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]]
+        ;; If the player picks up a disaster tile, go into disaster resolution mode
+        (when (some ::tile/disaster? (::epoch/auction-tiles epoch))
+          [[:db/add (:db/id epoch) ::epoch/in-disaster? true]]))
        ;;TODO what if there is no winning bid, but the track isn't full?
 
        ;; If there isn't a winning bid, and the auction track is full, then
@@ -499,8 +507,51 @@
   {::pc/params    #{::hand/id :sun-disk}
    ::pc/transform notify-clients
    ::pc/output    [::game/id]}
-  (let [hand (d/entity @conn [::hand/id (::hand/id input)])]
+  (let [hand  (d/entity @conn [::hand/id (::hand/id input)])
+        epoch (hand->epoch hand)]
+    (when-not (::epoch/auction epoch)
+      (throw (ex-info {} "Not in an auction")))
     (d/transact! conn (bid-tx hand sun-disk))
+    {::game/id (::game/id (hand->game hand))}))
+
+(defn discard-tile-op [hand tile]
+  [:db/retract (:db/id hand) ::hand/tiles (:db/id tile)])
+
+(pc/defmutation discard-disaster-tiles
+  [{:keys [::db/conn]} input]
+  {::pc/params    #{::hand/id :tile-ids}
+   ::pc/transform notify-clients
+   ::pc/output    [::game/id]}
+  (let [hand                 (d/entity @conn [::hand/id (::hand/id input)])
+        epoch                (hand->epoch hand)
+        disaster-tiles       (set (filter ::tile/disaster? (::hand/tiles hand)))
+        selected-tiles       (set (map (fn [tile-id] (d/entity @conn [::tile/id tile-id])) (:tile-ids input)))
+        possible-tiles       (set(filter (fn [tile]
+                                     (and (not (::tile/disaster? tile))
+                                          ((set (map ::tile/type disaster-tiles)) (::tile/type tile))))
+                                   (::hand/tiles hand)))
+        disaster-type->count (->> disaster-tiles
+                                  (group-by ::tile/type)
+                                  (reduce-kv (fn [a k v]
+                                               (assoc a k (count v)))
+                                             {}))]
+    (when-not (seq disaster-tiles)
+      (throw (ex-info "No disaster tiles in hand" {})))
+
+    ;; TODO handle nile vs flood
+    (doseq [[disaster-type disaster-count] disaster-type->count]
+      (let [candidates     (set (filter #(= disaster-type (::tile/type %)) possible-tiles))
+            expected-count (min (count candidates) (* disaster-count 2))
+            selected       (set (filter #(= disaster-type (::tile/type %)) selected-tiles))]
+        (when (not= expected-count (count selected))
+          (throw (ex-info "Invalid number of disaster tiles to discard"
+                          {:expected-count expected-count
+                           :received       (count selected)})))
+        (when-not (set/subset? selected candidates)
+          (throw (ex-info "Invalid selected disaster tiles" {})))))
+
+    (d/transact! conn (concat (mapv #(discard-tile-op hand %) (set/union selected-tiles disaster-tiles))
+                              [[:db/add (:db/id epoch) ::epoch/in-disaster? false]]))
     {::game/id (::game/id (hand->game hand))}))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
@@ -511,12 +562,14 @@
       (d/transact! conn (m-tile/new-bag)))))
 
 (def resolvers
-  [bid
+  [
+   bid
+   discard-disaster-tiles
    draw-tile
    invoke-ra
    join-game
    new-game
-   start-game
    reset
+   start-game
 
    game-resolver])

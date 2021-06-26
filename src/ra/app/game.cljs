@@ -65,6 +65,7 @@
            ::epoch/number
            ::epoch/id
            {::epoch/auction (comp/get-query ui-auction/Auction)}
+           ::epoch/in-disaster?
            {::epoch/current-hand [::hand/seat]}
            {::epoch/ra-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/auction-tiles (comp/get-query ui-tile/Tile)}
@@ -82,7 +83,7 @@
       (ui-auction/ui-auction auction))
     (ui-segment {:compact true}
                 (dom/h3 "Seats")
-                (ui-segment-group {:horizontal true}
+                (ui-segment-group {}
                                   (map (fn [hand]
                                          (ui-hand/ui-hand
                                           (if auction
@@ -90,13 +91,9 @@
                                                                                    (js/console.log "sun disk clicked" sun-disk)
                                                                                    (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
                                                                  :highest-bid    (highest-bid auction)
+                                                                 :epoch          props
                                                                  :auction        auction})
-                                            (comp/computed hand {:epoch props})))
-
-                        #_(if (= seat (::hand/seat current-hand))
-                            (ui-segment dom/div {:style {:backgroundColor "pink"}}
-                            (ui-hand hand))
-                          (ui-hand hand)))
+                                            (comp/computed hand {:epoch props}))))
                       hands)))))
 
 (def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))

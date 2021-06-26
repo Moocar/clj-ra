@@ -91,7 +91,7 @@
     ::tile/scarab? true
     ::tile/title "Nile"
     ::tile/river-type ::river/nile} 25
-   {::tile/type ::tile-type/flood
+   {::tile/type ::tile-type/river
     ::tile/title "Flood"
     ::tile/river-type ::river/flood} 12
    {::tile/type ::tile-type/river
