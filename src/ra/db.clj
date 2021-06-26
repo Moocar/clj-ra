@@ -40,6 +40,8 @@
                                  :db/valueType   :db.type/ref}
    :ra.specs.game/players       {:db/cardinality :db.cardinality/many
                                  :db/valueType   :db.type/ref}
+   :ra.specs.game/epochs        {:db/cardinality :db.cardinality/many
+                                 :db/valueType   :db.type/ref}
    :ra.specs.game/current-epoch {:db/valueType :db.type/ref}})
 
 (defmethod ig/init-key ::conn [_ _]

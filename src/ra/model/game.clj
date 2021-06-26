@@ -98,8 +98,10 @@
 ;; Scoring
 
 (defn score-hands [hands]
-  (let [hands (map (fn [hand]
-                     (assoc hand
+  (let [hand-scores (map (fn [hand]
+                           {::hand/id      (::hand/id hand)
+                            :db/id         (:db/id hand)
+                            :old-score     (::hand/score hand)
                             :score
                             (->> (::hand/tiles hand)
                                  (group-by ::tile/type)
@@ -121,12 +123,12 @@
                                                    0)))
                                             0))
                             :pharoah-count (count (filter #(= ::tile-type/pharoah (::tile/type %))
-                                                          (::hand/tiles hand)))))
-                   hands)
+                                                          (::hand/tiles hand)))})
+                         hands)
         sorted-by-pharoah (sort-by :pharoah-count hands)]
     (if (= (:pharoah-count (first sorted-by-pharoah))
            (:pharoah-count (last sorted-by-pharoah)))
-      hands
+      hand-scores
       (map (fn [hand]
              (cond (= hand (first sorted-by-pharoah))
                    (update hand :score - 2)
@@ -134,7 +136,7 @@
                    (update hand :score + 5)
                    :else
                    hand))
-           hands))))
+           hand-scores))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Small helpers
@@ -224,7 +226,6 @@
                       (update ::epoch/auction-tiles #(sort-by :db/id %))
                       (update ::epoch/hands
                               (fn [hands]
-                                (score-hands hands)
                                 (map (fn [hand]
                                        (-> hand
                                            (assoc ::hand/my-go? (= (::hand/seat hand)
@@ -317,7 +318,8 @@
                                player-hands
                                [epoch]
                                [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
-                                [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]]))))))))
+                                [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]
+                                [:db/add [::game/id game-id] ::game/epochs (:db/id epoch)]]))))))))
 
 (pc/defmutation start-game [{:keys [::db/conn]} {game-id ::game/id}]
   {::pc/params [::game/id]
@@ -366,6 +368,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Invoke Ra
 
+(defn discard-auction-tiles-op
+  "Removes the auction tiles from the epoch"
+  [epoch]
+  [:db/retract (:db/id epoch) ::epoch/auction-tiles])
+
+(defn discard-ra-tiles-op
+  "Removes the ra tiles from the epoch"
+  [epoch]
+  [:db/retract (:db/id epoch) ::epoch/ra-tiles])
+
 (defn auction-tiles-full?
   "Returns true if the auction track is full"
   [epoch]
@@ -401,6 +413,31 @@
     [[:db/retract (:db/id from-entity) from-attr (:db/id tile)]
      [:db/add (:db/id to-entity) to-attr (:db/id tile)]]))
 
+(defn max-ras [game]
+  (get ras-per-epoch (count (game->players game))))
+
+(defn last-ra? [epoch]
+  (= (inc (count (::epoch/ra-tiles epoch)))
+     (max-ras (epoch->game epoch))))
+
+(defn finish-epoch-tx [epoch]
+  (let [game         (epoch->game epoch)
+        hand-scores  (score-hands (::epoch/hands epoch))
+        id-atom      (atom -1)
+        new-epoch-id (swap! id-atom dec)]
+    (concat (mapv (fn [hand]
+                    [:db/add (:db/id hand) ::hand/score (+ (:old-score hand) (:score hand))])
+                  hand-scores)
+            [[:db/add (:db/id game) ::game/current-epoch new-epoch-id]
+             {:db/id new-epoch-id
+              ::epoch/current-hand (:db/id (::epoch/current-hand epoch))
+              ::epoch/current-sun-disk (::epoch/current-sun-disk epoch)
+              ::epoch/hands (map :db/id hand-scores)
+              ::epoch/id (db/uuid)
+              ::epoch/number (inc (::epoch/number epoch))}
+             [:db/add (:db/id game) ::game/current-epoch new-epoch-id]
+             [:db/add (:db/id game) ::game/epochs new-epoch-id]])))
+
 (defn draw-ra-tx [hand tile]
   (let [epoch (hand->epoch hand)
         game  (epoch->game epoch)]
@@ -408,7 +445,9 @@
      (move-tile-tx tile [game ::game/tile-bag] [epoch ::epoch/ra-tiles])
      [[:db/add (:db/id epoch) ::epoch/in-auction? true]
       [:db/add (:db/id epoch) ::epoch/last-ra-invokee (:db/id hand)]]
-     (invoke-ra-tx hand ::auction-reason/draw))))
+     (invoke-ra-tx hand ::auction-reason/draw)
+     (when (last-ra? epoch)
+       (finish-epoch-tx epoch)))))
 
 (defn draw-normal-tile-tx [hand tile]
   (let [epoch (hand->epoch hand)
@@ -490,11 +529,6 @@
            [:db/add (:db/id hand) ::hand/tiles (:db/id tile)])
          (::epoch/auction-tiles epoch))))
 
-(defn discard-auction-tiles-tx
-  "Removes the auction tiles from the epoch"
-  [epoch]
-  [[:db/retract (:db/id epoch) ::epoch/auction-tiles]])
-
 (defn last-bid-tx
   "The auction ends.
   1. Move all non-winning bids back into their original hands
@@ -534,7 +568,7 @@
        ;; If there isn't a winning bid, and the auction track is full, then
        ;; remove all tiles from the auction track
        (when (::auction/tiles-full? auction)
-         (discard-auction-tiles-tx epoch))))))
+         [(discard-auction-tiles-op epoch)])))))
 
 (defn bid-tx
   "Moves the sun-disk from the hand to the middle of the board and triggers an end
