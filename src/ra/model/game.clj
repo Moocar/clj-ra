@@ -1,5 +1,6 @@
 (ns ra.model.game
-  (:require [com.fulcrologic.fulcro.networking.websocket-protocols
+  (:require [clojure.set :as set]
+            [com.fulcrologic.fulcro.networking.websocket-protocols
              :as
              fws-protocols]
             [com.wsscode.pathom.connect :as pc]
@@ -20,8 +21,8 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
-            [clojure.set :as set]))
+            [ra.specs.tile.river :as river]
+            [ra.specs.tile.type :as tile-type]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Rules
@@ -92,6 +93,48 @@
    3 8
    4 9
    5 10})
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Scoring
+
+(defn score-hands [hands]
+  (let [hands (map (fn [hand]
+                     (assoc hand
+                            :score
+                            (->> (::hand/tiles hand)
+                                 (group-by ::tile/type)
+                                 (reduce-kv (fn [a tile-type tiles]
+                                              (+ a
+                                                 (case tile-type
+                                                   ::tile-type/god          (* 2 (count tiles))
+                                                   ::tile-type/gold         (* 3 (count tiles))
+                                                   ::tile-type/civilization (case (count (group-by ::tile/civilization-type tiles))
+                                                                              0 -5
+                                                                              1 0
+                                                                              2 5
+                                                                              3 10
+                                                                              4 15)
+                                                   ::tile-type/river        (let [x (group-by ::tile/river-type tiles)]
+                                                                              (if-not (seq (::river/flood x))
+                                                                                0
+                                                                                (reduce + (map count (vals x)))))
+                                                   0)))
+                                            0))
+                            :pharoah-count (count (filter #(= ::tile-type/pharoah (::tile/type %))
+                                                          (::hand/tiles hand)))))
+                   hands)
+        sorted-by-pharoah (sort-by :pharoah-count hands)]
+    (if (= (:pharoah-count (first sorted-by-pharoah))
+           (:pharoah-count (last sorted-by-pharoah)))
+      hands
+      (map (fn [hand]
+             (cond (= hand (first sorted-by-pharoah))
+                   (update hand :score - 2)
+                   (= hand (last sorted-by-pharoah))
+                   (update hand :score + 5)
+                   :else
+                   hand))
+           hands))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Small helpers
@@ -181,6 +224,7 @@
                       (update ::epoch/auction-tiles #(sort-by :db/id %))
                       (update ::epoch/hands
                               (fn [hands]
+                                #p (score-hands hands)
                                 (map (fn [hand]
                                        (-> hand
                                            (assoc ::hand/my-go? (= (::hand/seat hand)
