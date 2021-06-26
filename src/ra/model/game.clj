@@ -202,8 +202,9 @@
          ::pc/mutate
          (fn [env params]
            (let [result (mutate env params)]
-             (when-let [game-id (::game/id result)]
-               (notify-other-clients env game-id))
+             (when (:connected-uids env)
+               (when-let [game-id (::game/id result)]
+                 (notify-other-clients env game-id)))
              result))))
 
 (defn do-new-game [conn game-id]
