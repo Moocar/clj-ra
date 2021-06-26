@@ -35,6 +35,12 @@
   (dom/div {}
     (ui-input {:label    "Your Name"
                :value    (or temp-name "")
+               :onKeyUp  (fn [evt]
+                           (when (= (.-keyCode evt) 13)
+                             (comp/transact! this [(m-player/save
+                                                    {::player/id   id
+                                                     ::player/name temp-name})]
+                                             {:refresh [:ui/current-player]})))
                :onChange (fn [evt _]
                            (m/set-string! this ::player/temp-name :event evt))})
     (ui-button {:content  "Submit"

@@ -61,3 +61,9 @@
           (-> env
               (m/returning (game-component))
               (m/with-target [:ui/current-game]))))
+
+(defmutation use-god-tile [input]
+  (remote [{:keys [state] :as env}]
+          (-> env
+              (m/returning (game-component))
+              (m/with-target [:ui/current-game]))))

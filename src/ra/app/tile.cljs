@@ -37,7 +37,7 @@
              :key      value}
             (str value)))
 
-(defsc Tile [this props {:keys [selectable? dimmed?]}]
+(defsc Tile [this props {:keys [selectable? dimmed? on-click]}]
   {:query [::tile/id
            ::tile/title
            ::tile/disaster?
@@ -54,7 +54,11 @@
                              (assoc :border "red solid 2px"))}
              selectable?
              (assoc :onClick (fn []
-                               (m/toggle! this :ui/selected?))))
+                               (m/toggle! this :ui/selected?)
+                               (when on-click
+                                 (on-click props))))
+             on-click
+             (assoc :onClick (fn [] (on-click props))))
            (dom/div {}
              (dom/span (::tile/title props))
              (when (::tile/disaster? props)

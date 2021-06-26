@@ -102,6 +102,9 @@
 (defn epoch->game [epoch]
   (first (::game/_current-epoch epoch)))
 
+(defn tile->hand [tile]
+  (first (::hand/_tiles tile)))
+
 (defn hand->game [hand]
   #_(hand->epoch hand)
   (epoch->game (hand->epoch hand)))
@@ -123,6 +126,7 @@
 (defn hand-turn? [hand]
   (= (:db/id hand)
      (:db/id (current-hand (hand->game hand)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Bigger helpers
@@ -555,8 +559,23 @@
         (when-not (set/subset? selected candidates)
           (throw (ex-info "Invalid selected disaster tiles" {})))))
 
-    (d/transact! conn (concat (mapv #(discard-tile-op hand %) (set/union selected-tiles disaster-tiles))
+    (d/transact! conn (concat (mapv #(discard-tile-op hand %)
+                                    (set/union selected-tiles disaster-tiles))
                               [[:db/add (:db/id epoch) ::epoch/in-disaster? false]]))
+    {::game/id (::game/id (hand->game hand))}))
+
+(pc/defmutation use-god-tile
+  [{:keys [::db/conn]} input]
+  {::pc/params    #{:god-tile-id :auction-track-tile-id}
+   ::pc/transform notify-clients
+   ::pc/output    [::game/id]}
+  (let [god-tile (d/entity @conn [::tile/id (:god-tile-id input)])
+        hand (tile->hand god-tile)
+        auction-track-tile (d/entity @conn [::tile/id (:auction-track-tile-id input)])
+        epoch (hand->epoch hand)]
+    (d/transact! conn (concat
+                       [[:db/retract (:db/id hand) ::hand/tiles (:db/id god-tile)]]
+                       (move-tile-tx auction-track-tile [epoch ::epoch/auction-tiles] [hand ::hand/tiles])))
     {::game/id (::game/id (hand->game hand))}))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
@@ -576,5 +595,6 @@
    new-game
    reset
    start-game
+   use-god-tile
 
    game-resolver])

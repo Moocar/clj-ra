@@ -2,11 +2,9 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
+            [clojure.tools.logging :as log]
             [cognitect.transit :as transit]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
-            [com.fulcrologic.fulcro.networking.websocket-protocols
-             :as
-             fws-protocols]
             [com.fulcrologic.fulcro.networking.websockets :as fws]
             [com.fulcrologic.fulcro.server.api-middleware :as fmw :refer [wrap-api]]
             [hiccup.core :refer [html]]
@@ -15,9 +13,9 @@
             [ra.date :as date]
             [ra.specs :as rs]
             [ring.middleware.content-type :refer [wrap-content-type]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.not-modified :refer [wrap-not-modified]]
             [ring.middleware.params :refer [wrap-params]]
-            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.resource :refer [wrap-resource]]
             [taoensso.sente.server-adapters.http-kit :refer [get-sch-adapter]])
   (:import [com.cognitect.transit TransitFactory WriteHandler]
@@ -209,13 +207,15 @@
   (s/keys :req-un [::manifest-edn ::asset-path]))
 
 (defmethod ig/init-key ::handler [_ config]
-  (println "handler reinit" (:pathom-parser config))
   (make-middleware config))
 
 (defmethod ig/init-key ::server [_ {:keys [handler port]}]
-  (let [handler (atom (delay handler))]
-    {:handler handler
-     :server  (http/run-server #(@@handler %) {:port port})}))
+  (log/info "initializing server")
+  (let [handler (atom (delay handler))
+        result {:handler handler
+                :server  (http/run-server #(@@handler %) {:port port})}]
+    (println "server started")
+    result))
 
 (defmethod ig/halt-key! ::server [_ {:keys [server]}]
   (server))

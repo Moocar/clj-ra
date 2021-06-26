@@ -16,7 +16,8 @@
             [ra.specs.auction.reason :as auction-reason]
             [ra.specs.epoch :as epoch]
             [ra.specs.hand :as hand]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [ra.specs.tile.type :as tile-type]))
 
 (defn all-passes? [{:keys [::auction/bids]}]
   (empty? (filter ::bid/sun-disk bids)))
@@ -42,7 +43,7 @@
                      ::hand/id
                      ::hand/player
                      ::hand/my-go?] :as hand}
-             {:keys [onClickSunDisk highest-bid auction epoch]}]
+             {:keys [onClickSunDisk highest-bid auction epoch click-god-tile]}]
   {:query [::hand/available-sun-disks
            ::hand/used-sun-disks
            ::hand/my-go?
@@ -75,15 +76,18 @@
                                               :value   "Pass"})]))))
       (let [disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
         (ui-segment {:compact true}
-          (if discard-disaster-tiles?
-            (ui-tile/ui-tiles (map (fn [tile]
-                                     (comp/computed tile
+          (ui-tile/ui-tiles (map (fn [tile]
+                                   (comp/computed tile
+                                                  (if discard-disaster-tiles?
                                                     (if (and (not (::tile/disaster? tile))
                                                              (disaster-types (::tile/type tile)))
                                                       {:selectable? true}
-                                                      {:dimmed? true})))
-                                   tiles))
-            (ui-tile/ui-tiles tiles))))
+                                                      {:dimmed? true})
+                                                    (if (= ::tile-type/god (::tile/type tile))
+                                                      {:selectable? true
+                                                       :on-click click-god-tile}
+                                                      tiles))))
+                                 tiles))))
       (if discard-disaster-tiles?
         (dom/div {}
           (ui-button {:style   {:marginTop "10"}
