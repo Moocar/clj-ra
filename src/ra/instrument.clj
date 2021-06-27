@@ -132,6 +132,8 @@
     (ra-win-pass env h1 h2)
     (ra-win-pass env h2 h1)
     (ra-win-pass env h1 h2)
-    (ra-win-pass env h2 h1)
+    (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id (d/entity @conn h1))})])
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h1))
+                              :sun-disk ~(first (::hand/available-sun-disks (d/entity @conn h1)))})])
 
     nil))

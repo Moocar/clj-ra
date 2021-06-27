@@ -516,9 +516,15 @@
 (defn waiting-on-last-bid?
   "Returns true if the current bid auction's bid is the last"
   [auction]
-  (let [game (auction->game auction)
-        num-players (count (game->players game))]
-    (= (inc (count (::auction/bids auction))) num-players)))
+  (let [epoch (auction->epoch auction)
+        active-hands (filter (fn [hand]
+                               (or (seq (::hand/available-sun-disks hand))
+                                   (some (fn [bid-hand]
+                                              (= hand bid-hand))
+                                            (map ::bid/hand (::auction/bids auction)))))
+                             (::epoch/hands epoch))]
+    (= (inc (count (::auction/bids auction)))
+       (count active-hands))))
 
 (defn winning-bid
   "Given an auction and a potential new bid, return the winning bid (which could
