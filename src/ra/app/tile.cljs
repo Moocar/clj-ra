@@ -52,13 +52,12 @@
                              (assoc :opacity "50%")
                              (:ui/selected? props)
                              (assoc :border "red solid 2px"))}
-             selectable?
+             (or selectable? on-click)
              (assoc :onClick (fn []
-                               (m/toggle! this :ui/selected?)
+                               (when selectable?
+                                 (m/toggle! this :ui/selected?))
                                (when on-click
-                                 (on-click props))))
-             on-click
-             (assoc :onClick (fn [] (on-click props))))
+                                 (on-click props)))))
            (dom/div {}
              (dom/span (::tile/title props))
              (when (::tile/disaster? props)

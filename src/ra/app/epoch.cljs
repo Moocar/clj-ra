@@ -46,6 +46,7 @@
        (map (fn [_] (ui-tile/ui-blank-ra-spot)))))
 
 (defn swap-god-tile [this props tile]
+  (m/set-value! this :ui/selected-god-tile nil)
   (comp/transact! this [(m-game/use-god-tile {:god-tile-id (::tile/id (:ui/selected-god-tile props))
                                               :auction-track-tile-id (::tile/id tile)})]))
 
