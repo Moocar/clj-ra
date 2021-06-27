@@ -587,12 +587,12 @@
         ;; If the player picks up a disaster tile, go into disaster resolution mode
         (when (some ::tile/disaster? (::epoch/auction-tiles epoch))
           [[:db/add (:db/id epoch) ::epoch/in-disaster? true]]))
-       ;;TODO what if there is no winning bid, but the track isn't full?
 
        ;; If there isn't a winning bid, and the auction track is full, then
        ;; remove all tiles from the auction track
-       (when (::auction/tiles-full? auction)
-         [(discard-auction-tiles-op epoch)])))))
+       (if (::auction/tiles-full? auction)
+         [(discard-auction-tiles-op epoch)]
+         (throw (ex-info "You voluntarily invoked ra. You must bid" {})))))))
 
 (defn sun-disks-in-play? [epoch]
   (some (fn [hand]
