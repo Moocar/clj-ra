@@ -656,6 +656,8 @@
         hand (d/entity db [::hand/id (::hand/id input)])
         auction-track-tile (d/entity @conn [::tile/id (:auction-track-tile-id input)])
         epoch (hand->epoch hand)]
+    (when (= (::tile/type auction-track-tile) ::tile-type/god)
+      (throw (ex-info "Can't use god tile on a god tile" {})))
     (d/transact! conn (concat
                        [[:db/retract (:db/id hand) ::hand/tiles (:db/id god-tile)]]
                        (move-thing-tx (:db/id auction-track-tile) [epoch ::epoch/auction-tiles] [hand ::hand/tiles])))
