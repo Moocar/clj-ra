@@ -48,6 +48,7 @@
 (defn swap-god-tile [this props tile]
   (m/set-value! this :ui/selected-god-tile nil)
   (comp/transact! this [(m-game/use-god-tile {:god-tile-id (::tile/id (:ui/selected-god-tile props))
+                                              ::hand/id (get-in props [:ui/selected-god-tile ::tile/hand ::hand/id])
                                               :auction-track-tile-id (::tile/id tile)})]))
 
 (defn ui-auction-track [this props]
@@ -64,6 +65,16 @@
 (defn highest-bid [{:keys [::auction/bids]}]
   (apply max (or (seq (map ::bid/sun-disk bids)) [0])))
 
+(m/defmutation select-god-tile [{:keys [hand tile]}]
+  (action [env]
+    (let [hand-ident [::hand/id (::hand/id hand)]
+          tile-ident [::tile/id (::tile/id tile)]]
+     (swap! (:state env)
+            (fn [s]
+              (-> s
+                  (assoc-in (conj (:ref env) :ui/selected-god-tile) tile-ident)
+                  (assoc-in (conj tile-ident ::tile/hand) hand-ident)))))))
+
 (defsc Epoch [this {:keys [::epoch/number
                            ::epoch/current-sun-disk
                            ::epoch/auction
@@ -73,7 +84,7 @@
            ::epoch/number
            ::epoch/id
            {::epoch/auction (comp/get-query ui-auction/Auction)}
-           :ui/selected-god-tile
+           {:ui/selected-god-tile [::tile/id {::tile/hand [::hand/id]}]}
            ::epoch/in-disaster?
            {::epoch/current-hand [::hand/seat]}
            {::epoch/ra-tiles (comp/get-query ui-tile/Tile)}
@@ -101,10 +112,11 @@
                                                                  :epoch          props
                                                                  :auction        auction})
                                             (comp/computed hand {:epoch props
-                                                                 :click-god-tile (fn [tile]
+                                                                 :click-god-tile (fn [hand tile]
                                                                                    (if (:ui/selected-god-tile props)
                                                                                      (m/set-value! this :ui/selected-god-tile nil)
-                                                                                     (m/set-value! this :ui/selected-god-tile tile)))}))))
+                                                                                     (comp/transact! this [(select-god-tile {:hand hand
+                                                                                                                             :tile tile})])))}))))
                       hands)))))
 
 (def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))

@@ -2,10 +2,12 @@
   (:require [datascript.core :as d]
             [ra.db :as db]
             [ra.model.game :as m-game]
+            [ra.pathom :as pathom]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
-            [ra.specs.tile.type :as tile-type]
-            [ra.specs.tile :as tile]))
+            [ra.specs.hand :as hand]
+            [ra.specs.tile :as tile]
+            [ra.specs.tile.type :as tile-type]))
 
 (defn get-game [conn game-id]
   (d/entity @conn [::game/id game-id]))
@@ -24,6 +26,18 @@
                               (and (= tile-type (::tile/type tile))
                                    (not (::tile/disaster? tile))))))
 
+(defn god-tile? [t]
+  (= ::tile-type/god (::tile/type t)))
+
+(defn find-tile-in [thing pred]
+  (first (filter pred thing)))
+
+(defn find-tile-in-hand [hand pred]
+  (first (filter pred (::hand/tiles hand))))
+
+(defn find-tile-in-auction [epoch pred]
+  (first (filter pred (::epoch/auction-tiles epoch))))
+
 (defn draw-tile* [conn hand-id tile]
   (m-game/do-draw-tile conn
                        (d/entity @conn hand-id)
@@ -34,7 +48,7 @@
                                       (:db/id (m-game/hand->game (d/entity @conn hand-id)))
                                       tile-type)))
 
-(defn progress-game [{:keys [::db/conn]} game-id]
+(defn progress-game [{:keys [::db/conn ::pathom/parser]} game-id]
   (let [game (d/entity @conn [::game/id game-id])
         epoch (::game/current-epoch game)
         h1 (:db/id (::epoch/current-hand epoch))
@@ -42,5 +56,15 @@
                                   (::epoch/hands epoch))))]
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
     (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
+    (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id (d/entity @conn h1))})])
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h2))
+                              :sun-disk ~(first (::hand/available-sun-disks (d/entity @conn h2)))})])
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h1))
+                              :sun-disk nil})])
+    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
+    #_ (parser {} [`(m-game/use-god-tile {:god-tile-id ~(::tile/id (first (filter god-tile? (::hand/tiles (d/entity @conn h2)))))
+                                       :auction-track-tile-id ~(::tile/id (first (filter god-tile? (::epoch/auction-tiles #p (m-game/hand->epoch (d/entity @conn h2))))))})])
+    #_(draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
+
     nil))

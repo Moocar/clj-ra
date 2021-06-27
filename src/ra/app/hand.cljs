@@ -87,7 +87,7 @@
                                                       {:dimmed? true})
                                                     (if (= ::tile-type/god (::tile/type tile))
                                                       {:selectable? true
-                                                       :on-click click-god-tile}
+                                                       :on-click (fn [tile] (click-god-tile hand tile))}
                                                       tiles))))
                                  tiles))))
       (if discard-disaster-tiles?

@@ -147,9 +147,6 @@
 (defn epoch->game [epoch]
   (first (::game/_current-epoch epoch)))
 
-(defn tile->hand [tile]
-  (first (::hand/_tiles tile)))
-
 (defn hand->game [hand]
   (epoch->game (hand->epoch hand)))
 
@@ -604,7 +601,7 @@
   (let [hand  (d/entity @conn [::hand/id (::hand/id input)])
         epoch (hand->epoch hand)]
     (when-not (::epoch/auction epoch)
-      (throw (ex-info {} "Not in an auction")))
+      (throw (ex-info "Not in an auction" {})))
     (d/transact! conn (bid-tx hand sun-disk))
     {::game/id (::game/id (hand->game hand))}))
 
@@ -651,11 +648,12 @@
 
 (pc/defmutation use-god-tile
   [{:keys [::db/conn]} input]
-  {::pc/params    #{:god-tile-id :auction-track-tile-id}
+  {::pc/params    #{::hand/id :god-tile-id :auction-track-tile-id}
    ::pc/transform notify-clients
    ::pc/output    [::game/id]}
-  (let [god-tile (d/entity @conn [::tile/id (:god-tile-id input)])
-        hand (tile->hand god-tile)
+  (let [db @conn
+        god-tile (d/entity db [::tile/id (:god-tile-id input)])
+        hand (d/entity db [::hand/id (::hand/id input)])
         auction-track-tile (d/entity @conn [::tile/id (:auction-track-tile-id input)])
         epoch (hand->epoch hand)]
     (d/transact! conn (concat
