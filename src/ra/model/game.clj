@@ -285,6 +285,8 @@
    ::pc/transform notify-clients
    ::pc/output [::game/id]}
   (let [game (d/entity @conn [::game/id game-id])]
+    (when (::game/started-at game)
+      (throw (ex-info "Game already started" {})))
     (if (>= (count (game->players game)) 5)
       (throw (ex-info "Maximum players already reached" {}))
       (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]])))
@@ -599,7 +601,6 @@
             (seq (::hand/available-sun-disks hand)))
         (::epoch/hands epoch)))
 
-;; TODO when all players use up tiles, trigger end of epoch
 (defn bid-tx
   "Moves the sun-disk from the hand to the middle of the board and triggers an end
   to the auction if it's the last bid"
