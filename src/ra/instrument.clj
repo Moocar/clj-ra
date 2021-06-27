@@ -55,7 +55,7 @@
                               :sun-disk nil})])
     (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h1))
                               :sun-disk nil})])
-    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization)))
+  (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization)))
 
 (defn god-tile-scenario [{:keys [::db/conn ::pathom/parser]} game-id]
   (let [game (d/entity @conn [::game/id game-id])
@@ -88,7 +88,7 @@
     ;; Invoke Ra and win some
     (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id (d/entity @conn h1))})])
     (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h2))
-                              :sun-disk ~(first (::hand/available-sun-disks (d/touch (d/entity @conn h2))))})])
+                              :sun-disk ~(first (::hand/available-sun-disks (d/entity @conn h2)))})])
     (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h1))
                               :sun-disk nil})])
     (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
@@ -102,5 +102,36 @@
 
     ;; Last hoora
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/ra))
+
+    nil))
+
+(defn ra-win-pass [{:keys [::db/conn ::pathom/parser]} h1 h2]
+  (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id (d/entity @conn h1))})])
+  (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h2))
+                            :sun-disk ~(first (::hand/available-sun-disks (d/entity @conn h2)))})])
+  (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h1))
+                            :sun-disk nil})]))
+
+(defn run-out-of-sun-disks-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (let [game (d/entity @conn [::game/id game-id])
+        epoch (::game/current-epoch game)
+        h1 (:db/id (::epoch/current-hand epoch))
+        h2 (:db/id (first (filter #(not= h1 (:db/id %))
+                                  (::epoch/hands epoch))))]
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
+    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
+    (draw-tile* conn h1 (find-tile-p (get-game conn game-id) m-tile/pharoah?))
+    (draw-tile* conn h2 (find-tile-p (get-game conn game-id) m-tile/monument?))
+
+    ;; Invoke Ra and win some
+    (ra-win-pass env h1 h2)
+    (ra-win-pass env h2 h1)
+    (ra-win-pass env h1 h2)
+    (ra-win-pass env h2 h1)
+
+    (ra-win-pass env h1 h2)
+    (ra-win-pass env h2 h1)
+    (ra-win-pass env h1 h2)
+    (ra-win-pass env h2 h1)
 
     nil))

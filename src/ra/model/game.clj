@@ -97,7 +97,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Scoring
 
-;; TODO if hand has no tiles, won't get negative civilization
 (defn score-hands [hands]
   (let [hand-scores (map (fn [hand]
                            {::hand/id      (::hand/id hand)
@@ -350,10 +349,15 @@
 (defn next-hand
   "Returns the hand to the left of the given hand"
   [current-hand]
+  (assert current-hand)
   (let [db (d/entity-db current-hand)
+        _ (assert db)
         epoch (hand->epoch current-hand)
+        _ (assert epoch)
         game (hand->game current-hand)
+        _ (assert game)
         num-players (count (game->players game))]
+    (assert (pos? num-players))
     (loop [seat (inc (::hand/seat current-hand))]
       (if (>= seat num-players)
         (recur 0)
@@ -365,6 +369,8 @@
 (defn rotate-current-hand-tx
   "Sets the epoch's current hand to the player to the left of the given hand"
   [epoch hand]
+  (assert epoch)
+  (assert hand)
   [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -407,6 +413,8 @@
    ::pc/output [::game/id]}
   (assert (::hand/id input))
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])]
+    (assert hand)
+    (assert (hand->epoch hand))
     (d/transact! conn (invoke-ra-tx hand ::auction-reason/invoke))
     {::game/id (::game/id (hand->game hand))}))
 
@@ -610,6 +618,7 @@
   (assert (::hand/id input))
   (let [hand  (d/entity @conn [::hand/id (::hand/id input)])
         epoch (hand->epoch hand)]
+    (assert (= hand (::epoch/current-hand epoch)))
     (when-not (::epoch/auction epoch)
       (throw (ex-info "Not in an auction" {})))
     (d/transact! conn (bid-tx hand sun-disk))
