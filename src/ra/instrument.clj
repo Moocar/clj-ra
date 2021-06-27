@@ -137,3 +137,21 @@
                               :sun-disk ~(first (::hand/available-sun-disks (d/entity @conn h1)))})])
 
     nil))
+
+(defn drought-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (let [game (d/entity @conn [::game/id game-id])
+        epoch (::game/current-epoch game)
+        h1 (:db/id (::epoch/current-hand epoch))
+        h2 (:db/id (first (filter #(not= h1 (:db/id %))
+                                  (::epoch/hands epoch))))]
+    (draw-tile* conn h1 (find-tile-p (get-game conn game-id) m-tile/flood?))
+    (draw-tile* conn h2 (find-tile-p (get-game conn game-id) m-tile/flood?))
+    (draw-tile* conn h1 (find-tile-p (get-game conn game-id) m-tile/flood?))
+    (draw-tile* conn h2 (find-tile-p (get-game conn game-id) m-tile/nile?))
+    (draw-tile* conn h1 (find-tile-p (get-game conn game-id) m-tile/drought?))
+    (draw-tile* conn h2 (find-tile-p (get-game conn game-id) m-tile/nile?))
+
+
+    (ra-win-pass env h1 h2)
+
+    nil))

@@ -142,5 +142,8 @@
        (not (::tile/disaster? t))))
 
 (defn flood? [t]
-  (and (= (::tile/river-type t) ::river/flood)
-       (not (::tile/disaster? t))))
+  (= (::tile/river-type t) ::river/flood))
+
+(defn drought? [t]
+  (and (type= t ::tile-type/river)
+       (::tile/disaster? t)))

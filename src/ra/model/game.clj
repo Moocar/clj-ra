@@ -665,7 +665,13 @@
     (when-not (seq disaster-tiles)
       (throw (ex-info "No disaster tiles in hand" {})))
 
-    ;; TODO handle nile vs flood
+    (when-let [drought-tiles (seq (filter m-tile/drought? disaster-tiles))]
+      (let [flood-tiles-in-hand (filter m-tile/flood? (::hand/tiles hand))
+            flood-tiles-selected (filter m-tile/flood? selected-tiles)
+            needed (min (count flood-tiles-in-hand) (* (count drought-tiles) 2))]
+        (when (< (count flood-tiles-selected) needed)
+          (throw (ex-info "Need to select more flood tiles" {})))))
+
     (doseq [[disaster-type disaster-count] disaster-type->count]
       (let [candidates     (set (filter #(= disaster-type (::tile/type %)) possible-tiles))
             expected-count (min (count candidates) (* disaster-count 2))
