@@ -48,7 +48,15 @@
                                       (:db/id (m-game/hand->game (d/entity @conn hand-id)))
                                       tile-type)))
 
-(defn progress-game [{:keys [::db/conn ::pathom/parser]} game-id]
+(defn ra-pass-pass-pull [{:keys [::db/conn ::pathom/parser]} game-id h1 h2]
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/ra))
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h2))
+                              :sun-disk nil})])
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h1))
+                              :sun-disk nil})])
+    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization)))
+
+(defn god-tile-scenario [{:keys [::db/conn ::pathom/parser]} game-id]
   (let [game (d/entity @conn [::game/id game-id])
         epoch (::game/current-epoch game)
         h1 (:db/id (::epoch/current-hand epoch))
@@ -63,8 +71,33 @@
                               :sun-disk nil})])
     (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
-    #_ (parser {} [`(m-game/use-god-tile {:god-tile-id ~(::tile/id (first (filter god-tile? (::hand/tiles (d/entity @conn h2)))))
-                                       :auction-track-tile-id ~(::tile/id (first (filter god-tile? (::epoch/auction-tiles #p (m-game/hand->epoch (d/entity @conn h2))))))})])
-    #_(draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
+    nil))
+
+(defn end-of-epoch-1-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (let [game (d/entity @conn [::game/id game-id])
+        epoch (::game/current-epoch game)
+        h1 (:db/id (::epoch/current-hand epoch))
+        h2 (:db/id (first (filter #(not= h1 (:db/id %))
+                                  (::epoch/hands epoch))))]
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
+    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
+
+    ;; Invoke Ra and win some
+    (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id (d/entity @conn h1))})])
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h2))
+                              :sun-disk ~(first (::hand/available-sun-disks (d/touch (d/entity @conn h2))))})])
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h1))
+                              :sun-disk nil})])
+    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
+
+
+    (ra-pass-pass-pull env game-id h1 h2)
+    (ra-pass-pass-pull env game-id h1 h2)
+    (ra-pass-pass-pull env game-id h1 h2)
+    (ra-pass-pass-pull env game-id h1 h2)
+    (ra-pass-pass-pull env game-id h1 h2)
+
+    ;; Last hoora
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/ra))
 
     nil))

@@ -108,3 +108,30 @@
                                         (repeatedly num #(swap! id inc)))))
                     [])
          shuffle)))
+
+(defn type= [tile type]
+  (= type (::tile/type tile)))
+
+(defn god? [t]
+  (type= t ::tile-type/god))
+
+(defn gold? [t]
+  (type= t ::tile-type/gold))
+
+(defn civ? [t]
+  (type= t ::tile-type/civilization))
+
+(defn pharoah? [t]
+  (type= t ::tile-type/civilization))
+
+(defn ra? [t]
+  (type= t ::tile-type/ra))
+
+(defn river? [t]
+  (type= t ::tile-type/river))
+
+(defn nile? [t]
+  (= (::tile/river-type t) ::river/nile))
+
+(defn flood? [t]
+  (= (::tile/river-type t) ::river/flood))

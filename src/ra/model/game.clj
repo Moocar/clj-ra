@@ -97,33 +97,31 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Scoring
 
+;; TODO if hand has no tiles, won't get negative civilization
 (defn score-hands [hands]
   (let [hand-scores (map (fn [hand]
                            {::hand/id      (::hand/id hand)
                             :db/id         (:db/id hand)
                             :old-score     (::hand/score hand)
-                            :score
-                            (->> (::hand/tiles hand)
-                                 (group-by ::tile/type)
-                                 (reduce-kv (fn [a tile-type tiles]
-                                              (+ a
-                                                 (case tile-type
-                                                   ::tile-type/god          (* 2 (count tiles))
-                                                   ::tile-type/gold         (* 3 (count tiles))
-                                                   ::tile-type/civilization (case (count (group-by ::tile/civilization-type tiles))
-                                                                              0 -5
-                                                                              1 0
-                                                                              2 5
-                                                                              3 10
-                                                                              4 15)
-                                                   ::tile-type/river        (let [x (group-by ::tile/river-type tiles)]
-                                                                              (if-not (seq (::river/flood x))
-                                                                                0
-                                                                                (reduce + (map count (vals x)))))
-                                                   0)))
-                                            0))
-                            :pharoah-count (count (filter #(= ::tile-type/pharoah (::tile/type %))
-                                                          (::hand/tiles hand)))})
+                            :score         (let [tiles             (::hand/tiles hand)
+                                                 god-count         (count (filter m-tile/god? tiles))
+                                                 gold-count        (count (filter m-tile/gold? tiles))
+                                                 unique-civs-count (count (distinct (map ::tile/civilization-type (filter m-tile/civ? tiles))))
+                                                 flood-count       (count (filter m-tile/flood? tiles))
+                                                 nile-count        (count (filter m-tile/nile? tiles))]
+                                             (+ 0
+                                                (* 2 god-count)
+                                                (* 3 gold-count)
+                                                (case unique-civs-count
+                                                  0 -5
+                                                  1 0
+                                                  2 5
+                                                  3 10
+                                                  4 15)
+                                                (if (pos? flood-count)
+                                                  (+ flood-count nile-count)
+                                                  0)))
+                            :pharoah-count (count (filter m-tile/pharoah? (::hand/tiles hand)))})
                          hands)
         sorted-by-pharoah (sort-by :pharoah-count hands)]
     (if (= (:pharoah-count (first sorted-by-pharoah))
@@ -407,6 +405,7 @@
   {::pc/params #{::hand/id}
    ::pc/transform notify-clients
    ::pc/output [::game/id]}
+  (assert (::hand/id input))
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])]
     (d/transact! conn (invoke-ra-tx hand ::auction-reason/invoke))
     {::game/id (::game/id (hand->game hand))}))
@@ -419,12 +418,13 @@
      (max-ras (epoch->game epoch))))
 
 (defn flip-sun-disks-tx [hand]
-  (mapv (fn [sun-disk]
-          (move-thing-tx sun-disk
-                         [(:db/id hand) ::hand/used-sun-disk]
-                         [(:db/id hand) ::hand/available-sun-disks]))
-        (::hand/used-sun-disks hand)))
+  (mapcat (fn [sun-disk]
+            (move-thing-tx sun-disk
+                           [hand ::hand/used-sun-disks]
+                           [hand ::hand/available-sun-disks]))
+          (::hand/used-sun-disks hand)))
 
+;; TODO Need to clear non scarab tiles from hand
 (defn finish-epoch-tx [epoch]
   (let [game         (epoch->game epoch)
         hand-scores  (score-hands (::epoch/hands epoch))
@@ -465,13 +465,15 @@
       [:db/add (:db/id tile) ::tile/auction-track-position (inc (or (::tile/auction-track-position last-tile) 0))]])))
 
 (defn do-draw-tile [conn hand tile]
+  (assert hand)
+  (assert tile)
   (let [epoch (hand->epoch hand)]
     (when (::epoch/in-disaster? epoch)
       (throw (ex-info "Waiting for players to discard disaster tiles" {})))
     (if (not (hand-turn? hand))
       (throw (ex-info "not your turn" {:current-hand (::epoch/current-hand epoch)
                                        :tried-hand   hand}))
-      (if (= (::tile/type tile) ::tile-type/ra)
+      (if (m-tile/ra? tile)
         (d/transact! conn (draw-ra-tx hand tile))
         (d/transact! conn (draw-normal-tile-tx hand tile))))))
 
@@ -598,6 +600,8 @@
   {::pc/params    #{::hand/id :sun-disk}
    ::pc/transform notify-clients
    ::pc/output    [::game/id]}
+  (assert (contains? input :sun-disk))
+  (assert (::hand/id input))
   (let [hand  (d/entity @conn [::hand/id (::hand/id input)])
         epoch (hand->epoch hand)]
     (when-not (::epoch/auction epoch)
