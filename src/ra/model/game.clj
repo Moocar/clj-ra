@@ -275,9 +275,10 @@
                  [:db/retract [::game/id game-id] ::game/tile-bag]
                  [:db/retract [::game/id game-id] ::game/epochs]
                  [:db/retract [::game/id game-id] ::game/current-epoch]]
-                (mapv (fn [tile-id]
-                             [:db/add [::game/id game-id] ::game/tile-bag tile-id])
-                            (find-all-tiles @conn)))))
+                (let [tiles (find-all-tiles @conn)]
+                  (mapv (fn [tile-id]
+                          [:db/add [::game/id game-id] ::game/tile-bag tile-id])
+                        tiles)))))
 
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []

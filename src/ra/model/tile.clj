@@ -107,5 +107,4 @@
                       (concat coll (map #(assoc tile ::tile/id %)
                                         (repeatedly num #(swap! id inc)))))
                     [])
-         shuffle
-         (take 64))))
+         shuffle)))
