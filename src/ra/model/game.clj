@@ -424,7 +424,12 @@
                            [hand ::hand/available-sun-disks]))
           (::hand/used-sun-disks hand)))
 
-;; TODO Need to clear non scarab tiles from hand
+(defn discard-non-scarabs-tx [hand]
+  (->> (::hand/tiles hand)
+       (remove ::tile/scarab?)
+       (map (fn [tile]
+              [:db/retract (:db/id hand) ::hand/tiles (:db/id tile)]))))
+
 (defn finish-epoch-tx [epoch]
   (let [game         (epoch->game epoch)
         hand-scores  (score-hands (::epoch/hands epoch))
@@ -433,7 +438,8 @@
     (concat (mapv (fn [hand]
                     [:db/add (:db/id hand) ::hand/score (+ (:old-score hand) (:score hand))])
                   hand-scores)
-            (apply concat (map flip-sun-disks-tx (::epoch/hands epoch)))
+            (mapcat flip-sun-disks-tx (::epoch/hands epoch))
+            (mapcat discard-non-scarabs-tx (::epoch/hands epoch))
             [[:db/add (:db/id game) ::game/current-epoch new-epoch-id]
              {:db/id new-epoch-id
               ::epoch/current-hand (:db/id (next-hand (::epoch/current-hand epoch)))

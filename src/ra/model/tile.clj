@@ -119,19 +119,28 @@
   (type= t ::tile-type/gold))
 
 (defn civ? [t]
-  (type= t ::tile-type/civilization))
+  (and (type= t ::tile-type/civilization)
+       (not (::tile/disaster? t))))
 
 (defn pharoah? [t]
-  (type= t ::tile-type/civilization))
+  (and (type= t ::tile-type/pharoah)
+       (not (::tile/disaster? t))))
+
+(defn monument? [t]
+  (and (type= t ::tile-type/monument)
+       (not (::tile/disaster? t))))
 
 (defn ra? [t]
   (type= t ::tile-type/ra))
 
 (defn river? [t]
-  (type= t ::tile-type/river))
+  (and (type= t ::tile-type/river)
+       (not (::tile/disaster? t))))
 
 (defn nile? [t]
-  (= (::tile/river-type t) ::river/nile))
+  (and (= (::tile/river-type t) ::river/nile)
+       (not (::tile/disaster? t))))
 
 (defn flood? [t]
-  (= (::tile/river-type t) ::river/flood))
+  (and (= (::tile/river-type t) ::river/flood)
+       (not (::tile/disaster? t))))

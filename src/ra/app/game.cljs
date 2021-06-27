@@ -8,7 +8,8 @@
             [ra.app.player :as ui-player]
             [ra.model.game :as m-game]
             [ra.specs.game :as game]
-            [ra.specs.player :as player]))
+            [ra.specs.player :as player]
+            [com.fulcrologic.fulcro.data-fetch :as df]))
 
 (defsc Game [this {:keys [::game/players
                           ::game/current-epoch
@@ -32,6 +33,10 @@
                         :onClick (fn []
                                    (comp/transact! this [(m-game/reset {::game/id id})]))}
                        "Reset")
+                        (ui-button {:primary true
+                                    :onClick (fn []
+                                               (df/load! this [::game/id id] Game))}
+                       "Refresh")
             (ui-epoch/ui-epoch current-epoch))
           (ui-button {:primary true
                       :onClick (fn []

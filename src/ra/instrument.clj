@@ -7,7 +7,8 @@
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [ra.model.tile :as m-tile]))
 
 (defn get-game [conn game-id]
   (d/entity @conn [::game/id game-id]))
@@ -81,6 +82,8 @@
                                   (::epoch/hands epoch))))]
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/civilization))
     (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/god))
+    (draw-tile* conn h1 (find-tile-p (get-game conn game-id) m-tile/pharoah?))
+    (draw-tile* conn h2 (find-tile-p (get-game conn game-id) m-tile/monument?))
 
     ;; Invoke Ra and win some
     (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id (d/entity @conn h1))})])
