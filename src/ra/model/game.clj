@@ -450,7 +450,7 @@
             (mapcat discard-non-scarabs-tx (::epoch/hands epoch))
             [[:db/add (:db/id game) ::game/current-epoch new-epoch-id]
              {:db/id new-epoch-id
-              ::epoch/current-hand (:db/id (next-hand (::epoch/current-hand epoch)))
+              ::epoch/current-hand (:db/id (::epoch/current-hand epoch))
               ::epoch/current-sun-disk (::epoch/current-sun-disk epoch)
               ::epoch/hands (map :db/id hand-scores)
               ::epoch/id (db/uuid)
@@ -594,6 +594,11 @@
        (when (::auction/tiles-full? auction)
          [(discard-auction-tiles-op epoch)])))))
 
+(defn sun-disks-in-play? [epoch]
+  (some (fn [hand]
+            (seq (::hand/available-sun-disks hand)))
+        (::epoch/hands epoch)))
+
 ;; TODO when all players use up tiles, trigger end of epoch
 (defn bid-tx
   "Moves the sun-disk from the hand to the middle of the board and triggers an end
@@ -627,7 +632,13 @@
     (assert (= hand (::epoch/current-hand epoch)))
     (when-not (::epoch/auction epoch)
       (throw (ex-info "Not in an auction" {})))
-    (d/transact! conn (bid-tx hand sun-disk))
+    (let [tx (bid-tx hand sun-disk)
+          db-after (:db-after (d/with @conn tx))
+          new-epoch (d/entity db-after (:db/id epoch))
+          tx (if (sun-disks-in-play? new-epoch)
+               tx
+               (concat tx (finish-epoch-tx new-epoch)))]
+      (d/transact! conn tx))
     {::game/id (::game/id (hand->game hand))}))
 
 (defn discard-tile-op [hand tile]
