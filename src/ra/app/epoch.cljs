@@ -1,15 +1,6 @@
 (ns ra.app.epoch
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
-            [com.fulcrologic.semantic-ui.elements.segment.ui-segment
-             :refer
-             [ui-segment]]
-            [com.fulcrologic.semantic-ui.elements.segment.ui-segment-group
-             :refer
-             [ui-segment-group]]
-            [com.fulcrologic.semantic-ui.views.card.ui-card-group
-             :refer
-             [ui-card-group]]
             [ra.app.auction :as ui-auction]
             [ra.app.hand :as ui-hand]
             [ra.app.player :as ui-player]
@@ -33,10 +24,10 @@
         ra-count (count (::epoch/ra-tiles props))
         blank-spots (- (players->ra-count hand-count)
                        ra-count)]
-   (ui-segment {:compact true}
+   (dom/div {:compact true}
      (dom/strong "Ra track")
-     (ui-card-group {} (concat (map ui-tile/ui-tile (::epoch/ra-tiles props))
-                               (map (fn [_] (ui-tile/ui-blank-ra-spot)) (range blank-spots)))))))
+     (dom/div {} (concat (map ui-tile/ui-tile (::epoch/ra-tiles props))
+                         (map (fn [_] (ui-tile/ui-blank-ra-spot)) (range blank-spots)))))))
 
 (defn fill-blank-ra-spots [auction-tiles]
   (->> auction-tiles
@@ -52,15 +43,15 @@
                                               :auction-track-tile-id (::tile/id tile)})]))
 
 (defn ui-auction-track [this props]
-  (ui-segment {:compact true}
+  (dom/div {:compact true}
     (dom/strong "Auction track")
-    (ui-card-group {} (concat (->> (::epoch/auction-tiles props)
-                                   (sort-by ::tile/auction-track-position)
-                                   (map (fn [tile]
-                                          (ui-tile/ui-tile (comp/computed tile (cond-> {}
-                                                                                 (:ui/selected-god-tile props)
-                                                                                 (assoc :on-click #(swap-god-tile this props %))))))))
-                              (fill-blank-ra-spots (::epoch/auction-tiles props))))))
+    (dom/div {} (concat (->> (::epoch/auction-tiles props)
+                             (sort-by ::tile/auction-track-position)
+                             (map (fn [tile]
+                                    (ui-tile/ui-tile (comp/computed tile (cond-> {}
+                                                                           (:ui/selected-god-tile props)
+                                                                           (assoc :on-click #(swap-god-tile this props %))))))))
+                        (fill-blank-ra-spots (::epoch/auction-tiles props))))))
 
 (defn highest-bid [{:keys [::auction/bids]}]
   (apply max (or (seq (map ::bid/sun-disk bids)) [0])))
@@ -94,29 +85,29 @@
   (dom/div {}
     (dom/p (str "Epoch: " number))
     (ui-ra-track props)
-    (ui-segment {:compact "true"}
+    (dom/div {:compact "true"}
       (ui-tile/ui-sun-disk {:value current-sun-disk}))
     (ui-auction-track this props)
     (when auction
       (ui-auction/ui-auction auction))
-    (ui-segment {:compact true}
-                (dom/h3 "Seats")
-                (ui-segment-group {}
-                                  (map (fn [hand]
-                                         (ui-hand/ui-hand
-                                          (if auction
-                                            (comp/computed hand {:onClickSunDisk (fn [sun-disk]
-                                                                                   (js/console.log "sun disk clicked" sun-disk)
-                                                                                   (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
-                                                                 :highest-bid    (highest-bid auction)
-                                                                 :epoch          props
-                                                                 :auction        auction})
-                                            (comp/computed hand {:epoch props
-                                                                 :click-god-tile (fn [hand tile]
-                                                                                   (if (:ui/selected-god-tile props)
-                                                                                     (m/set-value! this :ui/selected-god-tile nil)
-                                                                                     (comp/transact! this [(select-god-tile {:hand hand
-                                                                                                                             :tile tile})])))}))))
-                      hands)))))
+    (dom/div {}
+      (dom/h3 "Seats")
+      (dom/div {}
+        (map (fn [hand]
+               (ui-hand/ui-hand
+                (if auction
+                  (comp/computed hand {:onClickSunDisk (fn [sun-disk]
+                                                         (js/console.log "sun disk clicked" sun-disk)
+                                                         (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
+                                       :highest-bid    (highest-bid auction)
+                                       :epoch          props
+                                       :auction        auction})
+                  (comp/computed hand {:epoch          props
+                                       :click-god-tile (fn [hand tile]
+                                                         (if (:ui/selected-god-tile props)
+                                                           (m/set-value! this :ui/selected-god-tile nil)
+                                                           (comp/transact! this [(select-god-tile {:hand hand
+                                                                                                   :tile tile})])))}))))
+             hands)))))
 
 (def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))

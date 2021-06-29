@@ -7,7 +7,6 @@
 /data/
 /deps.png
 /node_modules/
-/resources/public/css/semantic.css
 /resources/public/js
 /trace.edn
 /yarn-error.log

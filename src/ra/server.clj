@@ -147,19 +147,15 @@
 ;; Server
 
 (defn index-html [{:keys [main-js-path]}]
-  (let [semantic-href "https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.8.4/semantic.min.css"]
-    (html
-     [:head
-      [:meta {:charset "UTF-8"}]
-      [:link {:rel  "stylesheet"
-              :type "text/css"
-              :href semantic-href}]
-      [:link {:rel  "stylesheet"
-              :type "text/css"
-              :href "/main.css"}]]
-     [:body
-      [:div {:id "app"} "...Loading"]
-      [:script {:src main-js-path}]])))
+  (html
+   [:head
+    [:meta {:charset "UTF-8"}]
+    [:link {:rel  "stylesheet"
+            :type "text/css"
+            :href "/main.css"}]]
+   [:body
+    [:div {:id "app"} "...Loading"]
+    [:script {:src main-js-path}]]))
 
 (defn spa-handler [config]
   (fn [_]

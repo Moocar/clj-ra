@@ -1,8 +1,5 @@
 (ns ra.app.auction
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
-            [com.fulcrologic.semantic-ui.elements.segment.ui-segment
-             :refer
-             [ui-segment]]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
             [ra.specs.hand :as hand]
@@ -16,13 +13,13 @@
            ::auction/tiles-full?
            {::auction/bids [{::bid/hand [{::hand/player [::player/name]}]}
                             ::bid/sun-disk]}]}
-  (ui-segment {:compact true}
-              (dom/h3 "bids")
-              (dom/div {}
-                (map (fn [{:keys [::bid/hand ::bid/sun-disk]}]
-                       (dom/span {}
-                         (ui-tile/ui-sun-disk {:value sun-disk})
-                         (get-in hand [::hand/player ::player/name])))
-                     bids))))
+  (dom/div {:compact true}
+    (dom/h3 "bids")
+    (dom/div {}
+      (map (fn [{:keys [::bid/hand ::bid/sun-disk] :as bid}]
+             (dom/span {}
+                       (ui-tile/ui-sun-disk {:value sun-disk})
+                       (get-in hand [::hand/player ::player/name])))
+           bids))))
 
 (def ui-auction (comp/factory Auction))

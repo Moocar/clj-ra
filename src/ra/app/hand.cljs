@@ -2,12 +2,6 @@
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
             [com.fulcrologic.fulcro.mutations :as m]
-            [com.fulcrologic.semantic-ui.elements.button.ui-button
-             :refer
-             [ui-button]]
-            [com.fulcrologic.semantic-ui.elements.segment.ui-segment
-             :refer
-             [ui-segment]]
             [ra.app.player :as ui-player]
             [ra.app.tile :as ui-tile]
             [ra.model.game :as m-game]
@@ -55,13 +49,13 @@
    :ident ::hand/id}
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? tiles))
         my-go?                  (and my-go?  (not discard-disaster-tiles?))]
-    (ui-segment (cond-> {}
-                  (= seat (::hand/seat (::epoch/current-hand epoch)))
-                  (assoc-in [:style :backgroundColor] "pink"))
+    (dom/div (cond-> {}
+               (= seat (::hand/seat (::epoch/current-hand epoch)))
+               (assoc-in [:style :backgroundColor] "pink"))
       (dom/span (ui-player/ui-player player) " - "
                 (str "seat: " seat) " - "
                 (str "score: " (::hand/score hand)))
-      (ui-segment {:compact true}
+      (dom/div {}
         (dom/div {}
           (concat
            (map (fn [sun-disk]
@@ -77,7 +71,7 @@
              [(ui-tile/ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
                                               :value   "Pass"})]))))
       (let [disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
-        (ui-segment {:compact true}
+        (dom/div {:compact true}
           (ui-tile/ui-tiles (map (fn [tile]
                                    (comp/computed tile
                                                   (if discard-disaster-tiles?
@@ -87,30 +81,30 @@
                                                       {:dimmed? true})
                                                     (if (= ::tile-type/god (::tile/type tile))
                                                       {:selectable? true
-                                                       :on-click (fn [tile] (click-god-tile hand tile))}
+                                                       :on-click    (fn [tile] (click-god-tile hand tile))}
                                                       tiles))))
                                  tiles))))
       (if discard-disaster-tiles?
         (dom/div {}
-          (ui-button {:style   {:marginTop "10"}
-                      :primary true
-                      :onClick (fn []
-                                 (comp/transact! this [(m-game/discard-disaster-tiles
-                                                        {::hand/id id
-                                                         :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
-                     "Discard disaster tiles"))
-        (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
-          (dom/div {}
-           (when-not (auction-tiles-full? epoch)
-             (ui-button {:style   {:marginTop "10"}
-                         :primary true
-                         :onClick (fn []
-                                    (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
-                        "Draw Tile"))
-           (ui-button {:style   {:marginTop "10"}
+          (dom/button {:style   {:marginTop "10"}
                        :primary true
                        :onClick (fn []
-                                  (comp/transact! this [(m-game/invoke-ra {::hand/id id})]))}
-                      "Invoke Ra")))))))
+                                  (comp/transact! this [(m-game/discard-disaster-tiles
+                                                         {::hand/id id
+                                                          :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
+                      "Discard disaster tiles"))
+        (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
+          (dom/div {}
+            (when-not (auction-tiles-full? epoch)
+              (dom/button {:style   {:marginTop "10"}
+                           :primary true
+                           :onClick (fn []
+                                      (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
+                          "Draw Tile"))
+            (dom/button {:style   {:marginTop "10"}
+                         :primary true
+                         :onClick (fn []
+                                    (comp/transact! this [(m-game/invoke-ra {::hand/id id})]))}
+                        "Invoke Ra")))))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
