@@ -152,8 +152,8 @@
     [:meta {:charset "UTF-8"}]
     [:link {:rel  "stylesheet"
             :type "text/css"
-            :href "/main.css"}]]
-   [:body
+            :href "/tailwind.css"}]]
+   [:body {:class "font-sans"}
     [:div {:id "app"} "...Loading"]
     [:script {:src main-js-path}]]))
 

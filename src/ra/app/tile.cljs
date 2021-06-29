@@ -37,9 +37,8 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/button (cond-> {:style (cond-> {:height          "50"
-                                       :backgroundColor (type-background (::tile/type props))
-                                       :width           "50"}
+  (dom/div :.w-24.h-24.rounded-xl.shadow-md.justify-center.inline-block
+              (cond-> {:style (cond-> {:backgroundColor (type-background (::tile/type props))}
                                 dimmed?
                                 (assoc :opacity "50%")
                                 (:ui/selected? props)
@@ -51,7 +50,7 @@
                                   (when on-click
                                     (on-click props)))))
               (dom/div {}
-                (dom/span (::tile/title props))
+                (dom/span :.text-center.align-middle.inline-block (::tile/title props))
                 (when (::tile/disaster? props)
                   (dom/span {:style {:color "RED"}} " X")))))
 

@@ -34,7 +34,7 @@
        (count)
        (- 8)
        (range)
-       (map (fn [_] (ui-tile/ui-blank-ra-spot)))))
+       (map (fn [_] (ui-tile/ui-tile {})))))
 
 (defn swap-god-tile [this props tile]
   (m/set-value! this :ui/selected-god-tile nil)
@@ -45,7 +45,7 @@
 (defn ui-auction-track [this props]
   (dom/div {:compact true}
     (dom/strong "Auction track")
-    (dom/div {} (concat (->> (::epoch/auction-tiles props)
+    (dom/div :.border-2 {} (concat (->> (::epoch/auction-tiles props)
                              (sort-by ::tile/auction-track-position)
                              (map (fn [tile]
                                     (ui-tile/ui-tile (comp/computed tile (cond-> {}

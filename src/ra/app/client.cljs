@@ -10,43 +10,48 @@
             [ra.model.game :as m-game]
             [ra.model.player :as m-player]
             [ra.specs.game :as game]
-            [ra.specs.player :as player]))
+            [ra.specs.player :as player]
+            [ra.app.ui :as ui]))
 
-(defsc PlayerDetails [this {:keys [::player/id ::player/temp-name] :as input}]
+(defsc PlayerDetails [this {:keys [::player/id ::player/temp-name] :as props}]
   {:query         [::player/id ::player/temp-name ::player/name]
    :initial-state {::player/temp-name ""}
    :ident         ::player/id}
-  (dom/div {}
-    (dom/label {:for "your-name"}
-               "Your Name")
-    (dom/input {:type "text"
-                :id "your-name"
-                :value    (or temp-name "")
-                :onKeyUp  (fn [evt]
-                            (when (= (.-keyCode evt) 13)
-                              (comp/transact! this [(m-player/save
-                                                     {::player/id   id
-                                                      ::player/name temp-name})]
-                                              {:refresh [:ui/current-player]})))
-                :onChange (fn [evt _]
-                            (m/set-string! this ::player/temp-name :event evt))})
-    (dom/button {:onClick (fn []
+  (dom/div :.w-full.max-w-xs {}
+    (dom/div :.bg-white.shadow-md.rounded.px-8.pt-6.pb-8.mb-4 {}
+      (dom/div :.mb-4 {}
+        (dom/label :.block.text-gray-700.text-sm.font-bold.mb-2 {:for "username"}
+          "Username")
+        (ui/input props ::player/temp-name
+          {:id          "username"
+           :type        "text"
+           :placeholder "Username"
+           :onKeyUp     (fn [evt]
+                          (when (= (.-keyCode evt) 13)
                             (comp/transact! this [(m-player/save
                                                    {::player/id   id
                                                     ::player/name temp-name})]
-                                            {:refresh [:ui/current-player]}))}
-                "Submit")))
+                                            {:refresh [:ui/current-player]})))
+           :onChange    (fn [evt _]
+                          (m/set-string! this ::player/temp-name :event evt))}))
+      (dom/div :.flex.items-center.justify-between {}
+        (ui/button {:onClick (fn []
+                               (comp/transact! this [(m-player/save
+                                                      {::player/id   id
+                                                       ::player/name temp-name})]
+                                               {:refresh [:ui/current-player]}))}
+            "Submit")))))
 
 (def ui-player-details (comp/factory PlayerDetails {:keyfn ::player/id}))
 
 (defsc Root [this {:keys [:ui/current-player :ui/current-game :ui/error-occurred]}]
-  {:query [{[:ui/current-player '_] (comp/get-query PlayerDetails)}
-           {[:ui/current-game '_] (comp/get-query ui-game/Game)}
+  {:query         [{[:ui/current-player '_] (comp/get-query PlayerDetails)}
+                   {[:ui/current-game '_] (comp/get-query ui-game/Game)}
            :ui/error-occurred]
    :initial-state {}}
-  (dom/div {}
+  (dom/div :.container.mx-auto.flex.justify-center {}
     (if (nil? current-player)
-      (dom/p "loadings")
+      (dom/p "loading")
       (if (str/blank? (::player/name current-player))
         (ui-player-details current-player)
         (dom/div {}
