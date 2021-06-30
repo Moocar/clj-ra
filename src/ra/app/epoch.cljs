@@ -19,22 +19,23 @@
    4 9
    5 10})
 
-(defn ui-ra-track [props]
-  (let [hand-count (count (::epoch/hands props))
-        ra-count (count (::epoch/ra-tiles props))
-        blank-spots (- (players->ra-count hand-count)
-                       ra-count)]
-   (dom/div {:compact true}
-     (dom/strong "Ra track")
-     (dom/div {} (concat (map ui-tile/ui-tile (::epoch/ra-tiles props))
-                         (map (fn [_] (ui-tile/ui-blank-ra-spot)) (range blank-spots)))))))
-
 (defn fill-blank-ra-spots [auction-tiles]
   (->> auction-tiles
        (count)
        (- 8)
        (range)
        (map (fn [_] (ui-tile/ui-tile {})))))
+
+(defn ui-ra-track [props]
+  (let [hand-count (count (::epoch/hands props))
+        ra-count (count (::epoch/ra-tiles props))
+        blank-spots (- (players->ra-count hand-count)
+                       ra-count)]
+   (dom/div {}
+     (dom/strong "Ra track")
+     (dom/div :.border-2.rounded-md.flex.space-x-2.p-2 {}
+              (concat (map ui-tile/ui-tile (::epoch/ra-tiles props))
+                      (map (fn [_] (ui-tile/ui-tile {})) (range #p blank-spots)))))))
 
 (defn swap-god-tile [this props tile]
   (m/set-value! this :ui/selected-god-tile nil)
@@ -45,13 +46,14 @@
 (defn ui-auction-track [this props]
   (dom/div {:compact true}
     (dom/strong "Auction track")
-    (dom/div :.border-2 {} (concat (->> (::epoch/auction-tiles props)
-                             (sort-by ::tile/auction-track-position)
-                             (map (fn [tile]
-                                    (ui-tile/ui-tile (comp/computed tile (cond-> {}
-                                                                           (:ui/selected-god-tile props)
-                                                                           (assoc :on-click #(swap-god-tile this props %))))))))
-                        (fill-blank-ra-spots (::epoch/auction-tiles props))))))
+    (dom/div :.border-2.rounded-md.flex.space-x-2.p-2 {}
+             (concat (->> (::epoch/auction-tiles props)
+                          (sort-by ::tile/auction-track-position)
+                          (map (fn [tile]
+                                 (ui-tile/ui-tile (comp/computed tile (cond-> {}
+                                                                        (:ui/selected-god-tile props)
+                                                                        (assoc :on-click #(swap-god-tile this props %))))))))
+                     (fill-blank-ra-spots (::epoch/auction-tiles props))))))
 
 (defn highest-bid [{:keys [::auction/bids]}]
   (apply max (or (seq (map ::bid/sun-disk bids)) [0])))
@@ -81,15 +83,16 @@
            {::epoch/auction-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/hands (comp/get-query ui-hand/Hand)}]
    :ident ::epoch/id}
-  (dom/div {}
+  (dom/div :.flex.flex-col {}
     (ui-ra-track props)
-    (dom/div {:compact "true"}
+    (dom/div {}
+      (dom/p {} "Center Sun Disk")
       (ui-tile/ui-sun-disk {:value current-sun-disk}))
     (ui-auction-track this props)
     (when auction
       (ui-auction/ui-auction auction))
     (dom/div {}
-      (dom/h3 "Seats")
+      (dom/h3 :.font-bold.text-xl "Seats")
       (dom/div {}
         (map (fn [hand]
                (ui-hand/ui-hand

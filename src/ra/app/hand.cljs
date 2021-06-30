@@ -11,7 +11,8 @@
             [ra.specs.epoch :as epoch]
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [ra.app.ui :as ui]))
 
 (defn all-passes? [{:keys [::auction/bids]}]
   (empty? (filter ::bid/sun-disk bids)))
@@ -49,27 +50,28 @@
    :ident ::hand/id}
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? tiles))
         my-go?                  (and my-go?  (not discard-disaster-tiles?))]
-    (dom/div (cond-> {}
-               (= seat (::hand/seat (::epoch/current-hand epoch)))
-               (assoc-in [:style :backgroundColor] "pink"))
+    (dom/div :.p-2
+      (cond-> {}
+        (= seat (::hand/seat (::epoch/current-hand epoch)))
+        (assoc-in [:style :backgroundColor] "pink"))
       (dom/span (ui-player/ui-player player) " - "
                 (str "seat: " seat) " - "
                 (str "score: " (::hand/score hand)))
       (dom/div {}
-        (dom/div {}
-          (concat
-           (map (fn [sun-disk]
-                  (if (and my-go? onClickSunDisk (> sun-disk highest-bid) )
-                    (ui-tile/ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
-                                                    :value   sun-disk})
-                    (ui-tile/ui-sun-disk {:value sun-disk})))
-                available-sun-disks)
-           (map (fn [sun-disk]
-                  (ui-tile/ui-sun-disk {:value sun-disk :used? true}))
-                used-sun-disks)
-           (when (and onClickSunDisk my-go? (can-pass? auction hand))
-             [(ui-tile/ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
-                                              :value   "Pass"})]))))
+        (dom/div :.flex.space-x-2 {}
+                 (concat
+                  (map (fn [sun-disk]
+                         (if (and my-go? onClickSunDisk (> sun-disk highest-bid) )
+                           (ui-tile/ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
+                                                           :value   sun-disk})
+                           (ui-tile/ui-sun-disk {:value sun-disk})))
+                       available-sun-disks)
+                  (map (fn [sun-disk]
+                         (ui-tile/ui-sun-disk {:value sun-disk :used? true}))
+                       used-sun-disks)
+                  (when (and onClickSunDisk my-go? (can-pass? auction hand))
+                    [(ui-tile/ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
+                                                     :value   "Pass"})]))))
       (let [disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
         (dom/div {:compact true}
           (ui-tile/ui-tiles (map (fn [tile]
@@ -92,19 +94,15 @@
                                   (comp/transact! this [(m-game/discard-disaster-tiles
                                                          {::hand/id id
                                                           :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
-                      "Discard disaster tiles"))
+            "Discard disaster tiles"))
         (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
-          (dom/div {}
-            (when-not (auction-tiles-full? epoch)
-              (dom/button {:style   {:marginTop "10"}
-                           :primary true
-                           :onClick (fn []
-                                      (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
-                          "Draw Tile"))
-            (dom/button {:style   {:marginTop "10"}
-                         :primary true
-                         :onClick (fn []
-                                    (comp/transact! this [(m-game/invoke-ra {::hand/id id})]))}
-                        "Invoke Ra")))))))
+          (dom/div :.flex.space-x-2.py-2 {}
+                   (when-not (auction-tiles-full? epoch)
+                     (ui/button {:onClick (fn []
+                                            (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
+                       "Draw Tile"))
+                   (ui/button {:onClick (fn []
+                                          (comp/transact! this [(m-game/invoke-ra {::hand/id id})]))}
+                     "Invoke Ra")))))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))

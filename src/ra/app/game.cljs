@@ -16,7 +16,7 @@
   (let [epoch (::game/current-epoch props)]
     (dom/div {}
       (dom/p {} (str "Epoch: " (::epoch/number epoch)))
-      (dom/div :.space-x-4 {}
+      (dom/div :.flex.flex-col.space-y-4 {}
                (ui/button {:onClick (fn []
                                       (comp/transact! this [(m-game/reset {::game/id (::game/id props)})]))}
                  "Reset")
