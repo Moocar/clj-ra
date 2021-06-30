@@ -66,8 +66,7 @@
                   (assoc-in (conj (:ref env) :ui/selected-god-tile) tile-ident)
                   (assoc-in (conj tile-ident ::tile/hand) hand-ident)))))))
 
-(defsc Epoch [this {:keys [::epoch/number
-                           ::epoch/current-sun-disk
+(defsc Epoch [this {:keys [::epoch/current-sun-disk
                            ::epoch/auction
                            ::epoch/hands]
                     :as   props}]
@@ -83,7 +82,6 @@
            {::epoch/hands (comp/get-query ui-hand/Hand)}]
    :ident ::epoch/id}
   (dom/div {}
-    (dom/p (str "Epoch: " number))
     (ui-ra-track props)
     (dom/div {:compact "true"}
       (ui-tile/ui-sun-disk {:value current-sun-disk}))

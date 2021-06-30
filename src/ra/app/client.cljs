@@ -11,57 +11,41 @@
             [ra.model.player :as m-player]
             [ra.specs.game :as game]
             [ra.specs.player :as player]
-            [ra.app.ui :as ui]))
+            [ra.app.ui :as ui]
+            [ra.app.player :as ui-player]))
 
-(defsc PlayerDetails [this {:keys [::player/id ::player/temp-name] :as props}]
-  {:query         [::player/id ::player/temp-name ::player/name]
-   :initial-state {::player/temp-name ""}
-   :ident         ::player/id}
-  (dom/div :.w-full.max-w-xs {}
-    (dom/div :.bg-white.shadow-md.rounded.px-8.pt-6.pb-8.mb-4 {}
-      (dom/div :.mb-4 {}
-        (dom/label :.block.text-gray-700.text-sm.font-bold.mb-2 {:for "username"}
-          "Username")
-        (ui/input props ::player/temp-name
-          {:id          "username"
-           :type        "text"
-           :placeholder "Username"
-           :onKeyUp     (fn [evt]
-                          (when (= (.-keyCode evt) 13)
-                            (comp/transact! this [(m-player/save
-                                                   {::player/id   id
-                                                    ::player/name temp-name})]
-                                            {:refresh [:ui/current-player]})))
-           :onChange    (fn [evt _]
-                          (m/set-string! this ::player/temp-name :event evt))}))
-      (dom/div :.flex.items-center.justify-between {}
-        (ui/button {:onClick (fn []
-                               (comp/transact! this [(m-player/save
-                                                      {::player/id   id
-                                                       ::player/name temp-name})]
-                                               {:refresh [:ui/current-player]}))}
-            "Submit")))))
+(defn left-menu [props]
+  (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.left-0 {} "Menu"))
 
-(def ui-player-details (comp/factory PlayerDetails {:keyfn ::player/id}))
+(defn right-menu [props]
+  (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.right-0 {} (str "User: " (::player/name (:ui/current-player props)))))
 
-(defsc Root [this {:keys [:ui/current-player :ui/current-game :ui/error-occurred]}]
-  {:query         [{[:ui/current-player '_] (comp/get-query PlayerDetails)}
+(defn top-menu [props]
+  (dom/div :.relative.h-6.border-b-2.mb-2 {}
+           (left-menu props)
+           (right-menu props)))
+
+(defn ui-lobby [this props]
+  (dom/div :.w-full.max-w-4xl.relative {}
+           (dom/div :.bg-white.shadow-md.rounded.px-8.pt-6.pb-8.mb-4 {}
+                    (top-menu props)
+                    (if (nil? (:ui/current-game props))
+                      (ui/button {:onClick (fn []
+                                             (comp/transact! this [(m-game/new-game {})]))}
+                        "New Game")
+                      (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)}))))))
+
+(defsc Root [this {:keys [:ui/current-player :ui/error-occurred] :as props}]
+  {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
                    {[:ui/current-game '_] (comp/get-query ui-game/Game)}
-           :ui/error-occurred]
+                   :ui/error-occurred]
    :initial-state {}}
   (dom/div :.container.mx-auto.flex.justify-center {}
     (if (nil? current-player)
       (dom/p "loading")
       (if (str/blank? (::player/name current-player))
-        (ui-player-details current-player)
-        (dom/div {}
-          (dom/p (str "hi there " (::player/name current-player)))
-          (if (nil? current-game)
-            (dom/button {:primary true
-                         :onClick (fn []
-                                    (comp/transact! this [(m-game/new-game {})]))}
-                        "New Game")
-            (ui-game/ui-game (merge current-game {:ui/current-player current-player}))))))
+        (ui-player/ui-new-form current-player)
+        (ui-lobby this props)))
     (when error-occurred
       (dom/label {:color "red"} "ERROR!"))))
 

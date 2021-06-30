@@ -10,11 +10,11 @@
   (cider-filter-regexps . '(".*nrepl" "^cider.nrepl"))
 
   (eval . (define-clojure-indent
-            (div '(2))
-            (label '(2))
-            (input '(2))
-            (select '(2))
-	    (button '(2))
+            (div '(1))
+            (label '(1))
+            (input '(1))
+            (select '(1))
+	    (button '(1))
             (ui-table '(1))
             (ui-table-row '(1))
             (ui-table-body '(1))

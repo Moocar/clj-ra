@@ -6,8 +6,8 @@
             [com.fulcrologic.fulcro.data-fetch :as df]
             [clojure.spec.alpha :as s]))
 
-(defn player-component []
-  (comp/registry-key->class :ra.app.client/PlayerDetails))
+(defn new-form-component []
+  (comp/registry-key->class :ra.app.player/NewForm))
 
 (defmutation new-player [input]
   (action [{:keys [state app]}]
@@ -15,7 +15,7 @@
           (swap! state
                  (fn [s]
                    (-> s
-                       (merge/merge-component (player-component) input)
+                       (merge/merge-component (new-form-component) input)
                        (assoc :ui/current-player [::player/id (::player/id input)])))))
   (remote [env] true))
 
@@ -30,7 +30,7 @@
 (defmutation use-local-storage-player [{:keys [player-id]}]
   (action [{:keys [state app]}]
           (js/console.log "use local storage")
-          (df/load! app [::player/id player-id] (player-component)
+          (df/load! app [::player/id player-id] (new-form-component)
                     {:post-action (fn [{:keys [result state]}]
                                     (let [{:keys [body]} result
                                           data (get body [::player/id player-id])]
@@ -38,7 +38,7 @@
                                         (swap! state
                                                (fn [s]
                                                  (-> s
-                                                     (merge/merge-component (player-component) data)
+                                                     (merge/merge-component (new-form-component) data)
                                                      (assoc :ui/current-player [::player/id player-id]))))
                                         (comp/transact! app [(init-local-storage {})]))))})))
 
