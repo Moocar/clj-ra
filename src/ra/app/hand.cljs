@@ -1,9 +1,10 @@
 (ns ra.app.hand
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
-            [com.fulcrologic.fulcro.mutations :as m]
             [ra.app.player :as ui-player]
+            [ra.app.sun-disk :as ui-sun-disk]
             [ra.app.tile :as ui-tile]
+            [ra.app.ui :as ui]
             [ra.model.game :as m-game]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
@@ -11,8 +12,7 @@
             [ra.specs.epoch :as epoch]
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
-            [ra.app.ui :as ui]))
+            [ra.specs.tile.type :as tile-type]))
 
 (defn all-passes? [{:keys [::auction/bids]}]
   (empty? (filter ::bid/sun-disk bids)))
@@ -53,7 +53,7 @@
     (dom/div :.p-2
       (cond-> {}
         (= seat (::hand/seat (::epoch/current-hand epoch)))
-        (assoc-in [:style :backgroundColor] "pink"))
+        (assoc :classes ["border-2" "border-red-500"]))
       (dom/span (ui-player/ui-player player) " - "
                 (str "seat: " seat) " - "
                 (str "score: " (::hand/score hand)))
@@ -62,16 +62,16 @@
                  (concat
                   (map (fn [sun-disk]
                          (if (and my-go? onClickSunDisk (> sun-disk highest-bid) )
-                           (ui-tile/ui-clickable-sun-disk {:onClick #(onClickSunDisk sun-disk)
-                                                           :value   sun-disk})
-                           (ui-tile/ui-sun-disk {:value sun-disk})))
+                           (ui-sun-disk/ui {:onClick #(onClickSunDisk sun-disk)
+                                            :value   sun-disk})
+                           (ui-sun-disk/ui {:value sun-disk})))
                        available-sun-disks)
                   (map (fn [sun-disk]
-                         (ui-tile/ui-sun-disk {:value sun-disk :used? true}))
+                         (ui-sun-disk/ui {:value sun-disk :used? true}))
                        used-sun-disks)
                   (when (and onClickSunDisk my-go? (can-pass? auction hand))
-                    [(ui-tile/ui-clickable-sun-disk {:onClick #(onClickSunDisk nil)
-                                                     :value   "Pass"})]))))
+                    [(ui-sun-disk/ui {:onClick #(onClickSunDisk nil)
+                                      :value   "Pass"})]))))
       (let [disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
         (dom/div {:compact true}
           (ui-tile/ui-tiles (map (fn [tile]

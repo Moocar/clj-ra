@@ -1,11 +1,9 @@
 (ns ra.app.tile
-  (:require [com.fulcrologic.fulcro.algorithms.form-state :as fs]
-            [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
+  (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
             [com.fulcrologic.fulcro.mutations :as m]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
-            [ra.app.ui :as ui]))
+            [ra.specs.tile.type :as tile-type]))
 
 (def type-background
   {::tile-type/ra "red"
@@ -16,16 +14,6 @@
    ::tile-type/pharoah "green"
    ::tile-type/river "lightblue"
    ::tile-type/flood "lightblue"})
-
-(defn ui-clickable-sun-disk [{:keys [onClick value]}]
-  (dom/button :.rounded-full.h-8.w-8.my-2.flex.items-center.justify-center.bg-blue-500
-    {:onClick (fn [_] (onClick))}
-    (str value)))
-
-(defn ui-sun-disk [{:keys [value used?]}]
-  (dom/div :.rounded-full.h-8.w-8.my-2.flex.items-center.justify-center
-    {:classes (conj [] (if used? "bg-gray-500" "bg-green-500"))}
-    (str value)))
 
 (defsc Tile [this props {:keys [selectable? dimmed? on-click]}]
   {:query [::tile/id

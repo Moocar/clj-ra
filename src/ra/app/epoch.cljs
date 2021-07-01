@@ -1,17 +1,17 @@
 (ns ra.app.epoch
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
+            [com.fulcrologic.fulcro.mutations :as m]
             [ra.app.auction :as ui-auction]
             [ra.app.hand :as ui-hand]
-            [ra.app.player :as ui-player]
+            [ra.app.sun-disk :as ui-sun-disk]
             [ra.app.tile :as ui-tile]
-            [ra.specs.epoch :as epoch]
-            [ra.specs.hand :as hand]
-            [ra.specs.tile :as tile]
+            [ra.model.game :as m-game]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
-            [ra.model.game :as m-game]
-            [com.fulcrologic.fulcro.mutations :as m]))
+            [ra.specs.epoch :as epoch]
+            [ra.specs.hand :as hand]
+            [ra.specs.tile :as tile]))
 
 (def players->ra-count
   {2 6
@@ -87,7 +87,7 @@
     (ui-ra-track props)
     (dom/div {}
       (dom/p {} "Center Sun Disk")
-      (ui-tile/ui-sun-disk {:value current-sun-disk}))
+      (ui-sun-disk/ui {:value current-sun-disk}))
     (ui-auction-track this props)
     (when auction
       (ui-auction/ui-auction auction))

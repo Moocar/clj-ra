@@ -1,11 +1,11 @@
 (ns ra.app.auction
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
+            [com.fulcrologic.fulcro.dom :as dom]
+            [ra.app.sun-disk :as ui-sun-disk]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
             [ra.specs.hand :as hand]
-            [ra.specs.player :as player]
-            [ra.app.tile :as ui-tile]
-            [com.fulcrologic.fulcro.dom :as dom]))
+            [ra.specs.player :as player]))
 
 (defsc Auction [_ {:keys [::auction/bids]}]
   {:query [::auction/reason
@@ -16,9 +16,9 @@
   (dom/div {:compact true}
     (dom/h3 "bids")
     (dom/div {}
-      (map (fn [{:keys [::bid/hand ::bid/sun-disk] :as bid}]
+      (map (fn [{:keys [::bid/hand ::bid/sun-disk]}]
              (dom/span {}
-                       (ui-tile/ui-sun-disk {:value sun-disk})
+                       (ui-sun-disk/ui {:value sun-disk})
                        (get-in hand [::hand/player ::player/name])))
            bids))))
 
