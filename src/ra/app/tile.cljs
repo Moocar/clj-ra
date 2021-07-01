@@ -23,7 +23,7 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/div :.w-24.h-24.flex.items-center.justify-center.rounded-md.border-2.justify-center.inline-block
+  (dom/div :.w-20.h-20.flex.items-center.justify-center.rounded-md.border-2.justify-center.inline-block
               (cond-> {:style (cond-> {:backgroundColor (type-background (::tile/type props))}
                                 dimmed?
                                 (assoc :opacity "50%")

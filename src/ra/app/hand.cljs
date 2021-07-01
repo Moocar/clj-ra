@@ -50,7 +50,7 @@
    :ident ::hand/id}
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? tiles))
         my-go?                  (and my-go?  (not discard-disaster-tiles?))]
-    (dom/div :.p-2
+    (dom/div :.p-2.h-48
       (cond-> {}
         (= seat (::hand/seat (::epoch/current-hand epoch)))
         (assoc :classes ["border-2" "border-red-500"]))
@@ -61,14 +61,16 @@
         (dom/div :.flex.space-x-2 {}
                  (concat
                   (map (fn [sun-disk]
-                         (if (and my-go? onClickSunDisk (> sun-disk highest-bid) )
-                           (ui-sun-disk/ui {:onClick #(onClickSunDisk sun-disk)
-                                            :value   sun-disk})
-                           (ui-sun-disk/ui {:value sun-disk})))
-                       available-sun-disks)
-                  (map (fn [sun-disk]
-                         (ui-sun-disk/ui {:value sun-disk :used? true}))
+                         (ui-sun-disk/ui {:value sun-disk
+                                          :used? true}))
                        used-sun-disks)
+                  (map (fn [sun-disk]
+                         (ui-sun-disk/ui (cond-> {:value sun-disk}
+                                           (and my-go? onClickSunDisk (> sun-disk highest-bid) )
+                                           (assoc :onClick #(onClickSunDisk sun-disk))
+                                           (and my-go? (< sun-disk highest-bid))
+                                           (assoc :too-low? true))))
+                       available-sun-disks)
                   (when (and onClickSunDisk my-go? (can-pass? auction hand))
                     [(ui-sun-disk/ui {:onClick #(onClickSunDisk nil)
                                       :value   "Pass"})]))))

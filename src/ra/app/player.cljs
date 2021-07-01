@@ -8,7 +8,8 @@
 
 (defsc Player [_ {:keys [::player/name]}]
   {:query [::player/name
-           ::player/id]}
+           ::player/id]
+   :ident ::player/id}
   (dom/strong name))
 
 (def ui-player (comp/factory Player {:keyfn ::player/id}))
