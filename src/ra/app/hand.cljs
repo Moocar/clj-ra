@@ -30,15 +30,69 @@
   (and (not (::tile/disaster? tile))
        (disaster-types (::tile/type tile))))
 
-(defsc Hand [this
-             {:keys [::hand/available-sun-disks
-                     ::hand/used-sun-disks
-                     ::hand/tiles
-                     ::hand/seat
-                     ::hand/id
-                     ::hand/player
-                     ::hand/my-go?] :as hand}
-             {:keys [onClickSunDisk highest-bid auction epoch click-god-tile]}]
+(defn ui-info [props]
+  (dom/div
+      (ui-player/ui-player (::hand/player props)) " - "
+      (str "seat: " (::hand/seat props)) " - "
+      (str "score: " (::hand/score props))))
+
+(defn ui-sun-disks [props {:keys [onClickSunDisk highest-bid auction]}]
+  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
+        my-go? (and (::hand/my-go? props)  (not discard-disaster-tiles?))]
+    (dom/div :.flex.space-x-2 {}
+            (concat
+             (map (fn [sun-disk]
+                    (ui-sun-disk/ui {:value sun-disk
+                                     :used? true}))
+                  (::hand/used-sun-disks props))
+             (map (fn [sun-disk]
+                    (ui-sun-disk/ui (cond-> {:value sun-disk}
+                                      (and my-go? onClickSunDisk (> sun-disk highest-bid) )
+                                      (assoc :onClick #(onClickSunDisk sun-disk))
+                                      (and my-go? (< sun-disk highest-bid))
+                                      (assoc :too-low? true))))
+                  (::hand/available-sun-disks props))
+             (when (and onClickSunDisk my-go? (can-pass? auction props))
+               [(ui-sun-disk/ui {:onClick #(onClickSunDisk nil)
+                                 :value   "Pass"})])))))
+
+(defn ui-actions [this props {:keys [epoch auction]}]
+  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
+        my-go?                  (and (::hand/my-go? props)  (not discard-disaster-tiles?))]
+    (dom/div :.flex.flex-col.space-y-2.pr-2.w-48
+      (if discard-disaster-tiles?
+        (ui/button {:onClick (fn []
+                               (comp/transact! this [(m-game/discard-disaster-tiles
+                                                      {::hand/id (::hand/id props)
+                                                       :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles props)))})]))}
+          "Discard disaster tiles")
+        (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
+          (when-not (auction-tiles-full? epoch)
+            (comp/fragment
+             (ui/button {:onClick (fn []
+                                    (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id props)})]))}
+               "Draw Tile")
+             (ui/button {:onClick (fn []
+                                    (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id props)})]))}
+               "Invoke Ra"))))))))
+
+(defn ui-tiles [props {:keys [click-god-tile]}]
+  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
+        disaster-types (set (map ::tile/type (filter ::tile/disaster? (::hand/tiles props))))]
+   (ui-tile/ui-tiles (map (fn [tile]
+                            (comp/computed tile
+                                           (if discard-disaster-tiles?
+                                             (if (and (not (::tile/disaster? tile))
+                                                      (disaster-types (::tile/type tile)))
+                                               {:selectable? true}
+                                               {:dimmed? true})
+                                             (if (= ::tile-type/god (::tile/type tile))
+                                               {:selectable? true
+                                                :on-click    (fn [tile] (click-god-tile props tile))}
+                                               (::hand/tiles props)))))
+                          (::hand/tiles props)))))
+
+(defsc Hand [this props {:keys [epoch] :as computed}]
   {:query [::hand/available-sun-disks
            ::hand/used-sun-disks
            ::hand/my-go?
@@ -48,63 +102,14 @@
            {::hand/tiles (comp/get-query ui-tile/Tile)}
            {::hand/player (comp/get-query ui-player/Player)}]
    :ident ::hand/id}
-  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? tiles))
-        my-go?                  (and my-go?  (not discard-disaster-tiles?))]
-    (dom/div :.p-2.h-48
-      (cond-> {}
-        (= seat (::hand/seat (::epoch/current-hand epoch)))
-        (assoc :classes ["border-2" "border-red-500"]))
-      (dom/span (ui-player/ui-player player) " - "
-                (str "seat: " seat) " - "
-                (str "score: " (::hand/score hand)))
-      (dom/div {}
-        (dom/div :.flex.space-x-2 {}
-                 (concat
-                  (map (fn [sun-disk]
-                         (ui-sun-disk/ui {:value sun-disk
-                                          :used? true}))
-                       used-sun-disks)
-                  (map (fn [sun-disk]
-                         (ui-sun-disk/ui (cond-> {:value sun-disk}
-                                           (and my-go? onClickSunDisk (> sun-disk highest-bid) )
-                                           (assoc :onClick #(onClickSunDisk sun-disk))
-                                           (and my-go? (< sun-disk highest-bid))
-                                           (assoc :too-low? true))))
-                       available-sun-disks)
-                  (when (and onClickSunDisk my-go? (can-pass? auction hand))
-                    [(ui-sun-disk/ui {:onClick #(onClickSunDisk nil)
-                                      :value   "Pass"})]))))
-      (let [disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
-        (dom/div {:compact true}
-          (ui-tile/ui-tiles (map (fn [tile]
-                                   (comp/computed tile
-                                                  (if discard-disaster-tiles?
-                                                    (if (and (not (::tile/disaster? tile))
-                                                             (disaster-types (::tile/type tile)))
-                                                      {:selectable? true}
-                                                      {:dimmed? true})
-                                                    (if (= ::tile-type/god (::tile/type tile))
-                                                      {:selectable? true
-                                                       :on-click    (fn [tile] (click-god-tile hand tile))}
-                                                      tiles))))
-                                 tiles))))
-      (if discard-disaster-tiles?
-        (dom/div {}
-          (dom/button {:style   {:marginTop "10"}
-                       :primary true
-                       :onClick (fn []
-                                  (comp/transact! this [(m-game/discard-disaster-tiles
-                                                         {::hand/id id
-                                                          :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
-            "Discard disaster tiles"))
-        (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
-          (dom/div :.flex.space-x-2.py-2 {}
-                   (when-not (auction-tiles-full? epoch)
-                     (ui/button {:onClick (fn []
-                                            (comp/transact! this [(m-game/draw-tile {::hand/id id})]))}
-                       "Draw Tile"))
-                   (ui/button {:onClick (fn []
-                                          (comp/transact! this [(m-game/invoke-ra {::hand/id id})]))}
-                     "Invoke Ra")))))))
+  (dom/div :.h-48.relative.border-2.p-2
+    (if (= (::hand/seat props) (::hand/seat (::epoch/current-hand epoch)))
+      {:classes ["border-red-500"]}
+      {:classes []})
+    (dom/div :.absolute.top-0.right-2 {}
+             (ui-info props)
+             (ui-sun-disks props computed)
+             (ui-actions this props epoch))
+    (ui-tiles props computed)))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))

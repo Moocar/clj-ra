@@ -594,7 +594,8 @@
        ;; remove all tiles from the auction track
        (if (::auction/tiles-full? auction)
          [(discard-auction-tiles-op epoch)]
-         (throw (ex-info "You voluntarily invoked ra. You must bid" {})))))))
+         (when (= ::auction-reason/invoke (::auction/reason auction))
+           (throw (ex-info "You voluntarily invoked ra. You must bid" {}))))))))
 
 (defn sun-disks-in-play? [epoch]
   (some (fn [hand]

@@ -5,15 +5,15 @@
             [ra.specs.tile :as tile]
             [ra.specs.tile.type :as tile-type]))
 
-(def type-background
-  {::tile-type/ra "red"
-   ::tile-type/god "gold"
-   ::tile-type/civilization "beige"
-   ::tile-type/monument "cornflowerBlue"
-   ::tile-type/gold "orange"
-   ::tile-type/pharoah "green"
-   ::tile-type/river "lightblue"
-   ::tile-type/flood "lightblue"})
+(def type-classes
+  {::tile-type/ra ["bg-red-500" "text-white"]
+   ::tile-type/god ["bg-yellow-300"]
+   ::tile-type/civilization ["bg-yellow-50"]
+   ::tile-type/monument ["bg-blue-500" "text-white"]
+   ::tile-type/gold ["bg-yellow-500" "text-white" "backdrop-filter" "backdrop-blur-lg"]
+   ::tile-type/pharoah ["bg-green-700" "text-white"]
+   ::tile-type/river ["bg-blue-300"]
+   ::tile-type/flood ["bg-blue-300"]})
 
 (defsc Tile [this props {:keys [selectable? dimmed? on-click]}]
   {:query [::tile/id
@@ -23,12 +23,11 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/div :.w-20.h-20.flex.items-center.justify-center.rounded-md.border-2.justify-center.inline-block
-              (cond-> {:style (cond-> {:backgroundColor (type-background (::tile/type props))}
-                                dimmed?
-                                (assoc :opacity "50%")
-                                (:ui/selected? props)
-                                (assoc :border "red solid 2px"))}
+  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.justify-center.inline-block.cursor-default
+              (cond-> {:classes (concat (type-classes (::tile/type props))
+                                        (cond dimmed?               ["opacity-50"]
+                                              (:ui/selected? props) ["border-2" "border-red-700" "cursor-pointer"])
+                                        (when selectable? ["cursor-pointer"]))}
                 (or selectable? on-click)
                 (assoc :onClick (fn []
                                   (when selectable?

@@ -155,3 +155,14 @@
     (ra-win-pass env h1 h2)
 
     nil))
+
+(defn ra-pass-pass-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (let [game (d/entity @conn [::game/id game-id])
+        epoch (::game/current-epoch game)
+        h1 (:db/id (::epoch/current-hand epoch))
+        h2 (:db/id (first (filter #(not= h1 (:db/id %))
+                                  (::epoch/hands epoch))))]
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/ra))
+    (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h2))
+                              :sun-disk nil})])
+    nil))
