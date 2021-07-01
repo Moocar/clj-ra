@@ -15,7 +15,7 @@
    ::tile-type/river ["bg-blue-300"]
    ::tile-type/flood ["bg-blue-300"]})
 
-(defsc Tile [this props {:keys [selectable? dimmed? on-click]}]
+(defsc Tile [this props {:keys [selectable? dimmed? on-click stack-size]}]
   {:query [::tile/id
            ::tile/title
            ::tile/disaster?
@@ -23,7 +23,7 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.justify-center.inline-block.cursor-default.m-1
+  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.justify-center.inline-block.cursor-default.m-1.relative
               (cond-> {:classes (concat (type-classes (::tile/type props))
                                         (cond dimmed?               ["opacity-50"]
                                               (:ui/selected? props) ["border-2" "border-red-700" "cursor-pointer"])
@@ -37,7 +37,10 @@
               (dom/div {}
                 (dom/span :.text-center.align-middle.inline-block (::tile/title props))
                 (when (::tile/disaster? props)
-                  (dom/span {:style {:color "RED"}} " X")))))
+                  (dom/span {:style {:color "RED"}} " X"))
+                (when stack-size
+                  (dom/div :.absolute.bottom-0.right-0.pr-1 {}
+                    (str stack-size))))))
 
 (def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 
