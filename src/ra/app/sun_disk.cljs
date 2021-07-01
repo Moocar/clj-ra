@@ -2,7 +2,7 @@
   (:require [com.fulcrologic.fulcro.dom :as dom]))
 
 (defn ui [{:keys [value used? onClick too-low?]}]
-  (dom/div :.rounded-full.h-8.w-8.my-2.flex.items-center.justify-center.bg-red-300.cursor-default
+  (dom/div :.rounded-full.h-8.w-8.my-2.flex.items-center.justify-center.bg-red-300.cursor-default.hover:bg-red-500
     (cond-> {}
       onClick (-> (assoc :onClick (fn [_] (onClick)))
                   (assoc :classes ["cursor-pointer"]))

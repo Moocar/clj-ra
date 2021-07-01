@@ -52,7 +52,7 @@
                                       (and my-go? (< sun-disk highest-bid))
                                       (assoc :too-low? true))))
                   (::hand/available-sun-disks props))
-             (when (and onClickSunDisk my-go? (can-pass? auction props))
+             (when (and #p auction (and onClickSunDisk my-go? (can-pass? auction props)))
                [(ui-sun-disk/ui {:onClick #(onClickSunDisk nil)
                                  :value   "Pass"})])))))
 
@@ -102,14 +102,16 @@
            {::hand/tiles (comp/get-query ui-tile/Tile)}
            {::hand/player (comp/get-query ui-player/Player)}]
    :ident ::hand/id}
-  (dom/div :.h-48.relative.border-2.p-2
+  (dom/div :.h-48.border-2.p-2.grid.grid-cols-3.gap-4
     (if (= (::hand/seat props) (::hand/seat (::epoch/current-hand epoch)))
       {:classes ["border-red-500"]}
       {:classes []})
-    (dom/div :.absolute.top-0.right-2 {}
+    (dom/div :.col-span-2 {}
+             (ui-tiles props computed))
+    (dom/div {}
              (ui-info props)
              (ui-sun-disks props computed)
-             (ui-actions this props epoch))
-    (ui-tiles props computed)))
+             (ui-actions this props computed))
+    ))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))

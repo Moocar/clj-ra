@@ -13,13 +13,13 @@
            ::auction/tiles-full?
            {::auction/bids [{::bid/hand [{::hand/player [::player/name]}]}
                             ::bid/sun-disk]}]}
-  (dom/div {:compact true}
+  (dom/div {}
     (dom/h3 "bids")
     (dom/div {}
       (map (fn [{:keys [::bid/hand ::bid/sun-disk]}]
              (dom/span {}
-                       (ui-sun-disk/ui {:value sun-disk})
+                       (ui-sun-disk/ui {:value (or sun-disk "Pass")})
                        (get-in hand [::hand/player ::player/name])))
-           bids))))
+           #p bids))))
 
 (def ui-auction (comp/factory Auction))

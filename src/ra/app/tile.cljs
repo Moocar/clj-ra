@@ -23,7 +23,7 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.justify-center.inline-block.cursor-default
+  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.justify-center.inline-block.cursor-default.m-1
               (cond-> {:classes (concat (type-classes (::tile/type props))
                                         (cond dimmed?               ["opacity-50"]
                                               (:ui/selected? props) ["border-2" "border-red-700" "cursor-pointer"])
@@ -42,7 +42,7 @@
 (def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 
 (defn ui-tiles [tiles]
-  (dom/div :.flex.space-x-2 {} (map ui-tile tiles)))
+  (dom/div :.flex.flex-row.flex-wrap {} (map ui-tile tiles)))
 
 (defn ui-blank-ra-spot []
   (dom/div {:style {:height "50"
