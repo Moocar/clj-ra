@@ -65,23 +65,15 @@
       (ui-sun-disk/ui-large {:value (or (::bid/sun-disk auction-bid)
                                         "Pass")}))))
 
-(defn ui-actions [this props {:keys [epoch auction]}]
-  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
-        my-go?                  (and (::hand/my-go? props)
-                                     (not discard-disaster-tiles?)
-                                     (= (::player/id (::hand/player props))
-                                        (::player/id (:ui/current-player epoch))))]
+(defn ui-actions [this props]
+  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))]
     (dom/div :.flex.flex-col.space-y-2.pr-2.w-48
-      (if discard-disaster-tiles?
+      (when discard-disaster-tiles?
         (ui/button {:onClick (fn []
                                (comp/transact! this [(m-game/discard-disaster-tiles
                                                       {::hand/id (::hand/id props)
                                                        :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles props)))})]))}
-          "Discard disaster tiles")
-        (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
-          (ui/button {:onClick (fn []
-                                 (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id props)})]))}
-            "Invoke Ra"))))))
+          "Discard disaster tiles")))))
 
 (defn ui-tiles [props {:keys [click-god-tile]}]
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
@@ -123,6 +115,6 @@
              (ui-info props)
              (ui-sun-disks props computed)
              (ui-current-bid props computed)
-             (ui-actions this props computed))))
+             (ui-actions this props))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))

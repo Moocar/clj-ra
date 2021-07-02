@@ -110,6 +110,18 @@
       {})
     "Tile Bag"))
 
+(defn ui-invoke-ra [this props]
+  (dom/div :.flex.justify-center.items-center.w-24.h-24.rounded-md.bg-red-300.opacity-50
+    (if (and (= (::player/id (::hand/player (::epoch/current-hand props)))
+                (::player/id (:ui/current-player props)))
+             (not (::epoch/auction props))
+             (not (::epoch/in-disaster? props)))
+      {:onClick (fn []
+                  (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id (::epoch/current-hand props))})]))
+       :classes ["cursor-pointer" "hover:bg-red-500" "opacity-100"]}
+      {})
+    "Invoke Ra"))
+
 (defsc Epoch [this props]
   {:query [::epoch/current-sun-disk
            ::epoch/number
@@ -125,8 +137,10 @@
    :ident ::epoch/id}
   (dom/div :.flex.flex-col.content-center {}
            (dom/strong "Ra Track")
-           (dom/div :.inline-flex.items-center {}
-                    (ui-ra-track props))
+           (dom/div :.flex.flex-row.justify-between {}
+                    (dom/div :.inline-flex.items-center {}
+                             (ui-ra-track props))
+                    (ui-invoke-ra this props))
     (dom/strong "Auction track")
     (dom/div :.flex.flex-row.justify-between {}
              (ui-auction-track this props)
