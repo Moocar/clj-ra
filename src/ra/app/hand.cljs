@@ -53,7 +53,7 @@
                                        (assoc :used? true)))))
                  (concat (::hand/used-sun-disks props)
                          (::hand/available-sun-disks props)))
-            (when (and (my-go? props epoch) auction)
+            (when (and (my-go? props epoch) auction (can-pass? auction props))
               [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})]))))
 
 (defn ui-current-bid [props {:keys [auction]}]

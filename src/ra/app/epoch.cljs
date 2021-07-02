@@ -98,7 +98,7 @@
   (= 8 (count (::epoch/auction-tiles epoch))))
 
 (defn ui-tile-bag [this props]
-  (dom/div :.flex.justify-center.items-center.w-24.h-24.rounded-md.bg-green-300.opacity-50
+  (dom/div :.flex.justify-center.items-center.w-24.h-24.rounded-md.bg-green-300.opacity-50.cursor-default
     (if (and (= (::player/id (::hand/player (::epoch/current-hand props)))
                 (::player/id (:ui/current-player props)))
              (not (::epoch/auction props))
