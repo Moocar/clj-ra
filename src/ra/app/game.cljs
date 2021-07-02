@@ -8,21 +8,29 @@
             [ra.specs.player :as player]
             [com.fulcrologic.fulcro.data-fetch :as df]
             [ra.app.ui :as ui]
-            [ra.specs.epoch :as epoch]))
+            [ra.specs.epoch :as epoch]
+            [ra.app.sun-disk :as ui-sun-disk]))
 
 (declare Game)
 
 (defn ui-game-info [this props]
   (let [epoch (::game/current-epoch props)]
     (dom/div {}
-      (dom/p {} (str "Epoch: " (::epoch/number epoch)))
-      (dom/div :.flex.flex-col.space-y-4 {}
-               (ui/button {:onClick (fn []
-                                      (comp/transact! this [(m-game/reset {::game/id (::game/id props)})]))}
-                 "Reset")
-               (ui/button {:onClick (fn []
-                                      (df/load! this [::game/id (::game/id props)] Game))}
-                 "Refresh")))))
+      (dom/div :.flex.justify-between {}
+               (dom/div :.flex.flex-col {}
+                        (dom/div :.text-black-700.text-md.font-bold.mb-2 {}
+                                 (str "Game ID: " (str (::game/id props))))
+                        (dom/div {} (str "Epoch: " (::epoch/number epoch)))
+                        (dom/div {} (dom/div :.flex.flex-row.items-center {}
+                                             (dom/div {} "Sun Disk: ")
+                                             (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk (::game/current-epoch props))})))))
+               (dom/div :.flex.flex-col.space-y-4 {}
+                        (ui/button {:onClick (fn []
+                                               (comp/transact! this [(m-game/reset {::game/id (::game/id props)})]))}
+                          "Reset")
+                        (ui/button {:onClick (fn []
+                                               (df/load! this [::game/id (::game/id props)] Game))}
+                          "Refresh"))))))
 
 (defsc Game [this {:keys                                         [::game/players
                                               ::game/current-epoch
@@ -37,9 +45,7 @@
            ::game/id]
    :ident ::game/id}
   (dom/div {}
-    (dom/div {}
-      (dom/span :.text-black-700.text-md.font-bold.mb-2 {} "Game")
-      (dom/span :.text-black-300.text-md.mb-2.pl-4 {} (str "(" (str (::game/id props)) ")")))
+    (ui-game-info this props)
     (if (first (filter #(= (::player/id %) (::player/id current-player))
                        players))
       ;; Game exists and you're in it
@@ -47,8 +53,6 @@
         (if started-at
           ;; Game started
           (dom/div {}
-            (dom/div :.float-right {}
-                     (ui-game-info this props))
             (ui-epoch/ui-epoch current-epoch))
           ;; Game exists but not started
           (dom/div {}

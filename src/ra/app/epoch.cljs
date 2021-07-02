@@ -44,8 +44,7 @@
                                               :auction-track-tile-id (::tile/id tile)})]))
 
 (defn ui-auction-track [this props]
-  (dom/div {:compact true}
-    (dom/strong "Auction track")
+  (dom/div {}
     (dom/div :.border-2.rounded-md.inline-flex.space-x-2.p-2 {}
              (concat (->> (::epoch/auction-tiles props)
                           (sort-by ::tile/auction-track-position)
@@ -90,9 +89,7 @@
                                                             (comp/transact! this [(select-god-tile {:hand hand
                                                                                                     :tile tile})])))}))))))))
 
-(defsc Epoch [this {:keys [::epoch/current-sun-disk
-                           ::epoch/auction]
-                    :as   props}]
+(defsc Epoch [this {:keys [::epoch/auction] :as   props}]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            ::epoch/id
@@ -106,9 +103,10 @@
            {::epoch/hands (comp/get-query ui-hand/Hand)}]
    :ident ::epoch/id}
   (dom/div :.flex.flex-col {}
+           (dom/strong "Ra Track")
            (dom/div :.inline-flex.items-center {}
-                    (ui-ra-track props)
-                    (dom/div :.px-8 {} (ui-sun-disk/ui {:value current-sun-disk})))
+                    (ui-ra-track props))
+    (dom/strong "Auction track")
     (ui-auction-track this props)
     (when auction
       (ui-auction/ui-auction auction))
