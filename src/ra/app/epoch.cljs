@@ -54,8 +54,13 @@
                                                                         (assoc :on-click #(swap-god-tile this props %))))))))
                      (fill-blank-ra-spots (::epoch/auction-tiles props))))))
 
-(defn highest-bid [{:keys [::auction/bids]}]
-  (apply max (or (seq (map ::bid/sun-disk bids)) [0])))
+(defn highest-bid [props]
+  (reduce (fn [highest bid]
+            (if (< (::bid/sun-disk highest) (::bid/sun-disk bid))
+              bid
+              highest)
+            {::bid/sun-disk 0})
+          (::auction/bids props)))
 
 (m/defmutation select-god-tile [{:keys [hand tile]}]
   (action [env]
@@ -89,7 +94,7 @@
                                                             (comp/transact! this [(select-god-tile {:hand hand
                                                                                                     :tile tile})])))}))))))))
 
-(defsc Epoch [this {:keys [::epoch/auction] :as   props}]
+(defsc Epoch [this props]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            ::epoch/id
@@ -108,9 +113,6 @@
                     (ui-ra-track props))
     (dom/strong "Auction track")
     (ui-auction-track this props)
-    (when auction
-      (ui-auction/ui-auction auction))
-
     (dom/div {}
       (dom/h3 :.font-bold.text-xl "Seats")
       (dom/div {}

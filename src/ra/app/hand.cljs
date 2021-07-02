@@ -37,28 +37,39 @@
       (str "seat: " (::hand/seat props)) " - "
       (str "score: " (::hand/score props))))
 
+(defn my-go? [props epoch]
+  (and (::hand/my-go? props)
+       (= (::player/id (::hand/player props))
+          (::player/id (:ui/current-player epoch)))))
+
 (defn ui-sun-disks [props {:keys [onClickSunDisk highest-bid auction epoch]}]
-  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
-        my-go? (and (::hand/my-go? props)
-                    (not discard-disaster-tiles?)
-                    (= (::player/id (::hand/player props))
-                       (::player/id (:ui/current-player epoch))))]
-    (dom/div :.flex.space-x-2 {}
-            (concat
-             (map (fn [sun-disk]
-                    (ui-sun-disk/ui {:value sun-disk
-                                     :used? true}))
-                  (::hand/used-sun-disks props))
-             (map (fn [sun-disk]
-                    (ui-sun-disk/ui (cond-> {:value sun-disk}
-                                      (and my-go? onClickSunDisk (> sun-disk highest-bid) )
-                                      (assoc :onClick #(onClickSunDisk sun-disk))
-                                      (and my-go? (< sun-disk highest-bid))
-                                      (assoc :too-low? true))))
-                  (::hand/available-sun-disks props))
-             (when (and #p auction (and onClickSunDisk my-go? (can-pass? auction props)))
-               [(ui-sun-disk/ui {:onClick #(onClickSunDisk nil)
-                                 :value   "Pass"})])))))
+  #p (my-go? props epoch)
+  #p (::hand/seat props)
+  #p auction
+  (dom/div :.flex.space-x-2 {}
+           #p (concat
+               (map (fn [sun-disk]
+                      (let [used? ((set (::hand/used-sun-disks props)) sun-disk)]
+                        (ui-sun-disk/ui (cond-> {:value sun-disk}
+                                          (and (my-go? props epoch) auction (< (::bid/sun-disk highest-bid) sun-disk) (not used?))
+                                          (assoc :onClick #(onClickSunDisk sun-disk))
+                                          (and (my-go? props epoch) auction (< sun-disk (::bid/sun-disk highest-bid)) (not used?))
+                                          (assoc :too-low? true)
+                                          #p used?
+                                          (assoc :used? true)))))
+                    (concat (::hand/used-sun-disks props)
+                            (::hand/available-sun-disks props)))
+               (when (and (my-go? props epoch) auction)
+                 [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})]))))
+
+(defn ui-current-bid [props {:keys [auction]}]
+  (let [auction-bid (first (filter (fn [bid]
+                                     #p bid
+                                     (= (::hand/id (::bid/hand bid))
+                                        (::hand/id props)))
+                                   (::auction/bids auction)))]
+    (when auction-bid
+      (ui-sun-disk/ui-large {:value (::bid/sun-disk auction-bid)}))))
 
 (defn ui-actions [this props {:keys [epoch auction]}]
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
@@ -114,15 +125,16 @@
            {::hand/tiles (comp/get-query ui-tile/Tile)}
            {::hand/player (comp/get-query ui-player/Player)}]
    :ident ::hand/id}
-  (dom/div :.h-48.border-2.p-2.grid.grid-cols-3.gap-4
+  (dom/div :.h-48.border-2.p-2.flex.flex-row.justify-between
     (if (= (::hand/seat props) (::hand/seat (::epoch/current-hand epoch)))
       {:classes ["border-red-500"]}
       {:classes []})
-    (dom/div :.col-span-2 {}
+    (dom/div  {}
              (ui-tiles props computed))
-    (dom/div {}
+    (dom/div  {}
              (ui-info props)
              (ui-sun-disks props computed)
+             (ui-current-bid props computed)
              (ui-actions this props computed))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
