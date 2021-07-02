@@ -24,9 +24,6 @@
       (not (all-passes? auction))
       tiles-full?))
 
-(defn auction-tiles-full? [epoch]
-  (= 8 (count (::epoch/auction-tiles epoch))))
-
 (defn disaster-candidate? [disaster-types tile]
   (and (not (::tile/disaster? tile))
        (disaster-types (::tile/type tile))))
@@ -37,9 +34,9 @@
       (str "seat: " (::hand/seat props)) " - "
       (str "score: " (::hand/score props))))
 
-(defn my-go? [props epoch]
-  (and (::hand/my-go? props)
-       (= (::player/id (::hand/player props))
+(defn my-go? [hand epoch]
+  (and (::hand/my-go? hand)
+       (= (::player/id (::hand/player hand))
           (::player/id (:ui/current-player epoch)))))
 
 (defn ui-sun-disks [props {:keys [onClickSunDisk highest-bid auction epoch]}]
@@ -81,15 +78,10 @@
                                                       {::hand/id (::hand/id props)
                                                        :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles props)))})]))}
           "Discard disaster tiles")
-        (comp/fragment
-          (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)) (not (auction-tiles-full? epoch)))
-            (ui/button {:onClick (fn []
-                                   (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id props)})]))}
-              "Draw Tile"))
-          (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
-            (ui/button {:onClick (fn []
-                                   (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id props)})]))}
-              "Invoke Ra")))))))
+        (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
+          (ui/button {:onClick (fn []
+                                 (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id props)})]))}
+            "Invoke Ra"))))))
 
 (defn ui-tiles [props {:keys [click-god-tile]}]
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))

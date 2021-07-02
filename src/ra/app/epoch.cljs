@@ -94,6 +94,22 @@
                                                             (comp/transact! this [(select-god-tile {:hand hand
                                                                                                     :tile tile})])))}))))))))
 
+(defn auction-tiles-full? [epoch]
+  (= 8 (count (::epoch/auction-tiles epoch))))
+
+(defn ui-tile-bag [this props]
+  (dom/div :.flex.justify-center.items-center.w-24.h-24.rounded-md.bg-green-300.opacity-50
+    (if (and (= (::player/id (::hand/player (::epoch/current-hand props)))
+                (::player/id (:ui/current-player props)))
+             (not (::epoch/auction props))
+             (not (::epoch/in-disaster? props))
+             (not (auction-tiles-full? props)))
+      {:onClick (fn []
+                  (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id (::epoch/current-hand props))})]))
+       :classes ["cursor-pointer" "hover:bg-green-500" "opacity-100"]}
+      {})
+    "Tile Bag"))
+
 (defsc Epoch [this props]
   {:query [::epoch/current-sun-disk
            ::epoch/number
@@ -102,17 +118,19 @@
            {::epoch/auction (comp/get-query ui-auction/Auction)}
            {:ui/selected-god-tile [::tile/id {::tile/hand [::hand/id]}]}
            ::epoch/in-disaster?
-           {::epoch/current-hand [::hand/seat]}
+           {::epoch/current-hand [::hand/seat {::hand/player [::player/id]} ::hand/id]}
            {::epoch/ra-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/auction-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/hands (comp/get-query ui-hand/Hand)}]
    :ident ::epoch/id}
-  (dom/div :.flex.flex-col {}
+  (dom/div :.flex.flex-col.content-center {}
            (dom/strong "Ra Track")
            (dom/div :.inline-flex.items-center {}
                     (ui-ra-track props))
     (dom/strong "Auction track")
-    (ui-auction-track this props)
+    (dom/div :.flex.flex-row.justify-between {}
+             (ui-auction-track this props)
+             (ui-tile-bag this props))
     (dom/div {}
       (dom/h3 :.font-bold.text-xl "Seats")
       (dom/div {}
