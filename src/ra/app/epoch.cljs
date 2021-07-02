@@ -54,13 +54,13 @@
                                                                         (assoc :on-click #(swap-god-tile this props %))))))))
                      (fill-blank-ra-spots (::epoch/auction-tiles props))))))
 
-(defn highest-bid [props]
+(defn highest-bid [auction]
   (reduce (fn [highest bid]
-            (if (< (::bid/sun-disk highest) (::bid/sun-disk bid))
+            (if (< (or (::bid/sun-disk highest) 0) (::bid/sun-disk bid))
               bid
-              highest)
-            {::bid/sun-disk 0})
-          (::auction/bids props)))
+              highest))
+          {::bid/sun-disk 0}
+          (::auction/bids auction)))
 
 (m/defmutation select-god-tile [{:keys [hand tile]}]
   (action [env]

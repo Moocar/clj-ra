@@ -166,3 +166,25 @@
     (parser {} [`(m-game/bid {::hand/id ~(::hand/id (d/entity @conn h2))
                               :sun-disk nil})])
     nil))
+
+(defn get-hand-ids [epoch]
+  (->> (::epoch/hands epoch)
+       (sort-by ::hand/seat)
+       (repeat 2)
+       (apply concat)
+       (drop-while #(not= (:db/id (::epoch/current-hand epoch)) (:db/id %)))
+       (take 3)
+       (map :db/id)))
+;; 3 players
+(defn full-auction-track-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (let [game (d/entity @conn [::game/id game-id])
+        epoch (::game/current-epoch game)
+        [h1 h2 h3] (get-hand-ids epoch)]
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
+    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
+    (draw-tile* conn h3 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
+    (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
+    (draw-tile* conn h3 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
+    (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
+    nil))

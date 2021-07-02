@@ -40,7 +40,7 @@
         p2-id "2"]
     (parser {} [`(m-player/new-player {::player/id ~p1-id})])
     (parser {} [`(m-player/new-player {::player/id ~p2-id})])
-    (let [game-id #p (new-game parser)]
+    (let [game-id (new-game parser)]
       (parser {} [`(sut/join-game {::game/id ~game-id ::player/id ~p1-id})])
       (parser {} [`(sut/join-game {::game/id ~game-id ::player/id ~p2-id})])
       (parser {} [`(sut/start-game {::game/id ~game-id})]))

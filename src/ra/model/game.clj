@@ -498,8 +498,11 @@
    ::pc/transform notify-clients
    ::pc/output [::game/id]}
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])
+        epoch (hand->epoch hand)
         game (hand->game hand)
         tile (d/entity @conn (sample-tile @conn game))]
+    (when (auction-tiles-full? epoch)
+      (throw (ex-info "Auction Track full" {})))
     (do-draw-tile conn hand tile)
     {::game/id (::game/id (hand->game hand))}))
 

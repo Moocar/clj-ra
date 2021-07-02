@@ -43,33 +43,30 @@
           (::player/id (:ui/current-player epoch)))))
 
 (defn ui-sun-disks [props {:keys [onClickSunDisk highest-bid auction epoch]}]
-  #p (my-go? props epoch)
-  #p (::hand/seat props)
-  #p auction
   (dom/div :.flex.space-x-2 {}
-           #p (concat
-               (map (fn [sun-disk]
-                      (let [used? ((set (::hand/used-sun-disks props)) sun-disk)]
-                        (ui-sun-disk/ui (cond-> {:value sun-disk}
-                                          (and (my-go? props epoch) auction (< (::bid/sun-disk highest-bid) sun-disk) (not used?))
-                                          (assoc :onClick #(onClickSunDisk sun-disk))
-                                          (and (my-go? props epoch) auction (< sun-disk (::bid/sun-disk highest-bid)) (not used?))
-                                          (assoc :too-low? true)
-                                          #p used?
-                                          (assoc :used? true)))))
-                    (concat (::hand/used-sun-disks props)
-                            (::hand/available-sun-disks props)))
-               (when (and (my-go? props epoch) auction)
-                 [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})]))))
+           (concat
+            (map (fn [sun-disk]
+                   (let [used? ((set (::hand/used-sun-disks props)) sun-disk)]
+                     (ui-sun-disk/ui (cond-> {:value sun-disk}
+                                       (and (my-go? props epoch) auction (< (::bid/sun-disk highest-bid) sun-disk) (not used?))
+                                       (assoc :onClick #(onClickSunDisk sun-disk))
+                                       (and (my-go? props epoch) auction (< sun-disk (::bid/sun-disk highest-bid)) (not used?))
+                                       (assoc :too-low? true)
+                                       used?
+                                       (assoc :used? true)))))
+                 (concat (::hand/used-sun-disks props)
+                         (::hand/available-sun-disks props)))
+            (when (and (my-go? props epoch) auction)
+              [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})]))))
 
 (defn ui-current-bid [props {:keys [auction]}]
   (let [auction-bid (first (filter (fn [bid]
-                                     #p bid
                                      (= (::hand/id (::bid/hand bid))
                                         (::hand/id props)))
                                    (::auction/bids auction)))]
     (when auction-bid
-      (ui-sun-disk/ui-large {:value (::bid/sun-disk auction-bid)}))))
+      (ui-sun-disk/ui-large {:value (or (::bid/sun-disk auction-bid)
+                                        "Pass")}))))
 
 (defn ui-actions [this props {:keys [epoch auction]}]
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
@@ -84,15 +81,15 @@
                                                       {::hand/id (::hand/id props)
                                                        :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles props)))})]))}
           "Discard disaster tiles")
-        (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
-          (when-not (auction-tiles-full? epoch)
-            (comp/fragment
-             (ui/button {:onClick (fn []
-                                    (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id props)})]))}
-               "Draw Tile")
-             (ui/button {:onClick (fn []
-                                    (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id props)})]))}
-               "Invoke Ra"))))))))
+        (comp/fragment
+          (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)) (not (auction-tiles-full? epoch)))
+            (ui/button {:onClick (fn []
+                                   (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id props)})]))}
+              "Draw Tile"))
+          (when (and my-go? (not auction) (not (::epoch/in-disaster? epoch)))
+            (ui/button {:onClick (fn []
+                                   (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id props)})]))}
+              "Invoke Ra")))))))
 
 (defn ui-tiles [props {:keys [click-god-tile]}]
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
@@ -100,7 +97,6 @@
     (->> (::hand/tiles props)
          (group-by ::tile/title)
          (map (fn [[_ [tile :as tiles]]]
-                #p tile
                 (comp/computed tile
                                (merge {:stack-size (count tiles)}
                                       (if discard-disaster-tiles?

@@ -94,7 +94,7 @@
                                                                {::epoch/hands [::hand/available-sun-disks
                                                                                {::hand/tiles [::tile/title]}]}]}
                                         {::game/players [::player/name]}]}])]
-        #p x)
+        x)
       (parser {} `[(m-game/draw-tile {::game/id ~game-id ::player/id ~current-hand-player-id})])
       (let [x (pathom/entity-parse
                parser
@@ -109,7 +109,7 @@
                                                                {::epoch/hands [::hand/available-sun-disks
                                                                                {::hand/tiles [::tile/title]}]}]}
                                         {::game/players [::player/name]}]}])]
-        #p x))
+        x))
 
     )
 
