@@ -6,9 +6,8 @@
             [com.wsscode.pathom.connect :as pc]
             [com.wsscode.pathom.core :as p]
             [datascript.core :as d]
-            [ghostwheel.core :as g]
             [integrant.core :as ig]
-            [ra.core :refer [remove-keys update-when]]
+            [ra.core :refer [update-when]]
             [ra.date :as date]
             [ra.db :as db]
             [ra.model.player :as m-player]
@@ -21,7 +20,6 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.river :as river]
             [ra.specs.tile.type :as tile-type]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -400,6 +398,7 @@
     [[:db/add auction-id ::auction/ra-hand (:db/id hand)]
      [:db/add auction-id ::auction/reason auction-reason]
      [:db/add auction-id ::auction/tiles-full? (auction-tiles-full? epoch)]
+     [:db/add (:db/id epoch) ::epoch/last-ra-invoker (:db/id hand)]
      [:db/add (:db/id epoch) ::epoch/auction auction-id]]))
 
 (defn invoke-ra-tx [hand reason]
@@ -506,27 +505,13 @@
     (do-draw-tile conn hand tile)
     {::game/id (::game/id (hand->game hand))}))
 
-(defn play-bid-tx
-  "Adds a new bid to the auction. The sun-disk is moved from the hand to the bid"
-  [{:keys [hand auction sun-disk]}]
-  (let [bid-id -1]
-    (concat
-     [[:db/add (:db/id auction) ::auction/bids bid-id]
-      [:db/add bid-id ::bid/hand (:db/id hand)]]
-     (when sun-disk
-       (move-thing-tx sun-disk
-                      [hand ::hand/available-sun-disks]
-                      [{:db/id bid-id} ::bid/sun-disk])))))
-
 (defn waiting-on-last-bid?
   "Returns true if the current bid auction's bid is the last"
   [auction]
   (let [epoch (auction->epoch auction)
         active-hands (filter (fn [hand]
                                (or (seq (::hand/available-sun-disks hand))
-                                   (some (fn [bid-hand]
-                                              (= hand bid-hand))
-                                            (map ::bid/hand (::auction/bids auction)))))
+                                   (some #(= hand %) (map ::bid/hand (::auction/bids auction)))))
                              (::epoch/hands epoch))]
     (= (inc (count (::auction/bids auction)))
        (count active-hands))))
@@ -558,48 +543,6 @@
            [:db/add (:db/id hand) ::hand/tiles (:db/id tile)])
          (::epoch/auction-tiles epoch))))
 
-(defn last-bid-tx
-  "The auction ends.
-  1. Move all non-winning bids back into their original hands
-  2. Remove auction from the epoch
-  3. Move auction track tiles to winning hand
-  4. Move the epoch's current sun-disk into the winning hand as a used disk
-  5. Set the epoch's current disk to the winning bid's
-
-  If there is no winning bid, then discard all tiles from the auction track"
-  [{:keys [auction new-bid]}]
-  (let [epoch (auction->epoch auction)
-        winning-bid (winning-bid auction new-bid)
-        other-bids  (filter #(not-winning-bid % winning-bid)
-                            (conj (::auction/bids auction) new-bid))]
-    (concat
-     ;; Put all the non-winning bids back in the hand
-     (mapv (fn [bid]
-             [:db/add (:db/id (::bid/hand bid)) ::hand/available-sun-disks (::bid/sun-disk bid)])
-           other-bids)
-     ;; Remove the auction from the epoch (it's done)
-     ;; TODO have flag "in auction" so frontend can show last bid that was played
-     [[:db/retract (:db/id epoch) ::epoch/auction (:db/id auction)]]
-     (if winning-bid
-       (concat
-        ;; Move auction track tiles to winning hand
-        (auction-tiles->hand-tx epoch (::bid/hand winning-bid))
-        [;; Move the epoch's sun-disk into the winning hand as a used disk
-         [:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
-         ;; Set the current epoch's sun disk (middle of the board) to the
-         ;; winning disk
-         [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]]
-        ;; If the player picks up a disaster tile, go into disaster resolution mode
-        (when (some ::tile/disaster? (::epoch/auction-tiles epoch))
-          [[:db/add (:db/id epoch) ::epoch/in-disaster? true]]))
-
-       ;; If there isn't a winning bid, and the auction track is full, then
-       ;; remove all tiles from the auction track
-       (if (::auction/tiles-full? auction)
-         [(discard-auction-tiles-op epoch)]
-         (when (= ::auction-reason/invoke (::auction/reason auction))
-           (throw (ex-info "You voluntarily invoked ra. You must bid" {}))))))))
-
 (defn sun-disks-in-play? [epoch]
   (some (fn [hand]
             (seq (::hand/available-sun-disks hand)))
@@ -609,21 +552,71 @@
   "Moves the sun-disk from the hand to the middle of the board and triggers an end
   to the auction if it's the last bid"
   [hand sun-disk]
-  (let [epoch (hand->epoch hand)]
+  (let [epoch (hand->epoch hand)
+        auction (::epoch/auction epoch)]
     (concat
-     ;; New bid. sun-disk moves from hand to middle
-     (play-bid-tx {:hand     hand
-                   :sun-disk sun-disk
-                   :auction  (::epoch/auction epoch)})
-     ;; Set the current hand
-     (rotate-current-hand-tx epoch hand)
-     (when (waiting-on-last-bid? (::epoch/auction epoch))
-       ;; If the next bid would be the winner, then trigger
-       ;; an end to the auction
-       (let [new-bid {::bid/hand     hand
-                      ::bid/sun-disk sun-disk}]
-         (last-bid-tx {:auction (::epoch/auction epoch)
-                       :new-bid new-bid}))))))
+
+     ;; Add new bid to auction and move sun disk from hand to auction
+     (let [bid-id -1]
+       (concat
+        [[:db/add (:db/id auction) ::auction/bids bid-id]
+         [:db/add bid-id ::bid/hand (:db/id hand)]]
+        (when sun-disk
+          (move-thing-tx sun-disk
+                         [hand ::hand/available-sun-disks]
+                         [{:db/id bid-id} ::bid/sun-disk]))))
+
+     ;; If the next bid would be the winner, then trigger an end to the auction
+     (let [new-bid     {::bid/hand     hand
+                        ::bid/sun-disk sun-disk}
+           winning-bid (winning-bid auction new-bid)]
+       (concat
+        (when (waiting-on-last-bid? auction)
+          (let [other-bids (filter #(not-winning-bid % winning-bid)
+                                      (conj (::auction/bids auction) new-bid))]
+            (concat
+             ;; Put all the non-winning bids back in the hand
+             (mapv (fn [bid]
+                     [:db/add (:db/id (::bid/hand bid)) ::hand/available-sun-disks (::bid/sun-disk bid)])
+                   other-bids)
+             ;; Remove the auction from the epoch (it's done)
+             ;; TODO have flag "in auction" so frontend can show last bid that was played
+             [[:db/retract (:db/id epoch) ::epoch/auction (:db/id auction)]]
+
+             ;; If there was a winning bid
+             (if winning-bid
+               (concat
+                ;; Move auction track tiles to winning hand
+                (auction-tiles->hand-tx epoch (::bid/hand winning-bid))
+                [ ;; Move the epoch's sun-disk into the winning hand as a used disk
+                 [:db/add (:db/id (::bid/hand winning-bid)) ::hand/used-sun-disks (::epoch/current-sun-disk epoch)]
+                 ;; Set the current epoch's sun disk (middle of the board) to the
+                 ;; winning disk
+                 [:db/add (:db/id epoch) ::epoch/current-sun-disk (::bid/sun-disk winning-bid)]]
+                ;; If the player picks up a disaster tile, go into disaster resolution mode
+                (when (some ::tile/disaster? (::epoch/auction-tiles epoch))
+                  [[:db/add (:db/id epoch) ::epoch/in-disaster? true]]))
+
+               ;; If everyone passed
+               (if (::auction/tiles-full? auction)
+                 ;; If the auction track is full, then we discard all the tiles
+                 [(discard-auction-tiles-op epoch)]
+                 ;; If the auction track isn't full, and everyone else passed, you have to bid
+                 (when (= ::auction-reason/invoke (::auction/reason auction))
+                   (throw (ex-info "You voluntarily invoked ra. You must bid" {}))))))))
+
+        ;; TODO If they win a disaster tile, but they have no choices, then
+        ;; discard for them and move to the next hand
+
+        ;; Calculate whose turn it is next. If it was a winning bid and they won
+        ;; a disaster, then it's that person's turn still. If not, it's the
+        ;; player to the left of the last ra invoker
+        (let [the-next-hand (if (and winning-bid (some ::tile/disaster? (::epoch/auction-tiles epoch)))
+                              hand
+                              (if winning-bid
+                                (next-hand (::epoch/last-ra-invoker epoch))
+                                (next-hand hand)))]
+          [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id the-next-hand)]]))))))
 
 (pc/defmutation bid
   [{:keys [::db/conn]} {:keys [sun-disk] :as input}]
@@ -637,6 +630,8 @@
     (assert (= hand (::epoch/current-hand epoch)))
     (when-not (::epoch/auction epoch)
       (throw (ex-info "Not in an auction" {})))
+    ;; Perform a fake tx to find out if we have run out of sun disks. And if so,
+    ;; finish the epoch
     (let [tx (bid-tx hand sun-disk)
           db-after (:db-after (d/with @conn tx))
           new-epoch (d/entity db-after (:db/id epoch))
@@ -690,7 +685,8 @@
 
     (d/transact! conn (concat (mapv #(discard-tile-op hand %)
                                     (set/union selected-tiles disaster-tiles))
-                              [[:db/add (:db/id epoch) ::epoch/in-disaster? false]]))
+                              [[:db/add (:db/id epoch) ::epoch/in-disaster? false]
+                               [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand (::epoch/last-ra-invoker epoch)))]]))
     {::game/id (::game/id (hand->game hand))}))
 
 (pc/defmutation use-god-tile

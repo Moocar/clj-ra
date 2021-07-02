@@ -10,6 +10,15 @@
             [ra.specs.tile.type :as tile-type]
             [ra.model.tile :as m-tile]))
 
+(defn get-hand-ids [epoch]
+  (->> (::epoch/hands epoch)
+       (sort-by ::hand/seat)
+       (repeat 2)
+       (apply concat)
+       (drop-while #(not= (:db/id (::epoch/current-hand epoch)) (:db/id %)))
+       (take 3)
+       (map :db/id)))
+
 (defn get-game [conn game-id]
   (d/entity @conn [::game/id game-id]))
 
@@ -156,6 +165,16 @@
 
     nil))
 
+;; Win disaster, stays on your turn
+(defn win-disaster-your-turn-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (let [game (d/entity @conn [::game/id game-id])
+        epoch (::game/current-epoch game)
+        [h1 h2 h3] (get-hand-ids epoch)]
+    (draw-tile* conn h1 (find-tile-p (get-game conn game-id) m-tile/flood?))
+    (draw-tile* conn h2 (find-tile-p (get-game conn game-id) m-tile/drought?))
+
+    nil))
+
 (defn ra-pass-pass-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
   (let [game (d/entity @conn [::game/id game-id])
         epoch (::game/current-epoch game)
@@ -167,15 +186,6 @@
                               :sun-disk nil})])
     nil))
 
-(defn get-hand-ids [epoch]
-  (->> (::epoch/hands epoch)
-       (sort-by ::hand/seat)
-       (repeat 2)
-       (apply concat)
-       (drop-while #(not= (:db/id (::epoch/current-hand epoch)) (:db/id %)))
-       (take 3)
-       (map :db/id)))
-;; 3 players
 (defn full-auction-track-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
   (let [game (d/entity @conn [::game/id game-id])
         epoch (::game/current-epoch game)

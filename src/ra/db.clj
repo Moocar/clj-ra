@@ -34,6 +34,7 @@
    :ra.specs.epoch/ra-tiles {:db/cardinality :db.cardinality/many
                              :db/valueType   :db.type/ref}
    :ra.specs.epoch/current-hand  {:db/valueType :db.type/ref}
+   :ra.specs.epoch/last-ra-invoker {:db/valueType :db.type/ref}
 
    :ra.specs.game/id            {:db/unique :db.unique/value}
    :ra.specs.game/tile-bag      {:db/cardinality :db.cardinality/many
