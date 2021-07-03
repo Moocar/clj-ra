@@ -65,17 +65,7 @@
       (ui-sun-disk/ui-large {:value (or (::bid/sun-disk auction-bid)
                                         "Pass")}))))
 
-(defn ui-actions [this props]
-  (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))]
-    (dom/div :.flex.flex-col.space-y-2.pr-2.w-48
-      (when discard-disaster-tiles?
-        (ui/button {:onClick (fn []
-                               (comp/transact! this [(m-game/discard-disaster-tiles
-                                                      {::hand/id (::hand/id props)
-                                                       :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles props)))})]))}
-          "Discard disaster tiles")))))
-
-(defn ui-tiles [props {:keys [click-god-tile]}]
+(defn ui-tiles [props {:keys [click-god-tile epoch]}]
   (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))
         disaster-types (set (map ::tile/type (filter ::tile/disaster? (::hand/tiles props))))]
     (->> (::hand/tiles props)
@@ -83,7 +73,7 @@
          (map (fn [[_ [tile :as tiles]]]
                 (comp/computed tile
                                (merge {:stack-size (count tiles)}
-                                      (if discard-disaster-tiles?
+                                      (if (and discard-disaster-tiles? (my-go? props epoch))
                                         (if (and (not (::tile/disaster? tile))
                                                  (disaster-types (::tile/type tile)))
                                           {:selectable? true}
@@ -115,6 +105,13 @@
              (ui-info props)
              (ui-sun-disks props computed)
              (ui-current-bid props computed)
-             (ui-actions this props))))
+             (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))]
+               (dom/div :.flex.flex-col.space-y-2.pr-2.w-48
+                 (when (and discard-disaster-tiles? (my-go? props epoch))
+                   (ui/button {:onClick (fn []
+                                          (comp/transact! this [(m-game/discard-disaster-tiles
+                                                                 {::hand/id (::hand/id props)
+                                                                  :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles props)))})]))}
+                     "Discard selected disaster tiles")))))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))
