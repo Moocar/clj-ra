@@ -153,7 +153,7 @@
     [:link {:rel  "stylesheet"
             :type "text/css"
             :href "/tailwind.css"}]]
-   [:body {:class "font-sans"}
+   [:body {:class "font-sans bg-gray-100"}
     [:div {:id "app"} "...Loading"]
     [:script {:src main-js-path}]]))
 
