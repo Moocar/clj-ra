@@ -26,7 +26,7 @@
            (right-menu props)))
 
 (defn ui-lobby [this props]
-  (dom/div :.w-full.max-w-4xl.relative {}
+  (dom/div :.w-full.max-w-5xl.relative {}
            (dom/div :.bg-white.shadow-md.rounded.px-8.pt-6.pb-8.mb-4 {}
                     (top-menu props)
                     (if (nil? (:ui/current-game props))

@@ -198,3 +198,7 @@
     (draw-tile* conn h3 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
     nil))
+
+(defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (parser {} [`(m-game/reset {::game/id ~game-id})])
+  nil)

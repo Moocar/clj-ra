@@ -26,9 +26,6 @@
                                              (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk (::game/current-epoch props))})))))
                (dom/div :.flex.flex-col.space-y-4 {}
                         (ui/button {:onClick (fn []
-                                               (comp/transact! this [(m-game/reset {::game/id (::game/id props)})]))}
-                          "Reset")
-                        (ui/button {:onClick (fn []
                                                (df/load! this [::game/id (::game/id props)] Game))}
                           "Refresh"))))))
 
@@ -61,8 +58,8 @@
                     (map (fn [player]
                            (dom/li {} (::player/name player)))
                          (::game/players props)))
-            (ui/button {::onClick (fn []
-                                    (comp/transact! this [(m-game/start-game (select-keys props [::game/id]))]))}
+            (ui/button {:onClick (fn []
+                                   (comp/transact! this [(m-game/start-game (select-keys props [::game/id]))]))}
               "Start Game"))))
       ;; Game exists but you're not in it
       (ui/button {:onClick (fn []
