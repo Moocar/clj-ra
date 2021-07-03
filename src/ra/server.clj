@@ -148,19 +148,22 @@
 
 (defn index-html [{:keys [main-js-path]}]
   (html
-   [:head
-    [:meta {:charset "UTF-8"}]
-    [:meta {:name "viewport"
-            :content "width=device-width, initial-scale=1.0"}]
-    [:link {:rel  "stylesheet"
-            :type "text/css"
-            :href "/styles.css"}]
-    [:link {:rel "shortcut icon"
-            :type "image/svg"
-            :href "/favicon.svg"}]]
-   [:body {:class "font-sans bg-gray-100"}
-    [:div {:id "app"} ""]
-    [:script {:src main-js-path}]]))
+   [:html
+    {:lang  "en"
+     :class "text-gray-900 leading-light"}
+    [:head
+     [:meta {:charset "UTF-8"}]
+     [:meta {:name    "viewport"
+             :content "width=device-width, initial-scale=1.0"}]
+     [:link {:rel  "stylesheet"
+             :type "text/css"
+             :href "/styles.css"}]
+     [:link {:rel  "shortcut icon"
+             :type "image/svg"
+             :href "/favicon.svg"}]]
+    [:body {:class "bg-blue-500"}
+     [:div {:id "app"} ""]
+     [:script {:src main-js-path}]]]))
 
 (defn spa-handler [config]
   (fn [_]

@@ -1,7 +1,8 @@
 module.exports = {
   purge: {
     content: [
-      './src/**/*.cljs'
+      './src/**/*.cljs',
+      './src/ra/server.clj'
     ],
     extract: {
       md: (content) => {

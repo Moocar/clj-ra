@@ -42,9 +42,9 @@
                    {[:ui/current-game '_] (comp/get-query ui-game/Game)}
                    :ui/error-occurred]
    :initial-state {}}
-  (dom/div :.container.mx-auto.flex.justify-center {}
+  (dom/div {}
     (if (nil? current-player)
-      (dom/p "loading")
+      (dom/p "")
       (if (str/blank? (::player/name current-player))
         (ui-player/ui-new-form current-player)
         (ui-lobby this props)))
