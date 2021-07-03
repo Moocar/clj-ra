@@ -46,9 +46,3 @@
 
 (defn ui-tiles [tiles]
   (dom/div :.flex.flex-row.flex-wrap {} (map ui-tile tiles)))
-
-(defn ui-blank-ra-spot []
-  (dom/div {:style {:height "50"
-                    :color  "red"
-                    :width  "50"}}
-    ""))

@@ -43,16 +43,15 @@
                                               ::hand/id (get-in props [:ui/selected-god-tile ::tile/hand ::hand/id])
                                               :auction-track-tile-id (::tile/id tile)})]))
 
-(defn ui-auction-track [this props]
-  (dom/div {}
-    (dom/div :.border-2.rounded-md.inline-flex.space-x-2.p-2 {}
-             (concat (->> (::epoch/auction-tiles props)
-                          (sort-by ::tile/auction-track-position)
-                          (map (fn [tile]
-                                 (ui-tile/ui-tile (comp/computed tile (cond-> {}
-                                                                        (:ui/selected-god-tile props)
-                                                                        (assoc :on-click #(swap-god-tile this props %))))))))
-                     (fill-blank-ra-spots (::epoch/auction-tiles props))))))
+(defn ui-auction-track [this {:keys [epoch]}]
+  (dom/div :.border-2.rounded-md.inline-flex.flex-wrap {}
+    (concat (->> (::epoch/auction-tiles epoch)
+                 (sort-by ::tile/auction-track-position)
+                 (map (fn [tile]
+                        (ui-tile/ui-tile (comp/computed tile (cond-> {}
+                                                               (:ui/selected-god-tile epoch)
+                                                               (assoc :on-click #(swap-god-tile this epoch %))))))))
+            (fill-blank-ra-spots (::epoch/auction-tiles epoch)))))
 
 (defn highest-bid [auction]
   (reduce (fn [highest bid]
@@ -62,17 +61,17 @@
           {::bid/sun-disk 0}
           (::auction/bids auction)))
 
-(m/defmutation select-god-tile [{:keys [hand tile]}]
+(m/defmutation select-god-tile [{:keys [hand tile epoch]}]
   (action [env]
     (let [hand-ident [::hand/id (::hand/id hand)]
           tile-ident [::tile/id (::tile/id tile)]]
      (swap! (:state env)
             (fn [s]
               (-> s
-                  (assoc-in (conj (:ref env) :ui/selected-god-tile) tile-ident)
+                  (assoc-in (conj [::epoch/id (::epoch/id epoch)] :ui/selected-god-tile) tile-ident)
                   (assoc-in (conj tile-ident ::tile/hand) hand-ident)))))))
 
-(defn ui-hands [this props]
+#_(defn ui-hands [this props]
   (dom/div {}
     (->> (concat (::epoch/hands props) (::epoch/hands props))
          (drop-while (fn [hand]
@@ -92,6 +91,7 @@
                                                           (if (:ui/selected-god-tile props)
                                                             (m/set-value! this :ui/selected-god-tile nil)
                                                             (comp/transact! this [(select-god-tile {:hand hand
+                                                                                                    :epoch epoch
                                                                                                     :tile tile})])))}))))))))
 
 (defn auction-tiles-full? [epoch]
@@ -131,7 +131,7 @@
            {:ui/selected-god-tile [::tile/id {::tile/hand [::hand/id]}]}
            ::epoch/in-disaster?
            {::epoch/last-ra-invoker [::hand/id]}
-           {::epoch/current-hand [::hand/seat {::hand/player [::player/id]} ::hand/id]}
+           {::epoch/current-hand (comp/get-query ui-hand/Hand)}
            {::epoch/ra-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/auction-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/hands (comp/get-query ui-hand/Hand)}]
@@ -149,6 +149,6 @@
     (dom/div {}
       (dom/h3 :.font-bold.text-xl "Seats")
       (dom/div {}
-        (ui-hands this props)))))
+        #_(ui-hands this props)))))
 
 (def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))

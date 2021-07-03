@@ -11,7 +11,6 @@
 
 (defmutation new-player [input]
   (action [{:keys [state app]}]
-          (js/console.log "new player" input)
           (swap! state
                  (fn [s]
                    (-> s
@@ -21,7 +20,6 @@
 
 (defmutation init-local-storage [_]
   (action [{:keys [app]}]
-          (js/console.log "init local storage")
           (let [new-id (random-uuid)]
             (comp/transact! app [(new-player {::player/id new-id
                                             ::player/name ""})])
@@ -29,7 +27,6 @@
 
 (defmutation use-local-storage-player [{:keys [player-id]}]
   (action [{:keys [state app]}]
-          (js/console.log "use local storage")
           (df/load! app [::player/id player-id] (new-form-component)
                     {:post-action (fn [{:keys [result state]}]
                                     (let [{:keys [body]} result

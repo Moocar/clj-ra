@@ -22,6 +22,5 @@
               :remote (fws/fulcro-websocket-remote
                        {:push-handler (fn [{:keys [topic msg] :as all}]
                                         (let [{:keys [::game/id]} msg]
-                                          (js/console.log "firing load!" all)
                                           (df/load! APP [::game/id id] (comp/registry-key->class :ra.app.game/Game))))
                         :global-error-callback #(comp/transact! APP [(show-error {})] )})}}))

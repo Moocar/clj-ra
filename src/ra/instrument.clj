@@ -10,13 +10,13 @@
             [ra.specs.tile.type :as tile-type]
             [ra.model.tile :as m-tile]))
 
-(defn get-hand-ids [epoch]
+(defn get-hand-ids [epoch hand-count]
   (->> (::epoch/hands epoch)
        (sort-by ::hand/seat)
        (repeat 2)
        (apply concat)
        (drop-while #(not= (:db/id (::epoch/current-hand epoch)) (:db/id %)))
-       (take 3)
+       (take hand-count)
        (map :db/id)))
 
 (defn get-game [conn game-id]
@@ -48,17 +48,19 @@
 (defn find-tile-in-auction [epoch pred]
   (first (filter pred (::epoch/auction-tiles epoch))))
 
-(defn draw-tile* [{:keys [::db/conn ::pathom/parser]} hand-id tile]
-  (let [hand (d/entity @conn [::hand/id hand-id])
-        tx   (if (m-tile/ra? tile)
+(defn draw-tile* [conn hand tile]
+  (let [tx   (if (m-tile/ra? tile)
              (m-game/draw-ra-tx hand tile)
-             (m-game/draw-normal-tile-tx hand tile))]
-    (d/transact! conn (concat tx (m-game/event-tx (str (m-game/hand->player-name hand) " Drew tile " (::tile/title tile)) )))))
+             (m-game/draw-normal-tile-tx #p hand #p tile))]
+    (d/transact! conn (concat tx (m-game/event-tx (m-game/hand->game hand)
+                                                  (str (m-game/hand->player-name hand) " Drew tile " (::tile/title tile)) )))))
 
 (defn draw-tile [conn hand-id tile-type]
-  (draw-tile* conn hand-id (find-tile conn
-                                      (:db/id (m-game/hand->game (d/entity @conn hand-id)))
-                                      tile-type)))
+  (draw-tile* conn
+              (d/entity @conn hand-id)
+              (find-tile conn
+                         (:db/id (m-game/hand->game (d/entity @conn hand-id)))
+                         tile-type)))
 
 (defn ra-pass-pass-pull [{:keys [::db/conn ::pathom/parser]} game-id h1 h2]
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/ra))
@@ -86,7 +88,7 @@
     nil))
 
 (defn end-of-epoch-1-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
-  (let [game (d/entity @conn [::game/id game-id])
+  (let [game (get-game @conn game-id)
         epoch (::game/current-epoch game)
         h1 (:db/id (::epoch/current-hand epoch))
         h2 (:db/id (first (filter #(not= h1 (:db/id %))
@@ -171,7 +173,7 @@
 (defn win-disaster-your-turn-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
   (let [game (d/entity @conn [::game/id game-id])
         epoch (::game/current-epoch game)
-        [h1 h2 h3] (get-hand-ids epoch)]
+        [h1 h2 h3] (get-hand-ids epoch 2)]
     (draw-tile* conn h1 (find-tile-p (get-game conn game-id) m-tile/flood?))
     (draw-tile* conn h2 (find-tile-p (get-game conn game-id) m-tile/drought?))
 
@@ -191,7 +193,7 @@
 (defn full-auction-track-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-id]
   (let [game (d/entity @conn [::game/id game-id])
         epoch (::game/current-epoch game)
-        [h1 h2 h3] (get-hand-ids epoch)]
+        [h1 h2 h3] (get-hand-ids epoch 3)]
     (draw-tile* conn h1 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
     (draw-tile* conn h2 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
     (draw-tile* conn h3 (find-tile-by-type (get-game conn game-id) ::tile-type/monument))
@@ -204,3 +206,12 @@
 (defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-id]
   (parser {} [`(m-game/reset {::game/id ~game-id})])
   nil)
+
+(defn god-tile-scenario-2 [{:keys [::db/conn ::pathom/parser] :as env} game-id]
+  (let [game (get-game conn game-id)
+        epoch (::game/current-epoch game)
+        [h1 h2] (get-hand-ids epoch 2)]
+    #p game
+    (draw-tile conn #p h1 #p ::tile-type/god)
+
+    nil))

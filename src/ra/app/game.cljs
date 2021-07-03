@@ -10,7 +10,12 @@
             [ra.model.game :as m-game]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
-            [ra.specs.player :as player]))
+            [ra.specs.player :as player]
+            [ra.specs.tile :as tile]
+            [ra.app.tile :as ui-tile]
+            [ra.specs.hand :as hand]
+            [ra.app.hand :as ui-hand]
+            [com.fulcrologic.fulcro.mutations :as m]))
 
 (declare Game)
 
@@ -37,19 +42,121 @@
       (dom/div :.font-bold  {} "Event log")
       (ui-event/ui-items (reverse (::game/events game))))))
 
-(defn ui-game-info [this props]
-  (let [epoch (::game/current-epoch props)]
+(defn menu-bar [{:keys [game epoch]}]
+  (assert game)
+  (assert epoch)
+  (dom/div :.border-b-2.flex {}
+    (dom/div :.pw-2 {}
+      (dom/span {} "Epoch: ")
+      (dom/span (::epoch/number epoch)))))
+
+(def players->ra-count
+  {2 6
+   3 8
+   4 9
+   5 10})
+
+(defn ui-ra-track [{:keys [hands epoch ra-tiles] :as props}]
+  (let [blank-spots (- (players->ra-count (count hands))
+                       (count ra-tiles))]
+    (dom/div :.justify-items-stretch.inline-flex.w-screen.space-x-2.p-2 {}
+      (map (fn [ra-tile]
+             (dom/div :.border-2.flex.items-center.justify-center.border-2.rounded-md.cursor-default.m-1.justify-self-auto.w-full.h-full
+               (if ra-tile
+                 {:classes (ui-tile/type-classes (::tile/type ra-tile))}
+                 {})))
+           (concat ra-tiles
+                   (map (fn [_] nil) (range blank-spots)))))))
+
+(defn my-go? [{:keys [hand my-player]}]
+  (= (::player/id (::hand/player hand))
+     (::player/id my-player)))
+
+(defn ui-tile-bag [this {:keys [epoch hand auction my-go?]}]
+  (ui/button
+    (if (and my-go?
+             (not auction)
+             (not (::epoch/in-disaster? epoch))
+             (not (ui-epoch/auction-tiles-full? epoch)))
+      {:onClick (fn []
+                  (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)})]))}
+      {:disabled true})
+    "Draw Tile"))
+
+(defn ui-invoke-ra [this {:keys [epoch hand auction my-go?]}]
+  (ui/button
+    (if (and my-go?
+             (not auction)
+             (not (::epoch/in-disaster? epoch)))
+      {:onClick (fn []
+                  (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id hand)})]))}
+      {:disabled true})
+    "Invoke Ra"))
+
+(defn ui-discard-disaster-tiles [this {:keys [hand my-go?]}]
+  #p (filter ::tile/disaster? #p (::hand/tiles #p hand))
+  (ui/button
+    (if (and my-go?
+             (seq (filter ::tile/disaster? (::hand/tiles hand))))
+      {:onClick (fn []
+                  (comp/transact! this [(m-game/discard-disaster-tiles
+                                         {::hand/id (::hand/id hand)
+                                          :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
+      {:disabled true})
+    "Discard disasters"))
+
+(defn ui-hands [this {:keys [auction epoch hands my-player] :as props}]
+  (dom/div {}
+    (->> (concat hands hands)
+         (drop-while (fn [hand]
+                       (not= (::player/id (::hand/player hand))
+                             (::player/id my-player))))
+         (take (count hands))
+         (map (fn [hand]
+                (ui-hand/ui-hand
+                 (if auction
+                   (comp/computed hand (assoc props
+                                              :onClickSunDisk (fn [sun-disk]
+                                                                (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
+                                              :highest-bid    (ui-epoch/highest-bid auction)))
+                   (comp/computed hand (assoc props
+                                              :click-god-tile (fn [hand tile]
+                                                                (if (:ui/selected-god-tile epoch)
+                                                                  (m/set-value! this :ui/selected-god-tile nil)
+                                                                  (comp/transact! this [(ui-epoch/select-god-tile {:hand hand
+                                                                                                                   :epoch epoch
+                                                                                                                   :tile tile})]))))))))))))
+
+(defn ui-status [{:keys [hand my-go?]}]
+  (if my-go?
+    (str "It's your turn")
     (dom/div {}
-      (dom/div :.flex.justify-between {}
-               (dom/div :.flex.flex-col {}
-                        (dom/div {} (str "Epoch: " (::epoch/number epoch)))
-                        (dom/div {} (dom/div :.flex.flex-row.items-center {}
-                                             (dom/div {} "Sun Disk: ")
-                                             (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk (::game/current-epoch props))})))))
-               (dom/div :.flex.flex-col.space-y-4 {}
-                        (ui/button {:onClick (fn []
-                                               (df/load! this [::game/id (::game/id props)] Game))}
-                          "Refresh"))))))
+      (dom/span {} "Waiting for ")
+      (dom/span {} (::player/name (::hand/player hand))))))
+
+(defn ui-main-game [this {:keys [game epoch] :as props}]
+  (dom/div {}
+    (menu-bar props)
+    (dom/div :.flex {}
+      (dom/div {} "Ra Track")
+      (ui-ra-track props))
+    (dom/div :.flex.items-center {}
+      (dom/div :.font-bold {} "Current Sun Disk")
+      (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
+    (dom/div :.flex-col.w-screen {}
+      (dom/div :.font-bold {} "Auction Track")
+      (ui-epoch/ui-auction-track this props))
+    (dom/div :.flex.flex-col {}
+      (ui-status props)
+      (dom/div :.flex.flex-row.space-x-2 {}
+        (ui-tile-bag this props)
+        (ui-invoke-ra this props)
+        (ui-discard-disaster-tiles this props)))
+    (dom/div {}
+      (dom/h3 :.font-bold "Seats")
+      (dom/div {}
+        (ui-hands this props)))
+    (ui-event/ui-items (reverse (::game/events game)))))
 
 (defsc Game [this {:keys [::game/players
                           ::game/current-epoch
@@ -64,12 +171,23 @@
            {[:ui/current-player '_] (comp/get-query ui-player/Player)}
            ::game/id]
    :ident ::game/id}
-  (dom/div :.h-screen.w-screen.bg-white {}
+  (dom/div :.w-screen.bg-white {}
    (cond
      (not started-at)
      (ui-unstarted this props)
      :else
-     (dom/div :.h-screen.w-screen.flex.justify-center {}
+     (ui-main-game this
+                   (let [game props
+                         epoch (::game/current-epoch game)
+                         p {:game     game
+                            :my-player   (:ui/current-player game)
+                            :ra-tiles (::epoch/ra-tiles epoch)
+                            :epoch    epoch
+                            :hand     (::epoch/current-hand epoch)
+                            :hands    (::epoch/hands epoch)
+                            :auction  (::epoch/auction epoch)}]
+                     (assoc p :my-go? (my-go? p))))
+     #_(dom/div :.h-screen.w-screen.flex.justify-center {}
        (ui-game-info this props)
        (ui-event/ui-items (reverse (::game/events props)))
        (if (first (filter #(= (::player/id %) (::player/id current-player))
