@@ -18,7 +18,6 @@
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.game.event :as event]
-            [ra.specs.game.event.type :as event-type]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]

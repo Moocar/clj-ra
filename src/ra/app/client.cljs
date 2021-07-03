@@ -15,25 +15,27 @@
             [ra.app.player :as ui-player]))
 
 (defn left-menu [props]
-  (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.left-0 {} "Menu"))
+  (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.left-0 {}
+    "Menu"))
 
 (defn right-menu [props]
-  (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.right-0 {} (str "User: " (::player/name (:ui/current-player props)))))
+  (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.right-0 {}
+    (str "User: " (::player/name (:ui/current-player props)))))
 
 (defn top-menu [props]
   (dom/div :.relative.h-6.border-b-2.mb-2 {}
-           (left-menu props)
-           (right-menu props)))
+    (left-menu props)
+    (right-menu props)))
 
 (defn ui-lobby [this props]
   (dom/div :.w-full.max-w-5xl.relative {}
-           (dom/div :.bg-white.shadow-md.rounded.px-8.pt-6.pb-8.mb-4 {}
-                    (top-menu props)
-                    (if (nil? (:ui/current-game props))
-                      (ui/button {:onClick (fn []
-                                             (comp/transact! this [(m-game/new-game {})]))}
-                        "New Game")
-                      (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)}))))))
+    (dom/div :.bg-white.shadow-md.rounded.px-8.pt-6.pb-8.mb-4 {}
+      (top-menu props)
+      (if (nil? (:ui/current-game props))
+        (ui/button {:onClick (fn []
+                               (comp/transact! this [(m-game/new-game {})]))}
+          "New Game")
+        (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)}))))))
 
 (defsc Root [this {:keys [:ui/current-player :ui/error-occurred] :as props}]
   {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}

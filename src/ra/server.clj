@@ -150,11 +150,16 @@
   (html
    [:head
     [:meta {:charset "UTF-8"}]
+    [:meta {:name "viewport"
+            :content "width=device-width, initial-scale=1.0"}]
     [:link {:rel  "stylesheet"
             :type "text/css"
-            :href "/tailwind.css"}]]
+            :href "/styles.css"}]
+    [:link {:rel "shortcut icon"
+            :type "image/svg"
+            :href "/favicon.svg"}]]
    [:body {:class "font-sans bg-gray-100"}
-    [:div {:id "app"} "...Loading"]
+    [:div {:id "app"} ""]
     [:script {:src main-js-path}]]))
 
 (defn spa-handler [config]

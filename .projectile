@@ -2,6 +2,7 @@
 -/yarn.lock
 -/resources/public/js/
 -/resources/public/css/
+-/resources/public/styles.css
 -/.shadow-cljs
 -/data/
 -/.cpcache/

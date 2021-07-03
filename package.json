@@ -11,5 +11,8 @@
     "react-dom": "17.0.2",
     "shadow-cljs": "2.14.5",
     "socket.io-client": "4.1.2"
+  },
+  "scripts": {
+    "build": "NODE_ENV=production npx tailwindcss -i css/styles.css -o resources/public/styles.css --minify && shadow-cljs release main"
   }
 }
