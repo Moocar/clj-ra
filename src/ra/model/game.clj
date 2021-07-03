@@ -611,9 +611,11 @@
         ;; Calculate whose turn it is next. If it was a winning bid and they won
         ;; a disaster, then it's that person's turn still. If not, it's the
         ;; player to the left of the last ra invoker
-        (let [the-next-hand (if (and winning-bid (some ::tile/disaster? (::epoch/auction-tiles epoch)))
+        (let [the-next-hand (if (and (waiting-on-last-bid? auction)
+                                     winning-bid
+                                     (some ::tile/disaster? (::epoch/auction-tiles epoch)))
                               hand
-                              (if winning-bid
+                              (if (and (waiting-on-last-bid? auction) winning-bid)
                                 (next-hand (::epoch/last-ra-invoker epoch))
                                 (next-hand hand)))]
           [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id the-next-hand)]]))))))

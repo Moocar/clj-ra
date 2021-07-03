@@ -28,11 +28,16 @@
   (and (not (::tile/disaster? tile))
        (disaster-types (::tile/type tile))))
 
-(defn ui-info [props]
+(defn ui-info [props {:keys [epoch]}]
   (dom/div
       (ui-player/ui-player (::hand/player props)) " - "
-      (str "seat: " (::hand/seat props)) " - "
-      (str "score: " (::hand/score props))))
+      (str "seat " (::hand/seat props))
+      (dom/div {}
+        (dom/span "score: ")
+        (dom/span (str (::hand/score props)))
+        (when (= (::hand/id (::epoch/last-ra-invoker epoch))
+                 (::hand/id props))
+          (dom/span :.px-4.font-bold {} "Ra!")))))
 
 (defn my-go? [hand epoch]
   (and (::hand/my-go? hand)
@@ -102,7 +107,7 @@
     (dom/div  {}
              (ui-tiles props computed))
     (dom/div  {}
-             (ui-info props)
+             (ui-info props computed)
              (ui-sun-disks props computed)
              (ui-current-bid props computed)
              (let [discard-disaster-tiles? (seq (filter ::tile/disaster? (::hand/tiles props)))]

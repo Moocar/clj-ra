@@ -130,6 +130,7 @@
            {::epoch/auction (comp/get-query ui-auction/Auction)}
            {:ui/selected-god-tile [::tile/id {::tile/hand [::hand/id]}]}
            ::epoch/in-disaster?
+           {::epoch/last-ra-invoker [::hand/id]}
            {::epoch/current-hand [::hand/seat {::hand/player [::player/id]} ::hand/id]}
            {::epoch/ra-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/auction-tiles (comp/get-query ui-tile/Tile)}
