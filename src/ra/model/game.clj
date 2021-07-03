@@ -17,6 +17,8 @@
             [ra.specs.auction.reason :as auction-reason]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
+            [ra.specs.game.event :as event]
+            [ra.specs.game.event.type :as event-type]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
@@ -172,6 +174,12 @@
     [[:db/retract (:db/id from-entity) from-attr thing]
      [:db/add (:db/id to-entity) to-attr thing]]))
 
+(defn load-player [db player-id]
+  (d/entity db [::player/id player-id]))
+
+(defn hand->player-name [hand]
+  (::player/name (::hand/player hand)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Bigger helpers
 
@@ -261,16 +269,24 @@
     entity))
 
 (defn do-clear-game [conn game-id]
-  (d/transact! conn
-               (concat
-                [[:db/retract [::game/id game-id] ::game/started-at]
-                 [:db/retract [::game/id game-id] ::game/tile-bag]
-                 [:db/retract [::game/id game-id] ::game/epochs]
-                 [:db/retract [::game/id game-id] ::game/current-epoch]]
-                (let [tiles (find-all-tiles @conn)]
-                  (mapv (fn [tile-id]
-                          [:db/add [::game/id game-id] ::game/tile-bag tile-id])
-                        tiles)))))
+  (let [ident [::game/id game-id]]
+   (d/transact! conn
+                (concat
+                 [[:db/retract ident ::game/started-at]
+                  [:db/retract ident ::game/tile-bag]
+                  [:db/retract ident ::game/epochs]
+                  [:db/retract ident ::game/events]
+                  [:db/retract ident ::game/current-epoch]]
+                 (let [tiles (find-all-tiles @conn)]
+                   (mapv (fn [tile-id]
+                           [:db/add ident ::game/tile-bag tile-id])
+                         tiles))))))
+
+(defn event-tx [game description]
+  (let [evt-id -1]
+    [[:db/add evt-id ::event/id (ra.db/uuid)]
+     [:db/add evt-id ::event/description description]
+     [:db/add (:db/id game) ::game/events evt-id]]))
 
 (pc/defmutation new-game [{:keys [::db/conn]} _]
   {::pc/params []
@@ -287,7 +303,9 @@
       (throw (ex-info "Game already started" {})))
     (if (>= (count (game->players game)) 5)
       (throw (ex-info "Maximum players already reached" {}))
-      (d/transact! conn [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]])))
+      (d/transact! conn (concat
+                         [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]]
+                         (event-tx game (str (::player/name (load-player @conn player-id)) " joined game") )))))
   {::game/id game-id})
 
 (defn do-start-game [conn game-id]
@@ -320,7 +338,8 @@
                                [epoch]
                                [[:db/add [::game/id game-id] ::game/started-at (date/zdt)]
                                 [:db/add [::game/id game-id] ::game/current-epoch (:db/id epoch)]
-                                [:db/add [::game/id game-id] ::game/epochs (:db/id epoch)]]))))))))
+                                [:db/add [::game/id game-id] ::game/epochs (:db/id epoch)]]
+                               (event-tx game "Game started")))))))))
 
 (pc/defmutation start-game [{:keys [::db/conn]} {game-id ::game/id}]
   {::pc/params [::game/id]
@@ -416,7 +435,9 @@
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])]
     (assert hand)
     (assert (hand->epoch hand))
-    (d/transact! conn (invoke-ra-tx hand ::auction-reason/invoke))
+    (d/transact! conn (concat
+                       (invoke-ra-tx hand ::auction-reason/invoke)
+                       (event-tx (hand->game hand) (str (hand->player-name hand) " invoked Ra") )))
     {::game/id (::game/id (hand->game hand))}))
 
 (defn max-ras [game]
@@ -479,19 +500,6 @@
      [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand hand))]
       [:db/add (:db/id tile) ::tile/auction-track-position (inc (or (::tile/auction-track-position last-tile) 0))]])))
 
-(defn do-draw-tile [conn hand tile]
-  (assert hand)
-  (assert tile)
-  (let [epoch (hand->epoch hand)]
-    (when (::epoch/in-disaster? epoch)
-      (throw (ex-info "Waiting for players to discard disaster tiles" {})))
-    (if (not (hand-turn? hand))
-      (throw (ex-info "not your turn" {:current-hand (::epoch/current-hand epoch)
-                                       :tried-hand   hand}))
-      (if (m-tile/ra? tile)
-        (d/transact! conn (draw-ra-tx hand tile))
-        (d/transact! conn (draw-normal-tile-tx hand tile))))))
-
 (pc/defmutation draw-tile [{:keys [::db/conn]} input]
   {::pc/params [::hand/id]
    ::pc/transform notify-clients
@@ -502,7 +510,15 @@
         tile (d/entity @conn (sample-tile @conn game))]
     (when (auction-tiles-full? epoch)
       (throw (ex-info "Auction Track full" {})))
-    (do-draw-tile conn hand tile)
+    (when (::epoch/in-disaster? epoch)
+      (throw (ex-info "Waiting for players to discard disaster tiles" {})))
+    (when (not (hand-turn? hand))
+      (throw (ex-info "not your turn" {:current-hand (::epoch/current-hand epoch)
+                                       :tried-hand   hand})))
+    (let [tx (if (m-tile/ra? tile)
+               (draw-ra-tx hand tile)
+               (draw-normal-tile-tx hand tile))]
+      (d/transact! conn (concat tx (event-tx (hand->game hand) (str (hand->player-name hand) " drew tile " (::tile/title tile)) ))))
     {::game/id (::game/id (hand->game hand))}))
 
 (defn waiting-on-last-bid?
@@ -640,7 +656,11 @@
           tx (if (sun-disks-in-play? new-epoch)
                tx
                (concat tx (finish-epoch-tx new-epoch)))]
-      (d/transact! conn tx))
+      (d/transact! conn (concat tx (event-tx (hand->game hand)
+                                             (str (hand->player-name hand)
+                                                  (if sun-disk
+                                                    (str " bid " sun-disk)
+                                                    " passed")) ))))
     {::game/id (::game/id (hand->game hand))}))
 
 (defn discard-tile-op [hand tile]
@@ -688,7 +708,9 @@
     (d/transact! conn (concat (mapv #(discard-tile-op hand %)
                                     (set/union selected-tiles disaster-tiles))
                               [[:db/add (:db/id epoch) ::epoch/in-disaster? false]
-                               [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand (::epoch/last-ra-invoker epoch)))]]))
+                               [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand (::epoch/last-ra-invoker epoch)))]]
+                              (event-tx (hand->game hand)
+                                        (str (hand->player-name hand) " discarded disaster tiles"))))
     {::game/id (::game/id (hand->game hand))}))
 
 (pc/defmutation use-god-tile
@@ -705,7 +727,9 @@
       (throw (ex-info "Can't use god tile on a god tile" {})))
     (d/transact! conn (concat
                        [[:db/retract (:db/id hand) ::hand/tiles (:db/id god-tile)]]
-                       (move-thing-tx (:db/id auction-track-tile) [epoch ::epoch/auction-tiles] [hand ::hand/tiles])))
+                       (move-thing-tx (:db/id auction-track-tile) [epoch ::epoch/auction-tiles] [hand ::hand/tiles])
+                       (event-tx (hand->game hand)
+                                 (str (hand->player-name hand) " used god tile"))))
     {::game/id (::game/id (hand->game hand))}))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]

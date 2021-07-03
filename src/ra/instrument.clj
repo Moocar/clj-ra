@@ -48,10 +48,12 @@
 (defn find-tile-in-auction [epoch pred]
   (first (filter pred (::epoch/auction-tiles epoch))))
 
-(defn draw-tile* [conn hand-id tile]
-  (m-game/do-draw-tile conn
-                       (d/entity @conn hand-id)
-                       tile))
+(defn draw-tile* [{:keys [::db/conn ::pathom/parser]} hand-id tile]
+  (let [hand (d/entity @conn [::hand/id hand-id])
+        tx   (if (m-tile/ra? tile)
+             (m-game/draw-ra-tx hand tile)
+             (m-game/draw-normal-tile-tx hand tile))]
+    (d/transact! conn (concat tx (m-game/event-tx (str (m-game/hand->player-name hand) " Drew tile " (::tile/title tile)) )))))
 
 (defn draw-tile [conn hand-id tile-type]
   (draw-tile* conn hand-id (find-tile conn
