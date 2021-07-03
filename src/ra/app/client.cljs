@@ -27,15 +27,20 @@
     (left-menu props)
     (right-menu props)))
 
+(defn new-game-modal [this props]
+  (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
+    (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center {}
+      (dom/div :.block.text-gray-700.text-sm.font-bold.mb-2 {}
+        (dom/span {} "Welcome ")
+        (dom/span {} (::player/name (:ui/current-player props))))
+      (ui/button {:onClick (fn []
+                             (comp/transact! this [(m-game/new-game {})]))}
+        "Create New Game"))))
+
 (defn ui-lobby [this props]
-  (dom/div :.w-full.max-w-5xl.relative {}
-    (dom/div :.bg-white.shadow-md.rounded.px-8.pt-6.pb-8.mb-4 {}
-      (top-menu props)
-      (if (nil? (:ui/current-game props))
-        (ui/button {:onClick (fn []
-                               (comp/transact! this [(m-game/new-game {})]))}
-          "New Game")
-        (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)}))))))
+  (if (nil? (:ui/current-game props))
+    (new-game-modal this props)
+    (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)}))))
 
 (defsc Root [this {:keys [:ui/current-player :ui/error-occurred] :as props}]
   {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
@@ -44,9 +49,13 @@
    :initial-state {}}
   (dom/div {}
     (if (nil? current-player)
+      ;; loading
       (dom/p "")
+      ;; ask user for their name
       (if (str/blank? (::player/name current-player))
         (ui-player/ui-new-form current-player)
+
+        ;; Else, take them to the lobby
         (ui-lobby this props)))
     (when error-occurred
       (dom/label {:color "red"} "ERROR!"))))

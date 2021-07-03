@@ -35,12 +35,11 @@
                                             {:refresh [:ui/current-player]})))
            :onChange    (fn [evt _]
                           (m/set-string! this ::player/temp-name :event evt))}))
-      (dom/div :.flex-initial {}
-        (ui/button {:onClick (fn []
-                               (comp/transact! this [(m-player/save
-                                                      {::player/id   id
-                                                       ::player/name temp-name})]
-                                               {:refresh [:ui/current-player]}))}
-          "Submit")))))
+      (ui/button {:onClick (fn []
+                             (comp/transact! this [(m-player/save
+                                                    {::player/id   id
+                                                     ::player/name temp-name})]
+                                             {:refresh [:ui/current-player]}))}
+        "Submit"))))
 
 (def ui-new-form (comp/factory NewForm {:keyfn ::player/id}))
