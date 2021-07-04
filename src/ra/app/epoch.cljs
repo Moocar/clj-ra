@@ -44,7 +44,7 @@
                                               :auction-track-tile-id (::tile/id tile)})]))
 
 (defn ui-auction-track [this {:keys [epoch]}]
-  (dom/div :.border-2.rounded-md.inline-flex.flex-wrap {}
+  (dom/div :.flex.flex-row.flex-wrap.gap-2 {}
     (concat (->> (::epoch/auction-tiles epoch)
                  (sort-by ::tile/auction-track-position)
                  (map (fn [tile]

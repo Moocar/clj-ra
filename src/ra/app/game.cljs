@@ -59,9 +59,9 @@
 (defn ui-ra-track [{:keys [hands epoch ra-tiles] :as props}]
   (let [blank-spots (- (players->ra-count (count hands))
                        (count ra-tiles))]
-    (dom/div :.justify-items-stretch.inline-flex.w-screen.space-x-2.p-2 {}
+    (dom/div :.flex.flex-row.flex-initial.w-screen.space-x-2 {}
       (map (fn [ra-tile]
-             (dom/div :.border-2.flex.items-center.justify-center.border-2.rounded-md.cursor-default.m-1.justify-self-auto.w-full.h-full
+             (dom/div :.border-2.flex.items-center.justify-center.rounded-md.cursor-default.m-1.justify-self-auto.w-8.h-8
                (if ra-tile
                  {:classes (ui-tile/type-classes (::tile/type ra-tile))}
                  {})))
@@ -137,15 +137,16 @@
 (defn ui-main-game [this {:keys [game epoch] :as props}]
   (dom/div {}
     (menu-bar props)
-    (dom/div :.flex {}
-      (dom/div {} "Ra Track")
+    (dom/div :.flex-col.w-screen {}
+      (dom/div :.font-bold {} "Ras")
       (ui-ra-track props))
+    (dom/div :.flex-col.w-screen {}
+      (dom/div :.font-bold {} "Auction")
+      (ui-epoch/ui-auction-track this props))
     (dom/div :.flex.items-center {}
       (dom/div :.font-bold {} "Current Sun Disk")
       (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
-    (dom/div :.flex-col.w-screen {}
-      (dom/div :.font-bold {} "Auction Track")
-      (ui-epoch/ui-auction-track this props))
+    (dom/hr {})
     (dom/div :.flex.flex-col {}
       (ui-status props)
       (dom/div :.flex.flex-row.space-x-2 {}

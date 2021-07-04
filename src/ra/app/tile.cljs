@@ -10,7 +10,7 @@
    ::tile-type/god ["bg-yellow-300"]
    ::tile-type/civilization ["bg-yellow-50"]
    ::tile-type/monument ["bg-blue-500" "text-white"]
-   ::tile-type/gold ["bg-yellow-500" "text-white" "backdrop-filter" "backdrop-blur-lg"]
+   ::tile-type/gold ["bg-yellow-500" "text-white"]
    ::tile-type/pharoah ["bg-green-700" "text-white"]
    ::tile-type/river ["bg-blue-300"]
    ::tile-type/flood ["bg-blue-300"]})
@@ -23,7 +23,7 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.justify-center.inline-block.cursor-default.m-1.relative
+  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative
               (cond-> {:classes (concat (type-classes (::tile/type props))
                                         (cond dimmed?               ["opacity-50"]
                                               (:ui/selected? props) ["border-2" "border-red-700" "cursor-pointer"])
@@ -45,4 +45,4 @@
 (def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 
 (defn ui-tiles [tiles]
-  (dom/div :.flex.flex-row.flex-wrap {} (map ui-tile tiles)))
+  (dom/div :.flex.flex-row.flex-wrap.gap-2 {} (map ui-tile tiles)))
