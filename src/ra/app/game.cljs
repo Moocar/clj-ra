@@ -59,9 +59,9 @@
 (defn ui-ra-track [{:keys [hands epoch ra-tiles] :as props}]
   (let [blank-spots (- (players->ra-count (count hands))
                        (count ra-tiles))]
-    (dom/div :.flex.flex-row.flex-initial.w-screen.space-x-2 {}
+    (dom/div :.flex.flex-row.flex-initial.w-screen.gap-2 {}
       (map (fn [ra-tile]
-             (dom/div :.border-2.flex.items-center.justify-center.rounded-md.cursor-default.m-1.justify-self-auto.w-8.h-8
+             (dom/div :.border-2.flex.items-center.justify-center.rounded-md.cursor-default.justify-self-auto.w-8.h-8
                (if ra-tile
                  {:classes (ui-tile/type-classes (::tile/type ra-tile))}
                  {})))
@@ -128,14 +128,15 @@
                                                                                                                    :tile tile})]))))))))))))
 
 (defn ui-status [{:keys [hand my-go?]}]
-  (if my-go?
-    (str "It's your turn")
-    (dom/div {}
-      (dom/span {} "Waiting for ")
-      (dom/span {} (::player/name (::hand/player hand))))))
+  (dom/div :.font-bold {}
+    (if my-go?
+      (str "It's your turn")
+      (dom/div {}
+        (dom/span {} "Waiting for ")
+        (dom/span {} (::player/name (::hand/player hand)))))))
 
 (defn ui-main-game [this {:keys [game epoch] :as props}]
-  (dom/div {}
+  (dom/div :.flex.flex-col.p-2.gap-2 {}
     (menu-bar props)
     (dom/div :.flex-col.w-screen {}
       (dom/div :.font-bold {} "Ras")
@@ -148,16 +149,20 @@
       (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
     (dom/hr {})
     (dom/div :.flex.flex-col {}
-      (ui-status props)
-      (dom/div :.flex.flex-row.space-x-2 {}
+      (dom/div :.py-2 {}
+        (ui-status props))
+      (dom/div :.flex.flex-row.space-x-2.pb-2 {}
         (ui-tile-bag this props)
         (ui-invoke-ra this props)
         (ui-discard-disaster-tiles this props)))
+    (dom/hr {})
     (dom/div {}
       (dom/h3 :.font-bold "Seats")
       (dom/div {}
         (ui-hands this props)))
-    (ui-event/ui-items (reverse (::game/events game)))))
+    (dom/div :.flex-col.w-screen {}
+      (dom/h3 :.font-bold "Events")
+      (ui-event/ui-items (reverse (::game/events game))))))
 
 (defsc Game [this {:keys [::game/players
                           ::game/current-epoch

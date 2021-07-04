@@ -3,11 +3,11 @@
             [com.fulcrologic.fulcro.components :as comp]))
 
 (defn button [options text]
-  (dom/button :.bg-blue-500.text-white.font-bold.py-2.px-4.rounded.focus:outline-none.focus:shadow-outline
+  (dom/button :.bg-indigo-500.text-white.font-bold.py-2.px-4.rounded.focus:outline-none.focus:shadow-outline
     (merge {:type "button"
             :classes (if (:disabled options)
                        ["opacity-50" "cursor-default"]
-                       ["md:hover:bg-blue-700"])}
+                       ["md:hover:bg-indigo-700"])}
            options)
     text))
 

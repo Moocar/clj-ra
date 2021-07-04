@@ -35,9 +35,9 @@
                                   (when on-click
                                     (on-click props)))))
               (dom/div {}
-                (dom/span :.text-center.align-middle.inline-block (::tile/title props))
+                (dom/span :.text-center.align-middle.inline-block.text-sm.z-10 (::tile/title props))
                 (when (::tile/disaster? props)
-                  (dom/span {:style {:color "RED"}} " X"))
+                  (dom/span :.text-red-500.absolute.top-0.left-4.text-7xl.opacity-50.z-0 {} " X"))
                 (when stack-size
                   (dom/div :.absolute.bottom-0.right-0.pr-1 {}
                     (str stack-size))))))

@@ -89,7 +89,7 @@
            {::hand/tiles (comp/get-query ui-tile/Tile)}
            {::hand/player (comp/get-query ui-player/Player)}]
    :ident ::hand/id}
-  (dom/div :.border-2.p-2.flex.flex-col
+  (dom/div :.border-2.border-transparent.py-2.flex.flex-col
     (if (= (::hand/seat hand) (::hand/seat (::epoch/current-hand epoch)))
       {:classes ["border-red-500"]}
       {:classes []})
