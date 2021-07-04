@@ -94,7 +94,7 @@
     "Invoke Ra"))
 
 (defn ui-discard-disaster-tiles [this {:keys [hand my-go?]}]
-  #p (filter ::tile/disaster? #p (::hand/tiles #p hand))
+  (filter ::tile/disaster? (::hand/tiles hand))
   (ui/button
     (if (and my-go?
              (seq (filter ::tile/disaster? (::hand/tiles hand))))
@@ -130,7 +130,8 @@
 (defn ui-status [{:keys [hand my-go?]}]
   (dom/div :.font-bold {}
     (if my-go?
-      (str "It's your turn")
+      (dom/div {}
+        (dom/span (str "It's your turn ")))
       (dom/div {}
         (dom/span {} "Waiting for ")
         (dom/span {} (::player/name (::hand/player hand)))))))

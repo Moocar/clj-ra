@@ -51,7 +51,7 @@
 (defn draw-tile* [conn hand tile]
   (let [tx   (if (m-tile/ra? tile)
              (m-game/draw-ra-tx hand tile)
-             (m-game/draw-normal-tile-tx #p hand #p tile))]
+             (m-game/draw-normal-tile-tx hand tile))]
     (d/transact! conn (concat tx (m-game/event-tx (m-game/hand->game hand)
                                                   (str (m-game/hand->player-name hand) " Drew tile " (::tile/title tile)) )))))
 
@@ -211,7 +211,6 @@
   (let [game (get-game conn game-id)
         epoch (::game/current-epoch game)
         [h1 h2] (get-hand-ids epoch 2)]
-    #p game
     (draw-tile conn #p h1 #p ::tile-type/god)
 
     nil))
