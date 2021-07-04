@@ -7,7 +7,7 @@
     (merge {:type "button"
             :classes (if (:disabled options)
                        ["opacity-50" "cursor-default"]
-                       ["hover:bg-blue-700"])}
+                       ["md:hover:bg-blue-700"])}
            options)
     text))
 

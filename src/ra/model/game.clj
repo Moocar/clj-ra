@@ -581,11 +581,12 @@
                          [hand ::hand/available-sun-disks]
                          [{:db/id bid-id} ::bid/sun-disk]))))
 
-     ;; If the next bid would be the winner, then trigger an end to the auction
      (let [new-bid     {::bid/hand     hand
                         ::bid/sun-disk sun-disk}
            winning-bid (winning-bid auction new-bid)]
        (concat
+
+        ;; If this will be the last bid of the auction
         (when (waiting-on-last-bid? auction)
           (let [other-bids (filter #(not-winning-bid % winning-bid)
                                       (conj (::auction/bids auction) new-bid))]
@@ -594,12 +595,13 @@
              (mapv (fn [bid]
                      [:db/add (:db/id (::bid/hand bid)) ::hand/available-sun-disks (::bid/sun-disk bid)])
                    other-bids)
+
              ;; Remove the auction from the epoch (it's done)
              ;; TODO have flag "in auction" so frontend can show last bid that was played
              [[:db/retract (:db/id epoch) ::epoch/auction (:db/id auction)]]
 
-             ;; If there was a winning bid
              (if winning-bid
+               ;; If there was a winning bid (not everyone passed
                (concat
                 ;; Move auction track tiles to winning hand
                 (auction-tiles->hand-tx epoch (::bid/hand winning-bid))
@@ -629,7 +631,7 @@
         (let [the-next-hand (if (and (waiting-on-last-bid? auction)
                                      winning-bid
                                      (some ::tile/disaster? (::epoch/auction-tiles epoch)))
-                              hand
+                              (::bid/hand winning-bid)
                               (if (and (waiting-on-last-bid? auction) winning-bid)
                                 (next-hand (::epoch/last-ra-invoker epoch))
                                 (next-hand hand)))]
@@ -728,7 +730,8 @@
                        [[:db/retract (:db/id hand) ::hand/tiles (:db/id god-tile)]]
                        (move-thing-tx (:db/id auction-track-tile) [epoch ::epoch/auction-tiles] [hand ::hand/tiles])
                        (event-tx (hand->game hand)
-                                 (str (hand->player-name hand) " used god tile"))))
+                                 (str (hand->player-name hand) " used god tile"))
+                       (rotate-current-hand-tx epoch hand)))
     {::game/id (::game/id (hand->game hand))}))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]

@@ -56,22 +56,28 @@
   (let [tiles (::hand/tiles hand)
         discard-disaster-tiles? (seq (filter ::tile/disaster? tiles))
         disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
-    (->> tiles
-         (group-by ::tile/title)
-         (map (fn [[_ [tile :as tiles]]]
-                (comp/computed tile
-                               (merge {:stack-size (count tiles)}
-                                      (if (and discard-disaster-tiles? my-go? (::hand/my-go? hand))
+    (if (and discard-disaster-tiles? my-go? (::hand/my-go? hand))
+      (->> tiles
+           (map (fn [tile]
+                  (comp/computed tile
+                                 (merge {}
                                         (if (and (not (::tile/disaster? tile))
                                                  (disaster-types (::tile/type tile)))
                                           {:selectable? true}
-                                          {:dimmed? true})
+                                          {:dimmed? true})))))
+           (sort-by (juxt ::tile/type ::tile/title))
+           (ui-tile/ui-tiles))
+      (->> tiles
+           (group-by ::tile/title)
+           (map (fn [[_ [tile :as tiles]]]
+                  (comp/computed tile
+                                 (merge {:stack-size (count tiles)}
                                         (if (= ::tile-type/god (::tile/type tile))
                                           {:selectable? true
                                            :on-click    (fn [tile] (click-god-tile hand tile))}
-                                          {}))))))
-         (sort-by (juxt ::tile/type ::tile/title))
-         (ui-tile/ui-tiles))))
+                                          {})))))
+           (sort-by (juxt ::tile/type ::tile/title))
+           (ui-tile/ui-tiles)))))
 
 (defsc Hand [this hand {:keys [epoch auction] :as computed}]
   {:query [::hand/available-sun-disks
