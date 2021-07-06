@@ -9,10 +9,7 @@
          ;; com.wsscode/pathom     {:local/root "/Users/amarcar/dev/github/wilkerlucio/pathom"}
          com.wsscode/pathom                  {:mvn/version "2.3.1"}
 
-         ;; Logging
-
          ;; For http requests
-         clj-http/clj-http {:mvn/version "3.12.2"}
          cheshire/cheshire {:mvn/version "5.10.0"}
 
          ;; Fulcro
@@ -27,9 +24,11 @@
          ;; http server
          ring/ring-core    {:mvn/version "1.9.3"}
          http-kit/http-kit {:mvn/version "2.5.3"}
-         ring/ring-spec    {:mvn/version "0.0.4"}
-         hiccup/hiccup     {:mvn/version "1.0.5"}
 
+         ;; TODO instead of generating html in server. Move into build system to
+         ;; generate and move to resources/public/index.html. Wait till
+         ;; clojure.build
+         hiccup/hiccup     {:mvn/version "1.0.5"}
 
          ;; Integrant
          integrant/integrant {:mvn/version "0.8.0"}
@@ -37,16 +36,13 @@
 
          ;; Crux DB
          datascript/datascript {:mvn/version "1.2.1"}
-
-         ;; Debugging
-         hashp/hashp {:mvn/version "0.2.1"}
-
-         ;; Error handling
-         io.aviso/pretty {:mvn/version "1.1"}
          }
 
- :aliases {:server-dev {:extra-paths ["dev"]
+ :aliases {:server-dev {:extra-paths ["dev" "classes"]
                         :extra-deps  {
+                                      ;; Debugging
+                                      hashp/hashp {:mvn/version "0.2.1"}
+
                                       ;; Clojure Spec
                                       org.clojure/test.check {:mvn/version "1.1.0"}
 
@@ -61,7 +57,10 @@
                              kibu/pushy                          {:mvn/version "0.3.8"}
                              thheller/shadow-cljs                {:mvn/version "2.14.5"}}}
 
-           :ui-dev {:extra-deps {binaryage/devtools {:mvn/version "1.0.3"}}
+           :ui-dev {:extra-deps {binaryage/devtools {:mvn/version "1.0.3"}
+                                 ;; Debugging
+                                 hashp/hashp {:mvn/version "0.2.1"}
+                                 }
                     :jvm-opts   ["-Dnashorn.args=--no-deprecation-warning"]}}}
 
 ;; Run server with clj -Anrepl:server:server-dev

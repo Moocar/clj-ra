@@ -3,7 +3,6 @@
             [com.wsscode.pathom.core :as p]
             [edn-query-language.core :as eql]
             [integrant.core :as ig]
-            [io.aviso.exception :as aviso]
             [ra.model.game :as m-game]
             [ra.model.player :as m-player]))
 
@@ -29,19 +28,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parser
 
-(alter-var-root #'aviso/*default-frame-rules*
-                (constantly [[:package "clojure.lang" :omit]
-                             [:package #"sun\.reflect.*" :hide]
-                             [:package "java.lang.reflect" :omit]
-                             [:name #"next\.jdbc\.protocols/.*" :omit]
-                             [:name #"speclj\..*" :terminate]
-                             [:name #"clj-http\.client/.*" :omit]
-                             [:name #"clj-http\.cookies/.*" :omit]
-                             [:name #"slingshot\.support/.*" :omit]
-                             [:name #"com\.wsscode\.pathom\.connect/.*" :omit]
-                             [:name #"clojure\.core\.async\.impl\.ioc-macros/.*" :omit]
-                             [:name #"clojure\.main/repl/read-eval-print.*" :terminate]]))
-
 (pc/defresolver index-explorer [env _]
   {::pc/input  #{:com.wsscode.pathom.viz.index-explorer/id}
    ::pc/output [:com.wsscode.pathom.viz.index-explorer/index]}
@@ -61,7 +47,7 @@
    index-explorer])
 
 (defn process-error [env err]
-  (println (aviso/format-exception err))
+  (println err)
   err)
 
 (defn make-serial-parser [{:keys [resolvers extra-env]}]
