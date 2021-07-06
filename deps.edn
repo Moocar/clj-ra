@@ -1,24 +1,15 @@
 {:paths ["src" "resources"]
  :deps  {org.clojure/clojure    {:mvn/version "1.10.3"}
-         org.clojure/core.async {:mvn/version "1.3.618"}
 
          ;; For clojure spec
          org.clojure/spec.alpha {:mvn/version "0.2.194"}
-         expound/expound        {:mvn/version "0.8.9"}
-         gnl/ghostwheel         {:mvn/version "0.3.9"}
          edn-query-language/eql {:mvn/version "2021.02.28"}
 
          ;; For Graphql requests
          ;; com.wsscode/pathom     {:local/root "/Users/amarcar/dev/github/wilkerlucio/pathom"}
          com.wsscode/pathom                  {:mvn/version "2.3.1"}
-         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.2"}
 
          ;; Logging
-         org.clojure/tools.logging      {:mvn/version "1.1.0"}
-         ch.qos.logback/logback-core    {:mvn/version "1.2.3"}
-         ch.qos.logback/logback-classic {:mvn/version "1.2.3"}
-         org.slf4j/slf4j-api            {:mvn/version "1.7.31"}
-         org.slf4j/jul-to-slf4j         {:mvn/version "1.7.31"}
 
          ;; For http requests
          clj-http/clj-http {:mvn/version "3.12.2"}

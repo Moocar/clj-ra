@@ -3,10 +3,6 @@
             [clojure.java.io :as io]
             [integrant.core :as ig]))
 
-(defn init-logging []
-  (org.slf4j.bridge.SLF4JBridgeHandler/removeHandlersForRootLogger)
-  (org.slf4j.bridge.SLF4JBridgeHandler/install))
-
 (defmethod aero/reader 'ig/ref
   [_ _ value]
   (ig/ref value))
@@ -17,7 +13,6 @@
 (defn prep
   ([]
    (let [config (config)]
-     (init-logging)
      (ig/load-namespaces config)
      config))
   ([ks]

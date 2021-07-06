@@ -1,6 +1,8 @@
 (ns ra.app.sun-disk
   (:require [com.fulcrologic.fulcro.dom :as dom]))
 
+;; TODO Make sun disks bigger for mobile
+
 (defn ui [{:keys [value used? onClick too-low? large]}]
   (dom/div :.rounded-full.h-8.w-8.my-2.flex.items-center.justify-center.bg-red-300.cursor-default
     (cond-> {}

@@ -2,7 +2,6 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [clojure.tools.logging :as log]
             [cognitect.transit :as transit]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [com.fulcrologic.fulcro.networking.websockets :as fws]
@@ -214,7 +213,7 @@
   (make-middleware config))
 
 (defmethod ig/init-key ::server [_ {:keys [handler port]}]
-  (log/info "initializing server")
+  (println "initializing server")
   (let [handler (atom (delay handler))
         result {:handler handler
                 :server  (http/run-server #(@@handler %) {:port port})}]
