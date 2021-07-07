@@ -24,7 +24,7 @@
   (let [{:keys [segments query-params]} (parse-uri p)]
     (dr/change-route! client-app/APP
                      (if (= segments [])
-                       ["orders"]
+                       ["lobby"]
                        segments)
                      ;; HACK: /orders?a=b -> /orders?foo=bar wouldn't trigger,
                      ;; so we force every time

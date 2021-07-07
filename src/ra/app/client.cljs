@@ -5,6 +5,11 @@
             [com.fulcrologic.fulcro.data-fetch :as df]
             [com.fulcrologic.fulcro.dom :as dom]
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
+            [com.fulcrologic.fulcro.routing.dynamic-routing
+             :as
+             dr
+             :refer
+             [defrouter]]
             [ra.app.app :as client-app]
             [ra.app.game :as ui-game]
             [ra.app.lobby :as ui-lobby]
@@ -13,6 +18,17 @@
             [ra.model.player :as m-player]
             [ra.specs.game :as game]
             [ra.specs.player :as player]))
+
+(defrouter TopRouter [_ {:keys [current-state]}]
+  {:router-targets [ui-lobby/Lobby
+                    ui-game/Game]}
+  (case current-state
+    :initial (dom/div "Wat?")
+    :pending (dom/div "")
+    :failed (dom/div "")
+    (dom/div (str current-state))))
+
+(def ui-top-router (comp/factory TopRouter))
 
 (defn left-menu [props]
   (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.left-0 {}
@@ -49,8 +65,10 @@
 (defsc Root [this {:keys [:ui/current-player] :as props}]
   {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
                    {:ui/lobby (comp/get-query ui-lobby/Lobby)}
+                   {:ui/router (comp/get-query TopRouter)}
                    [:ui/global-error '_]]
-   :initial-state {:ui/lobby {}}}
+   :initial-state {:ui/lobby {}
+                   :ui/router {}}}
   (dom/div :.relative {}
     (if (nil? current-player)
       ;; loading
@@ -60,7 +78,8 @@
         (ui-player/ui-new-form current-player)
 
         ;; Else, take them to the lobby
-        (ui-lobby/ui-lobby (:ui/lobby props))))
+        (ui-top-router (:ui/router props))
+        #_(ui-lobby/ui-lobby (:ui/lobby props))))
     (ui-error this (:ui/global-error props))))
 
 (defn init-player-local-storage []

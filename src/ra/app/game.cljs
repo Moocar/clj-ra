@@ -14,7 +14,9 @@
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [ra.app.routing :as routing]
+            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
 
 (declare Game)
 
@@ -48,7 +50,8 @@
             "Join Game"))
         (when-not (joined? game)
           (ui/button {:onClick (fn []
-                                 (comp/transact! this [(back-to-lobby {})]))}
+                                 (comp/transact! this [(back-to-lobby {})])
+                                 (.back js/history))}
             "Back"))
         (when (joined? game)
           (dom/div {}
@@ -59,7 +62,8 @@
           (dom/div {}
             (ui/button {:onClick (fn []
                                    (comp/transact! this [(m-game/leave-game {::game/id   (::game/id game)
-                                                                             ::player/id (::player/id (:ui/current-player game))})]))}
+                                                                             ::player/id (::player/id (:ui/current-player game))})])
+                                   (routing/route-to! "/lobby"))}
               "Leave Game")))))
     (dom/div {}
       (dom/div :.font-bold  {} "Event log")
@@ -189,7 +193,10 @@
            ::game/short-id
            {[:ui/current-player '_] (comp/get-query ui-player/Player)}
            ::game/id]
-   :ident ::game/id}
+   :ident ::game/id
+   :route-segment ["game" ::game/id]
+   :will-enter (fn [app props]
+                 (dr/route-immediate [::game/id (::game/id props)]))}
   (dom/div :.w-screen.bg-white {}
    (cond
      (not (::game/started-at props))

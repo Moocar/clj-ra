@@ -75,6 +75,7 @@
                    :ui/join-game
                    :ui/join-game-code]
    :ident         (fn [_] [:component/id :lobby])
+   :route-segment ["lobby"]
    :initial-state {}}
   (if (:ui/join-game props)
     (join-game-modal this props)

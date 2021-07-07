@@ -211,6 +211,6 @@
   (let [game (get-game conn game-id)
         epoch (::game/current-epoch game)
         [h1 h2] (get-hand-ids epoch 2)]
-    (draw-tile conn #p h1 #p ::tile-type/god)
+    (draw-tile conn h1 ::tile-type/god)
 
     nil))
