@@ -18,25 +18,26 @@
    :ra.specs.hand/tiles               {:db/cardinality :db.cardinality/many
                                        :db/valueType   :db.type/ref}
 
-   :ra.specs.auction.bid/hand {:db/valueType   :db.type/ref}
+   :ra.specs.auction.bid/hand {:db/valueType :db.type/ref}
 
-   :ra.specs.auction/bids {:db/cardinality :db.cardinality/many
-                           :db/valueType   :db.type/ref}
-   :ra.specs.auction/ra-hand {:db/valueType   :db.type/ref}
+   :ra.specs.auction/bids    {:db/cardinality :db.cardinality/many
+                              :db/valueType   :db.type/ref}
+   :ra.specs.auction/ra-hand {:db/valueType :db.type/ref}
 
-   :ra.specs.epoch/auction {:db/valueType   :db.type/ref}
+   :ra.specs.epoch/auction {:db/valueType :db.type/ref}
 
-   :ra.specs.epoch/id            {:db/unique :db.unique/value}
-   :ra.specs.epoch/hands         {:db/cardinality :db.cardinality/many
-                                  :db/valueType   :db.type/ref}
-   :ra.specs.epoch/auction-tiles {:db/cardinality :db.cardinality/many
-                                  :db/valueType   :db.type/ref}
-   :ra.specs.epoch/ra-tiles {:db/cardinality :db.cardinality/many
-                             :db/valueType   :db.type/ref}
-   :ra.specs.epoch/current-hand  {:db/valueType :db.type/ref}
+   :ra.specs.epoch/id              {:db/unique :db.unique/value}
+   :ra.specs.epoch/hands           {:db/cardinality :db.cardinality/many
+                                    :db/valueType   :db.type/ref}
+   :ra.specs.epoch/auction-tiles   {:db/cardinality :db.cardinality/many
+                                    :db/valueType   :db.type/ref}
+   :ra.specs.epoch/ra-tiles        {:db/cardinality :db.cardinality/many
+                                    :db/valueType   :db.type/ref}
+   :ra.specs.epoch/current-hand    {:db/valueType :db.type/ref}
    :ra.specs.epoch/last-ra-invoker {:db/valueType :db.type/ref}
 
    :ra.specs.game/id            {:db/unique :db.unique/value}
+   :ra.specs.game/short-id      {:db/unique :db.unique/value}
    :ra.specs.game/tile-bag      {:db/cardinality :db.cardinality/many
                                  :db/valueType   :db.type/ref}
    :ra.specs.game/players       {:db/cardinality :db.cardinality/many

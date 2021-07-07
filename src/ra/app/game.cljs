@@ -1,21 +1,20 @@
 (ns ra.app.game
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
-            [com.fulcrologic.fulcro.data-fetch :as df]
             [com.fulcrologic.fulcro.dom :as dom]
+            [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
             [ra.app.epoch :as ui-epoch]
             [ra.app.event :as ui-event]
+            [ra.app.hand :as ui-hand]
             [ra.app.player :as ui-player]
             [ra.app.sun-disk :as ui-sun-disk]
+            [ra.app.tile :as ui-tile]
             [ra.app.ui :as ui]
             [ra.model.game :as m-game]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
-            [ra.specs.player :as player]
-            [ra.specs.tile :as tile]
-            [ra.app.tile :as ui-tile]
             [ra.specs.hand :as hand]
-            [ra.app.hand :as ui-hand]
-            [com.fulcrologic.fulcro.mutations :as m]))
+            [ra.specs.player :as player]
+            [ra.specs.tile :as tile]))
 
 (declare Game)
 
@@ -23,32 +22,48 @@
   (first (filter #(= (::player/id %) (::player/id (:ui/current-player game)))
                  (::game/players game))))
 
+(defn menu-bar [{:keys [game epoch]}]
+  (assert game)
+  (dom/div :.border-b-2.flex {}
+    (dom/div :.pw-2 {}
+      (dom/span {} "Game: ")
+      (dom/span {} (::game/short-id game))
+      (dom/span :.pl-8 {} "Epoch: ")
+      (dom/span (::epoch/number epoch)))))
+
+(defmutation back-to-lobby [{}]
+  (action [env]
+    (swap! (:state env) assoc :ui/current-game nil)))
+
 (defn ui-unstarted [this game]
   (dom/div {}
+    (menu-bar {:game game})
     (dom/div :.flex-col.justify-center {}
-      (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center {}
+      (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center.gap-6 {}
         (dom/div :.p-2 {} "Game has not started yet")
         (when-not (joined? game)
           (ui/button {:onClick (fn []
                                  (comp/transact! this [(m-game/join-game {::game/id   (::game/id game)
                                                                           ::player/id (::player/id (:ui/current-player game))})]))}
             "Join Game"))
+        (when-not (joined? game)
+          (ui/button {:onClick (fn []
+                                 (comp/transact! this [(back-to-lobby {})]))}
+            "Back"))
         (when (joined? game)
           (dom/div {}
             (ui/button {:onClick (fn []
                                    (comp/transact! this [(m-game/start-game (select-keys game [::game/id]))]))}
-              "Start Game")))))
+              "Start Game")))
+        (when (joined? game)
+          (dom/div {}
+            (ui/button {:onClick (fn []
+                                   (comp/transact! this [(m-game/leave-game {::game/id   (::game/id game)
+                                                                             ::player/id (::player/id (:ui/current-player game))})]))}
+              "Leave Game")))))
     (dom/div {}
       (dom/div :.font-bold  {} "Event log")
       (ui-event/ui-items (reverse (::game/events game))))))
-
-(defn menu-bar [{:keys [game epoch]}]
-  (assert game)
-  (assert epoch)
-  (dom/div :.border-b-2.flex {}
-    (dom/div :.pw-2 {}
-      (dom/span {} "Epoch: ")
-      (dom/span (::epoch/number epoch)))))
 
 (def players->ra-count
   {2 6
@@ -165,22 +180,19 @@
       (dom/h3 :.font-bold "Events")
       (ui-event/ui-items (reverse (::game/events game))))))
 
-(defsc Game [this {:keys [::game/players
-                          ::game/current-epoch
-                          ::game/started-at
-                          ::game/id
-                          ui/current-player] :as props}]
+(defsc Game [this props]
   {:query [{::game/players (comp/get-query ui-player/Player)}
            {::game/current-epoch (comp/get-query ui-epoch/Epoch)}
            {::game/events (comp/get-query ui-event/Item)}
            ;;           {::game/tile-bag (comp/get-query Tile)}
            ::game/started-at
+           ::game/short-id
            {[:ui/current-player '_] (comp/get-query ui-player/Player)}
            ::game/id]
    :ident ::game/id}
   (dom/div :.w-screen.bg-white {}
    (cond
-     (not started-at)
+     (not (::game/started-at props))
      (ui-unstarted this props)
      :else
      (ui-main-game this
@@ -193,26 +205,6 @@
                             :hand     (::epoch/current-hand epoch)
                             :hands    (::epoch/hands epoch)
                             :auction  (::epoch/auction epoch)}]
-                     (assoc p :my-go? (my-go? p))))
-     #_(dom/div :.h-screen.w-screen.flex.justify-center {}
-       (ui-game-info this props)
-       (ui-event/ui-items (reverse (::game/events props)))
-       (if (first (filter #(= (::player/id %) (::player/id current-player))
-                          players))
-         ;; Game exists and you're in it
-         (dom/div {}
-           (if started-at
-             ;; Game started
-             (dom/div {}
-               (ui-epoch/ui-epoch current-epoch))
-             ;; Game exists but not started
-             (dom/div {}
-               (ui/button {:onClick (fn []
-                                      (comp/transact! this [(m-game/start-game (select-keys props [::game/id]))]))}
-                 "Start Game"))))
-         ;; Game exists but you're not in it
-         (ui/button {:onClick (fn []
-                                (comp/transact! this [(m-game/join-game {::game/id id ::player/id (::player/id current-player)})]))}
-           "Join Game"))))))
+                     (assoc p :my-go? (my-go? p)))))))
 
 (def ui-game (comp/factory Game {:keyfn ::game/id}))

@@ -23,7 +23,7 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative
+  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative.shadow-md
               (cond-> {:classes (concat (type-classes (::tile/type props))
                                         (cond dimmed?               ["opacity-50"]
                                               (:ui/selected? props) ["border-2" "border-red-700" "cursor-pointer"])

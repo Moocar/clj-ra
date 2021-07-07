@@ -236,6 +236,16 @@
                                                                    (::hand/seat (::epoch/current-hand epoch))))))
                                      hands)))))))))
 
+(pc/defresolver short-game-resolver [{:keys [::db/conn]}
+                               {:keys [::game/short-id]}]
+  {::pc/input #{::game/short-id}
+   ::pc/output [::game/id]}
+  (try
+    (let [result (d/pull @conn [::game/id] [::game/short-id short-id])]
+      result)
+    (catch Exception _
+      nil)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mutations
 
@@ -260,9 +270,19 @@
                  (notify-other-clients env game-id)))
              result))))
 
+(def short-game-chars
+  "abcdefghijklmnop")
+
+(defn rand-char []
+  (char (+ 65 (rand-int 26))))
+
+(defn new-short-id []
+  (apply str (repeatedly 4 rand-char)))
+
 (defn do-new-game [conn game-id]
   (let [tile-bag (find-all-tiles @conn)
         entity   {::game/id       game-id
+                  ::game/short-id (new-short-id)
                   ::game/tile-bag tile-bag}]
     (d/transact! conn [entity])
     entity))
@@ -305,6 +325,19 @@
       (d/transact! conn (concat
                          [[:db/add [::game/id game-id] ::game/players [::player/id player-id]]]
                          (event-tx game (str (::player/name (load-player @conn player-id)) " joined game") )))))
+  {::game/id game-id})
+
+(pc/defmutation leave-game [{:keys [::db/conn]}
+                           {game-id ::game/id player-id ::player/id}]
+  {::pc/params [::game/id ::player/id]
+   ::pc/transform notify-clients
+   ::pc/output [::game/id]}
+  (let [game (d/entity @conn [::game/id game-id])]
+    (when (::game/started-at game)
+      (throw (ex-info "Can't leave game that has already started" {})))
+    (d/transact! conn (concat
+                       [[:db/retract [::game/id game-id] ::game/players [::player/id player-id]]]
+                       (event-tx game (str (::player/name (load-player @conn player-id)) " left game") ))))
   {::game/id game-id})
 
 (defn do-start-game [conn game-id]
@@ -436,7 +469,7 @@
     (assert (hand->epoch hand))
     (d/transact! conn (concat
                        (invoke-ra-tx hand ::auction-reason/invoke)
-                       (event-tx (hand->game hand) (str (hand->player-name hand) " invoked Ra") )))
+                       (event-tx (hand->game hand) (str (hand->player-name hand) " invoked auction") )))
     {::game/id (::game/id (hand->game hand))}))
 
 (defn max-ras [game]
@@ -748,9 +781,11 @@
    draw-tile
    invoke-ra
    join-game
+   leave-game
    new-game
    reset
    start-game
    use-god-tile
 
-   game-resolver])
+   game-resolver
+   short-game-resolver])

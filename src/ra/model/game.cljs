@@ -16,7 +16,7 @@
                (-> js/window
                    .-history
                    (.pushState #js{:game-id game-id}
-                               "Ra in progress"
+                               "Game in progress"
                                (str "/game/" (str game-id)))))))
 
 (defmutation join-game [_]
@@ -30,6 +30,14 @@
           (-> env
               (m/returning (game-component))
               (m/with-target [:ui/current-game]))))
+
+(defmutation leave-game [_]
+  (remote [env]
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game])))
+  (ok-action [env]
+    (swap! (:state env) assoc :ui/current-game nil)))
 
 (defmutation reset [_]
   (remote [env] true
