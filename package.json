@@ -13,6 +13,7 @@
     "socket.io-client": "4.1.2"
   },
   "scripts": {
+    "watch": "npx tailwindcss -i css/styles.css -o resources/public/styles.css --watch",
     "build": "NODE_ENV=production yarn install && npx tailwindcss -i css/styles.css -o resources/public/styles.css --minify && npx shadow-cljs release main",
     "sync-to-prod": "rsync -v -r --exclude node_modules/ --exclude .clj-kondo/ --exclude .git/ --exclude .cpcache/ --exclude .shadow-cljs/ --exclude resources/public/js/main/cljs-runtime --exclude .cider-repl-history --exclude .nrepl-port --exclude report*.json ./ anthony@slang-service.bnr.la:/home/anthony/ra",
     "start": "PORT=8080 clojure -M -m ra.main"

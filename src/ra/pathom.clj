@@ -48,7 +48,8 @@
 
 (defn process-error [env err]
   (println err)
-  err)
+  {:error {:msg (.getMessage err)
+           :data (ex-data err)}})
 
 (defn make-serial-parser [{:keys [resolvers extra-env]}]
   (let [real-parser (p/parser
@@ -58,13 +59,13 @@
                                                            p/env-placeholder-reader
                                                            ]
                                ::p/placeholder-prefixes   #{">"}
-                               ;; ::p/process-error          process-error
+                               ::p/process-error          process-error
                                ::pc/mutation-join-globals [:tempids]
                                }
                       ::p/mutate  pc/mutate
                       ::p/plugins [(pc/connect-plugin {::pc/register resolvers})
                                    (p/env-wrap-plugin #(merge % extra-env))
-                                   ;; p/error-handler-plugin
+                                   p/error-handler-plugin
                                    (p/post-process-parser-plugin p/elide-not-found)
                                    ;; p/elide-special-outputs-plugin
                                    p/trace-plugin

@@ -42,10 +42,17 @@
     (new-game-modal this props)
     (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)}))))
 
-(defsc Root [this {:keys [:ui/current-player :ui/error-occurred] :as props}]
+(defn ui-error [err]
+  (when err
+    (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
+      (dom/div :.flex.flex-col.shadow-md.rounded.bg-red-200.px-8.pt-6.pb-8.mb-4.items-center {}
+        (dom/h1 :.font-bold {} "Error")
+        (dom/p err)))))
+
+(defsc Root [this {:keys [:ui/current-player] :as props}]
   {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
                    {[:ui/current-game '_] (comp/get-query ui-game/Game)}
-                   :ui/error-occurred]
+                   [:ui/global-error '_]]
    :initial-state {}}
   (dom/div {}
     (if (nil? current-player)
@@ -57,8 +64,7 @@
 
         ;; Else, take them to the lobby
         (ui-lobby this props)))
-    (when error-occurred
-      (dom/label {:color "red"} "ERROR!"))))
+    (ui-error (:ui/global-error props))))
 
 (defn init-player-local-storage []
   (if-let [player-id (-> js/window .-localStorage (.getItem "player.id"))]
