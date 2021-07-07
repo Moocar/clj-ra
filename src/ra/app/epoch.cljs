@@ -4,7 +4,6 @@
             [com.fulcrologic.fulcro.mutations :as m]
             [ra.app.auction :as ui-auction]
             [ra.app.hand :as ui-hand]
-            [ra.app.sun-disk :as ui-sun-disk]
             [ra.app.tile :as ui-tile]
             [ra.model.game :as m-game]
             [ra.specs.auction :as auction]
@@ -14,11 +13,11 @@
             [ra.specs.tile :as tile]
             [ra.specs.player :as player]))
 
-(def players->ra-count
-  {2 6
-   3 8
-   4 9
-   5 10})
+(defn swap-god-tile [this props tile]
+  (m/set-value! this :ui/selected-god-tile nil)
+  (comp/transact! this [(m-game/use-god-tile {:god-tile-id (::tile/id (:ui/selected-god-tile props))
+                                              ::hand/id (get-in props [:ui/selected-god-tile ::tile/hand ::hand/id])
+                                              :auction-track-tile-id (::tile/id tile)})]))
 
 (defn fill-blank-ra-spots [auction-tiles]
   (->> auction-tiles
@@ -26,22 +25,6 @@
        (- 8)
        (range)
        (map (fn [_] (ui-tile/ui-tile {})))))
-
-(defn ui-ra-track [props]
-  (let [hand-count (count (::epoch/hands props))
-        ra-count (count (::epoch/ra-tiles props))
-        blank-spots (- (players->ra-count hand-count)
-                       ra-count)]
-    (dom/div :.inline-flex {}
-             (dom/div :.border-2.rounded-md.flex.space-x-2.p-2 {}
-                      (concat (map ui-tile/ui-tile (::epoch/ra-tiles props))
-                              (map (fn [_] (ui-tile/ui-tile {})) (range blank-spots)))))))
-
-(defn swap-god-tile [this props tile]
-  (m/set-value! this :ui/selected-god-tile nil)
-  (comp/transact! this [(m-game/use-god-tile {:god-tile-id (::tile/id (:ui/selected-god-tile props))
-                                              ::hand/id (get-in props [:ui/selected-god-tile ::tile/hand ::hand/id])
-                                              :auction-track-tile-id (::tile/id tile)})]))
 
 (defn ui-auction-track [this {:keys [epoch]}]
   (dom/div :.flex.flex-row.flex-wrap.gap-2 {}
@@ -71,58 +54,10 @@
                   (assoc-in (conj [::epoch/id (::epoch/id epoch)] :ui/selected-god-tile) tile-ident)
                   (assoc-in (conj tile-ident ::tile/hand) hand-ident)))))))
 
-#_(defn ui-hands [this props]
-  (dom/div {}
-    (->> (concat (::epoch/hands props) (::epoch/hands props))
-         (drop-while (fn [hand]
-                       (not= (::player/id (::hand/player hand))
-                             (::player/id (:ui/current-player props)))))
-         (take (count (::epoch/hands props)))
-         (map (fn [hand]
-                (ui-hand/ui-hand
-                 (if (::epoch/auction props)
-                   (comp/computed hand {:onClickSunDisk (fn [sun-disk]
-                                                          (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
-                                        :highest-bid    (highest-bid (::epoch/auction props))
-                                        :epoch          props
-                                        :auction        (::epoch/auction props)})
-                   (comp/computed hand {:epoch          props
-                                        :click-god-tile (fn [hand tile]
-                                                          (if (:ui/selected-god-tile props)
-                                                            (m/set-value! this :ui/selected-god-tile nil)
-                                                            (comp/transact! this [(select-god-tile {:hand hand
-                                                                                                    :epoch epoch
-                                                                                                    :tile tile})])))}))))))))
-
 (defn auction-tiles-full? [epoch]
   (= 8 (count (::epoch/auction-tiles epoch))))
 
-(defn ui-tile-bag [this props]
-  (dom/div :.flex.justify-center.items-center.w-24.h-24.rounded-md.bg-green-300.opacity-50.cursor-default
-    (if (and (= (::player/id (::hand/player (::epoch/current-hand props)))
-                (::player/id (:ui/current-player props)))
-             (not (::epoch/auction props))
-             (not (::epoch/in-disaster? props))
-             (not (auction-tiles-full? props)))
-      {:onClick (fn []
-                  (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id (::epoch/current-hand props))})]))
-       :classes ["cursor-pointer" "hover:bg-green-500" "opacity-100"]}
-      {})
-    "Tile Bag"))
-
-(defn ui-invoke-ra [this props]
-  (dom/div :.flex.justify-center.items-center.w-24.h-24.rounded-md.bg-red-300.opacity-50
-    (if (and (= (::player/id (::hand/player (::epoch/current-hand props)))
-                (::player/id (:ui/current-player props)))
-             (not (::epoch/auction props))
-             (not (::epoch/in-disaster? props)))
-      {:onClick (fn []
-                  (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id (::epoch/current-hand props))})]))
-       :classes ["cursor-pointer" "hover:bg-red-500" "opacity-100"]}
-      {})
-    "Invoke Ra"))
-
-(defsc Epoch [this props]
+(defsc Epoch [_ _]
   {:query [::epoch/current-sun-disk
            ::epoch/number
            ::epoch/id
@@ -135,20 +70,4 @@
            {::epoch/ra-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/auction-tiles (comp/get-query ui-tile/Tile)}
            {::epoch/hands (comp/get-query ui-hand/Hand)}]
-   :ident ::epoch/id}
-  (dom/div :.flex.flex-col.content-center {}
-           (dom/strong "Ra Track")
-           (dom/div :.flex.flex-row.justify-between {}
-                    (dom/div :.inline-flex.items-center {}
-                             (ui-ra-track props))
-                    (ui-invoke-ra this props))
-    (dom/strong "Auction track")
-    (dom/div :.flex.flex-row.justify-between {}
-             (ui-auction-track this props)
-             (ui-tile-bag this props))
-    (dom/div {}
-      (dom/h3 :.font-bold.text-xl "Seats")
-      (dom/div {}
-        #_(ui-hands this props)))))
-
-(def ui-epoch (comp/factory Epoch {:keyfn ::epoch/number}))
+   :ident ::epoch/id})

@@ -91,7 +91,7 @@
       {:onClick (fn []
                   (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id hand)})]))}
       {:disabled true})
-    "Invoke Ra"))
+    "Invoke Auction"))
 
 (defn ui-discard-disaster-tiles [this {:keys [hand my-go?]}]
   (filter ::tile/disaster? (::hand/tiles hand))
@@ -103,7 +103,7 @@
                                          {::hand/id (::hand/id hand)
                                           :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
       {:disabled true})
-    "Discard disasters"))
+    "Discard Disasters"))
 
 (defn ui-hands [this {:keys [auction epoch hands my-player] :as props}]
   (dom/div {}
@@ -140,7 +140,7 @@
   (dom/div :.flex.flex-col.p-2.gap-2 {}
     (menu-bar props)
     (dom/div :.flex-col.w-screen {}
-      (dom/div :.font-bold {} "Ras")
+      (dom/div :.font-bold {} "Auctions Invoked")
       (ui-ra-track props))
     (dom/div :.flex-col.w-screen {}
       (dom/div :.font-bold {} "Auction")

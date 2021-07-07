@@ -95,13 +95,13 @@
       {:classes []})
     (dom/div :.flex.flex-row.justify-between {}
       (ui-player/ui-player (::hand/player hand))
-      (dom/div :.px-4.font-bold
+      (dom/div :.px-4
         (if (and auction
                  (= (::hand/id (::epoch/last-ra-invoker epoch))
                     (::hand/id hand)))
           {}
           {:classes ["invisible"]})
-        "Ra!")
+        "Last called Auction")
       (dom/div {}
         (dom/span "score: ")
         (dom/span (str (::hand/score hand)))))

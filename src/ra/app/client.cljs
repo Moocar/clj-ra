@@ -12,7 +12,8 @@
             [ra.specs.game :as game]
             [ra.specs.player :as player]
             [ra.app.ui :as ui]
-            [ra.app.player :as ui-player]))
+            [ra.app.player :as ui-player]
+            [com.fulcrologic.fulcro.mutations :refer [defmutation]]))
 
 (defn left-menu [props]
   (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.left-0 {}
@@ -42,19 +43,27 @@
     (new-game-modal this props)
     (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)}))))
 
-(defn ui-error [err]
+(defmutation clear-error [{}]
+  (action [env]
+    (swap! (:state env) assoc :ui/global-error nil)))
+
+(defn ui-error [this err]
   (when err
-    (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
-      (dom/div :.flex.flex-col.shadow-md.rounded.bg-red-200.px-8.pt-6.pb-8.mb-4.items-center {}
-        (dom/h1 :.font-bold {} "Error")
-        (dom/p err)))))
+    (dom/div :.h-screen.w-screen.flex.justify-center.items-center.absolute.z-50.top-0 {}
+      (dom/div :.relative {}
+       (dom/div :.font-bold.right-2.top-1.absolute.text-sm
+         {:onClick (fn [] (comp/transact! this [(clear-error {})]))}
+         "X")
+        (dom/div :.flex.flex-col.shadow-md.rounded.bg-red-200.px-8.pt-6.pb-8.mb-4.items-center {}
+          (dom/h1 :.font-bold {} "Error")
+          (dom/p err))))))
 
 (defsc Root [this {:keys [:ui/current-player] :as props}]
   {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
                    {[:ui/current-game '_] (comp/get-query ui-game/Game)}
                    [:ui/global-error '_]]
    :initial-state {}}
-  (dom/div {}
+  (dom/div :.relative {}
     (if (nil? current-player)
       ;; loading
       (dom/p "")
@@ -64,7 +73,7 @@
 
         ;; Else, take them to the lobby
         (ui-lobby this props)))
-    (ui-error (:ui/global-error props))))
+    (ui-error this (:ui/global-error props))))
 
 (defn init-player-local-storage []
   (if-let [player-id (-> js/window .-localStorage (.getItem "player.id"))]
