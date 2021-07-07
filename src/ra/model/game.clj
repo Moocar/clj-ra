@@ -21,7 +21,8 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [clojure.string :as str]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Rules
@@ -241,7 +242,7 @@
   {::pc/input #{::game/short-id}
    ::pc/output [::game/id]}
   (try
-    (let [result (d/pull @conn [::game/id] [::game/short-id short-id])]
+    (let [result (d/pull @conn [::game/id] [::game/short-id (str/upper-case short-id)])]
       result)
     (catch Exception _
       nil)))
