@@ -114,9 +114,10 @@
                                                 (case unique-civs-count
                                                   0 -5
                                                   1 0
-                                                  2 5
-                                                  3 10
-                                                  4 15)
+                                                  2 0
+                                                  3 5
+                                                  4 10
+                                                  5 15)
                                                 (if (pos? flood-count)
                                                   (+ flood-count nile-count)
                                                   0)))
