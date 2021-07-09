@@ -52,6 +52,7 @@
         (when-not (joined? game)
           (ui/button {:onClick (fn []
                                  (comp/transact! this [(back-to-lobby {})])
+                                 (dr/change-route! this ["lobby"])
                                  (.back js/history))}
             "Back"))
         (when (joined? game)
@@ -195,9 +196,12 @@
            {[:ui/current-player '_] (comp/get-query ui-player/Player)}
            ::game/id]
    :ident ::game/id
+   :initial-state {}
+   :componentDidMount (fn [this]
+                        (set! (.-title js/document) (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
    :route-segment ["game" ::game/id]
-   :will-enter (fn [app props]
-                 (dr/route-immediate [::game/id (::game/id props)]))}
+   :will-enter (fn [_ props]
+                 (dr/route-immediate [::game/id (uuid (::game/id props))]))}
   (dom/div :.w-screen.bg-white {}
    (cond
      (not (::game/started-at props))

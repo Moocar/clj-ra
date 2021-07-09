@@ -1,8 +1,6 @@
 (ns ra.app.client
-  (:require [clojure.string :as str]
-            [com.fulcrologic.fulcro.application :as app]
+  (:require [com.fulcrologic.fulcro.application :as app]
             [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
-            [com.fulcrologic.fulcro.data-fetch :as df]
             [com.fulcrologic.fulcro.dom :as dom]
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
             [com.fulcrologic.fulcro.routing.dynamic-routing
@@ -14,21 +12,28 @@
             [ra.app.game :as ui-game]
             [ra.app.lobby :as ui-lobby]
             [ra.app.player :as ui-player]
-            [ra.app.routing :as routing]
             [ra.model.player :as m-player]
-            [ra.specs.game :as game]
             [ra.specs.player :as player]))
 
-(defrouter TopRouter [_ {:keys [current-state]}]
-  {:router-targets [ui-lobby/Lobby
-                    ui-game/Game]}
-  (case current-state
-    :initial (dom/div "Wat?")
-    :pending (dom/div "")
-    :failed (dom/div "")
-    (dom/div (str current-state))))
+(defsc Home [_ _]
+  {:query []
+   :ident (fn [_] [:component/id :home])
+   :initial-state {}
+   :route-segment ["home"]}
+  (dom/div ""))
 
-(def ui-top-router (comp/factory TopRouter))
+(defrouter RootRouter [this props]
+  {:router-targets [Home
+                    ui-player/NewForm
+                    ui-lobby/Lobby
+                    ui-game/Game]
+   :initial-state {}}
+  (case (:current-state props)
+    :pending (dom/div "Loading...")
+    :failed (dom/div "Failed!")
+    (dom/div "")))
+
+(def ui-root-router (comp/factory RootRouter))
 
 (defn left-menu [props]
   (dom/p :.mb-4.text-gray-700.text-sm.font-bold.absolute.top-0.left-0 {}
@@ -62,50 +67,22 @@
           (dom/h1 :.font-bold {} "Error")
           (dom/p err))))))
 
-(defsc Root [this {:keys [:ui/current-player] :as props}]
-  {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
-                   {:ui/lobby (comp/get-query ui-lobby/Lobby)}
-                   {:ui/router (comp/get-query TopRouter)}
-                   [:ui/global-error '_]]
-   :initial-state {:ui/lobby {}
-                   :ui/router {}}}
-  (dom/div :.relative {}
-    (if (nil? current-player)
-      ;; loading
-      (dom/p "")
-      ;; ask user for their name
-      (if (str/blank? (::player/name current-player))
-        (ui-player/ui-new-form current-player)
 
-        ;; Else, take them to the lobby
-        (ui-top-router (:ui/router props))
-        #_(ui-lobby/ui-lobby (:ui/lobby props))))
+
+(defsc Root [this props]
+  {:query         [{:ui/router (comp/get-query RootRouter)}
+                   [:ui/global-error '_]]
+   :initial-state {:ui/router {}}}
+  (dom/div :.relative {}
+    (ui-root-router (:ui/router props))
     (ui-error this (:ui/global-error props))))
 
-(defn init-player-local-storage []
-  (if-let [player-id (-> js/window .-localStorage (.getItem "player.id"))]
-    (comp/transact! client-app/APP [(m-player/use-local-storage-player {:player-id (uuid player-id)})])
-    (comp/transact! client-app/APP [(m-player/init-local-storage {})])))
-
-(defn is-uuid? [s]
-  (re-find #"[a-f0-9]{8}(-[a-f0-9]{4}){4}[a-f0-9]{8}" s))
-
-(defn init-game-from-url []
-  (let [path (-> js/window .-location .-pathname)]
-    (when (str/starts-with? path "/game/")
-      (let [game-id (second (re-find #"/game/(.*)" path))]
-        (when (is-uuid? game-id)
-          (df/load! client-app/APP [::game/id (uuid game-id)] ui-game/Game
-                    {:target [:ui/current-game]}))))))
-
 (defn ^:export refresh []
-  (js/console.log "refresh")
   (app/mount! client-app/APP Root "app"))
 
 (defn ^:export start []
-  (js/console.log "start")
-  (js/console.log "mounting")
-  (app/mount! client-app/APP Root "app")
-  (routing/start!)
-  (init-player-local-storage)
-  (init-game-from-url))
+  (let [app client-app/APP]
+    (app/set-root! app Root {:initialize-state? true})
+    (dr/change-route! app ["home"])
+    (app/mount! app Root "app" {:initialize-state? false})
+    (m-player/init! app)))

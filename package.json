@@ -3,14 +3,16 @@
   "version": "0.0.1",
   "license": "UNLICENSED",
   "dependencies": {
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
+    "socket.io-client": "4.1.2"
+  },
+  "devDependencies": {
     "codemirror": "5.62.0",
     "d3": "7.0.0",
     "parinfer": "^3.12.0",
     "parinfer-codemirror": "^1.4.2",
-    "react": "17.0.2",
-    "react-dom": "17.0.2",
-    "shadow-cljs": "2.14.5",
-    "socket.io-client": "4.1.2"
+    "shadow-cljs": "2.14.6"
   },
   "scripts": {
     "watch": "npx tailwindcss -i css/styles.css -o resources/public/styles.css --watch",

@@ -9,7 +9,8 @@
             [com.fulcrologic.fulcro.dom :as dom]
             [ra.app.ui :as ui]
             [ra.specs.player :as player]
-            [ra.model.game :as m-game]))
+            [ra.model.game :as m-game]
+            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
 
 (defmutation set-error [{:keys [msg]}]
   (action [env]
@@ -31,7 +32,9 @@
             {:post-action (fn [env]
                             (if-let [game-id (get-in env [:result :body [::game/short-id short-id] ::game/id])]
                               (do (merge/merge-component! this ui-game/Game (get-in env [:result :body [::game/short-id short-id]]))
-                                  (comp/transact! this [(set-current-game {:ident [::game/id game-id]}) (clear-join-game {})]))
+                                  (comp/transact! this [(set-current-game {:ident [::game/id game-id]}) (clear-join-game {})])
+                                  (dr/change-route! this ["game" (str game-id)])
+                                  (.pushState (.-history js/window) #js {} "" (str "/game/" (str game-id))))
                               (comp/transact! this [(set-error {:msg "Game doesn't exist"})])))}))
 
 (defn join-game-modal [this props]
@@ -70,17 +73,15 @@
         "Join Game"))))
 
 (defsc Lobby [this props]
-  {:query         [{[:ui/current-game '_] (comp/get-query ui-game/Game)}
-                   {[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
+  {:query         [{[:ui/current-player '_] (comp/get-query ui-player/NewForm)}
                    :ui/join-game
                    :ui/join-game-code]
    :ident         (fn [_] [:component/id :lobby])
    :route-segment ["lobby"]
+   :componentDidMount (fn [_] (set! (.-title js/document) "Lobby | Ra?"))
    :initial-state {}}
   (if (:ui/join-game props)
     (join-game-modal this props)
-    (if (nil? (:ui/current-game props))
-      (new-game-modal this props)
-      (ui-game/ui-game (merge (:ui/current-game props) {:ui/current-player (:ui/current-player props)})))))
+    (new-game-modal this props)))
 
 (def ui-lobby (comp/factory Lobby))

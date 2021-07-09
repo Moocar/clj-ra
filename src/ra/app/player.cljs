@@ -1,10 +1,11 @@
 (ns ra.app.player
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
-            [ra.specs.player :as player]
             [com.fulcrologic.fulcro.dom :as dom]
+            [com.fulcrologic.fulcro.mutations :as m]
+            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [ra.app.ui :as ui]
             [ra.model.player :as m-player]
-            [com.fulcrologic.fulcro.mutations :as m]))
+            [ra.specs.player :as player]))
 
 (defsc Player [_ {:keys [::player/name]}]
   {:query [::player/name
@@ -16,8 +17,11 @@
 
 (defsc NewForm [this {:keys [::player/id ::player/temp-name] :as props}]
   {:query         [::player/id ::player/temp-name ::player/name]
+   :ident         ::player/id
    :initial-state {::player/temp-name ""}
-   :ident         ::player/id}
+   :route-segment ["player" ::player/id]
+   :will-enter (fn [_ {:keys [::player/id]}]
+                 (dr/route-immediate [::player/id (uuid id)]))}
   (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
     (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center {}
       (dom/label :.block.text-gray-700.text-sm.font-bold.mb-2 {:htmlFor "username"}

@@ -13,13 +13,7 @@
                                {:keys [::player/id]}]
   {::pc/input #{::player/id}
    ::pc/output [::player/id ::player/name]}
-  (println "pulling player" id)
-  (try
-    (d/pull @conn parent-query [::player/id id])
-    (catch clojure.lang.ExceptionInfo e
-      (if (= :entity-id/missing (:error (ex-data e)))
-        {}
-        (throw e)))))
+  (d/pull @conn parent-query [::player/id id]))
 
 (pc/defmutation new-player [{:keys [::db/conn]} {:keys [::player/id]}]
   {::pc/params #{::player/id}

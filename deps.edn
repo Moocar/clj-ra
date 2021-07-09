@@ -7,14 +7,14 @@
 
          ;; For Graphql requests
          ;; com.wsscode/pathom     {:local/root "/Users/amarcar/dev/github/wilkerlucio/pathom"}
-         com.wsscode/pathom                  {:mvn/version "2.3.1"}
+         com.wsscode/pathom                  {:mvn/version "2.4.0"}
 
          ;; For http requests
          cheshire/cheshire {:mvn/version "5.10.0"}
 
          ;; Fulcro
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
-         com.fulcrologic/fulcro {:mvn/version "3.4.22"}
+         com.fulcrologic/fulcro {:mvn/version "3.5.0"}
 
          ;; Websockets
          ;; com.fulcrologic/fulcro-websockets {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro-websockets"}
@@ -35,7 +35,7 @@
          aero/aero           {:mvn/version "1.1.6"}
 
          ;; Crux DB
-         datascript/datascript {:mvn/version "1.2.1"}
+         datascript/datascript {:mvn/version "1.2.2"}
          }
 
  :aliases {:server-dev {:extra-paths ["dev" "classes"]
@@ -55,7 +55,7 @@
 
            :ui {:extra-deps {org.clojure/clojurescript           {:mvn/version "1.10.866"}
                              kibu/pushy                          {:mvn/version "0.3.8"}
-                             thheller/shadow-cljs                {:mvn/version "2.14.5"}}}
+                             thheller/shadow-cljs                {:mvn/version "2.14.6"}}}
 
            :ui-dev {:extra-deps {binaryage/devtools {:mvn/version "1.0.3"}
                                  ;; Debugging
