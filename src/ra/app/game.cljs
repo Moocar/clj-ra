@@ -29,7 +29,8 @@
   (dom/div :.border-b-2.flex {}
     (dom/div :.pw-2 {}
       (dom/span {} "Game: ")
-      (dom/span {} (::game/short-id game))
+      (dom/span {} (::game/short-id game)))
+    (dom/div {}
       (dom/span :.pl-8 {} "Epoch: ")
       (dom/span (::epoch/number epoch)))))
 

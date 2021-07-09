@@ -272,6 +272,13 @@
                  (notify-other-clients env game-id)))
              result))))
 
+;; full env
+(defn notify-all-clients! [env game-id]
+  (let [websockets (:ra.server/websockets env)
+        connected-uids (:ws @(:connected-uids (:websockets websockets)))]
+    (doseq [o connected-uids]
+      (fws-protocols/push (:websockets websockets) o :refresh {::game/id game-id}))))
+
 (def short-game-chars
   "abcdefghijklmnop")
 
@@ -408,6 +415,24 @@
         epoch (hand->epoch current-hand)
         _ (assert epoch)
         game (hand->game current-hand)
+        _ (assert game)
+        num-players (count (game->players game))]
+    (assert (pos? num-players))
+    (loop [seat (inc (::hand/seat current-hand))]
+      (if (>= seat num-players)
+        (recur 0)
+        (let [hand (find-hand-by-seat db epoch seat)]
+          (if (empty? (::hand/available-sun-disks hand))
+            (recur (inc seat))
+            hand))))))
+
+(defn next-hand-in-epoch
+  "Returns the hand to the left of the given hand"
+  [epoch current-hand]
+  (assert current-hand)
+  (let [db (d/entity-db current-hand)
+        _ (assert db)
+        game (epoch->game epoch)
         _ (assert game)
         num-players (count (game->players game))]
     (assert (pos? num-players))
@@ -744,8 +769,8 @@
     (d/transact! conn (concat (mapv #(discard-tile-op hand %)
                                     (set/union selected-tiles disaster-tiles))
                               [[:db/add (:db/id epoch) ::epoch/in-disaster? false]
-                               [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand (::epoch/last-ra-invoker epoch)))]]
-                              (event-tx (hand->game hand)
+                               [:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand-in-epoch epoch (d/touch (::epoch/last-ra-invoker epoch))))]]
+                              (event-tx (epoch->game epoch)
                                         (str (hand->player-name hand) " discarded disaster tiles"))))
     {::game/id (::game/id (hand->game hand))}))
 
