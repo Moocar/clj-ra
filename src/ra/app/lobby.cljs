@@ -10,11 +10,8 @@
             [ra.app.ui :as ui]
             [ra.specs.player :as player]
             [ra.model.game :as m-game]
-            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
-
-(defmutation set-error [{:keys [msg]}]
-  (action [env]
-    (swap! (:state env) assoc :ui/global-error msg)))
+            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
+            [ra.model.error :as m-error]))
 
 (defmutation set-current-game [{:keys [ident]}]
   (action [env]
@@ -35,7 +32,7 @@
                                   (comp/transact! this [(set-current-game {:ident [::game/id game-id]}) (clear-join-game {})])
                                   (dr/change-route! this ["game" (str game-id)])
                                   (.pushState (.-history js/window) #js {} "" (str "/game/" (str game-id))))
-                              (comp/transact! this [(set-error {:msg "Game doesn't exist"})])))}))
+                              (m-error/set-error! this "Game doesn't exist")))}))
 
 (defn join-game-modal [this props]
   (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
