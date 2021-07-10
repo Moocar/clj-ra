@@ -20,6 +20,7 @@
            ::tile/title
            ::tile/disaster?
            ::tile/type
+           ::tile/scarab?
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
@@ -40,7 +41,10 @@
                   (dom/span :.text-red-500.absolute.top-0.left-4.text-7xl.opacity-50.z-0 {} " X"))
                 (when stack-size
                   (dom/div :.absolute.bottom-0.right-0.pr-1 {}
-                    (str stack-size))))))
+                    (str stack-size)))
+                (when (::tile/scarab? props)
+                  (dom/div :.absolute.bottom-0.left-0.pl-1 {}
+                    "\u267E")))))
 
 (def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 

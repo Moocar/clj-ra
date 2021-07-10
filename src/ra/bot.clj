@@ -21,12 +21,14 @@
             current-hand (::epoch/current-hand epoch)]
         (if-not (= player (::hand/player current-hand))
           nil
-          (if (::epoch/auction epoch)
-            (let [available-sun-disks (::hand/available-sun-disks current-hand)]
-              (parser parser-env [`(m-game/bid {::hand/id ~(::hand/id current-hand)
-                                                :sun-disk ~(rand-nth (vec available-sun-disks))})]))
-            (if (::epoch/in-disaster? epoch)
-              (str "Bot turn: " (::player/name player) " discard disaster")
-              (if (m-game/auction-tiles-full? epoch)
-                (parser parser-env [`(m-game/invoke-ra {::hand/id ~(::hand/id current-hand)})])
-                (parser parser-env [`(m-game/draw-tile {::hand/id ~(::hand/id current-hand)})])))))))))
+          (future
+            (Thread/sleep 1000)
+            (if (::epoch/auction epoch)
+              (let [available-sun-disks (::hand/available-sun-disks current-hand)]
+                (parser parser-env [`(m-game/bid {::hand/id ~(::hand/id current-hand)
+                                                  :sun-disk ~(rand-nth (vec available-sun-disks))})]))
+              (if (::epoch/in-disaster? epoch)
+                (str "Bot turn: " (::player/name player) " discard disaster")
+                (if (m-game/auction-tiles-full? epoch)
+                  (parser parser-env [`(m-game/invoke-ra {::hand/id ~(::hand/id current-hand)})])
+                  (parser parser-env [`(m-game/draw-tile {::hand/id ~(::hand/id current-hand)})]))))))))))
