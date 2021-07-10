@@ -105,13 +105,9 @@
       (dom/div {}
         (dom/span "score: ")
         (dom/span (str (::hand/score hand)))))
-    (dom/div (if (not auction)
-               {:classes ["opacity-50"]}
-               {})
+    (dom/div {}
       (ui-sun-disks hand computed))
-    (dom/div (if auction
-               {:classes ["opacity-50"]}
-               {})
+    (dom/div {}
       (ui-tiles hand computed))))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))

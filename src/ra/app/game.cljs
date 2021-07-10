@@ -153,25 +153,20 @@
                                                                                                                    :epoch epoch
                                                                                                                    :tile tile})]))))))))))))
 
-(defn ui-status [{:keys [hand my-go?]}]
-  (dom/div :.font-bold {}
-    (if my-go?
-      (dom/div {}
-        (dom/span (str "It's your turn ")))
-      (dom/div {}
-        (dom/span {} "Waiting for ")
-        (dom/span {} (::player/name (::hand/player hand)))))))
-
 (defn ui-action-bar [this props]
-  (dom/div :.h-24.flex.justify-center.items-center {}
-    (if (:my-go? props)
-      (dom/div :.flex.flex-row.space-x-2.pb-2 {}
+  (dom/div :.h-16.flex.justify-center.items-center {}
+    (if (and (:my-go? props) (not (::epoch/auction (:epoch props))))
+      (dom/div :.flex.flex-row.space-x-2 {}
         (ui-tile-bag this props)
         (ui-invoke-ra this props)
-        (ui-discard-disaster-tiles this props))
-      (dom/div :.font-bold {}
-        (dom/span {} "Waiting for ")
-        (dom/span {} (::player/name (::hand/player (:hand props))))))))
+        (when (::epoch/in-disaster? (:epoch props))
+          (ui-discard-disaster-tiles this props)))
+      (if (and (:my-go? props) (::epoch/auction (:epoch props)))
+        (dom/div :.font-bold {}
+          (dom/span {} "Your bid"))
+        (dom/div :.font-bold {}
+          (dom/span {} "Waiting for ")
+          (dom/span {} (::player/name (::hand/player (:hand props)))))))))
 
 (defn ui-main-game [this {:keys [game epoch] :as props}]
   (dom/div :.flex.flex-col.p-2.gap-2 {}
