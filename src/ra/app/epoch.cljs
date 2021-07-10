@@ -31,9 +31,13 @@
     (concat (->> (::epoch/auction-tiles epoch)
                  (sort-by ::tile/auction-track-position)
                  (map (fn [tile]
-                        (ui-tile/ui-tile (comp/computed tile (cond-> {}
-                                                               (:ui/selected-god-tile epoch)
-                                                               (assoc :on-click #(swap-god-tile this epoch %))))))))
+                        (dom/div
+                          {:style {"animation-name"     "drawtile"
+                                   "animation-duration" "1s"
+                                   "transform"          "scale(1, 1)"}}
+                          (ui-tile/ui-tile (comp/computed tile (cond-> {}
+                                                                 (:ui/selected-god-tile epoch)
+                                                                 (assoc :on-click #(swap-god-tile this epoch %)))))))))
             (fill-blank-ra-spots (::epoch/auction-tiles epoch)))))
 
 (defn highest-bid [auction]
