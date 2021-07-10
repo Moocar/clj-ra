@@ -41,7 +41,7 @@
                    :>/global-error {}}}
   (dom/div :.relative {}
     (ui-root-router (:ui/router props))
-    (ui-error/ui-modal (:>/global-error #p props))))
+    (ui-error/ui-modal (:>/global-error props))))
 
 (defn ^:export refresh []
   (app/mount! client-app/APP Root "app"))

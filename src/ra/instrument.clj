@@ -1,14 +1,17 @@
 (ns ra.instrument
   (:require [datascript.core :as d]
+            [ra.bot :as bot]
             [ra.db :as db]
             [ra.model.game :as m-game]
+            [ra.model.player :as m-player]
+            [ra.model.tile :as m-tile]
             [ra.pathom :as pathom]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
+            [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
-            [ra.model.tile :as m-tile]))
+            [ra.specs.tile.type :as tile-type]))
 
 (defn get-hands [epoch hand-count]
   (->> (::epoch/hands epoch)
@@ -70,7 +73,42 @@
     nil))
 
 (defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
-  (let [game (get-game @conn game-short-id)]
-    (parser {} [`(m-game/reset {::game/-id ~(::game/id game)})])
+  (let [game (get-game @conn game-short-id)
+        players (::game/players game)]
+    (doseq [player players]
+      (d/unlisten! conn (::player/id player)))
+    (assert game)
+    (parser {} [`(m-game/reset {::game/id ~(::game/id game)})])
     (m-game/notify-all-clients! env (::game/id game))
+    nil))
+
+(defn clear-bots! [{:keys [::db/conn ::pathom/parser] :as env}]
+  (reset! (:listeners (meta conn)) {}))
+
+(defn rand-char []
+  (char (+ 65 (rand-int 26))))
+
+(defn new-bot-name []
+  (apply str (concat ["Bot "] (repeatedly 4 rand-char))))
+
+(defn add-bot [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
+  (let [websockets  (:websockets (:ra.server/websockets env))
+        parser-env  {:connected-uids (:connected-uids websockets)
+                     :websockets     websockets}
+        player-id   (db/uuid)
+        player-name (new-bot-name)
+        game        (get-game @conn game-short-id)]
+    (assert game)
+    (parser {} [`(m-player/new-player {::player/id ~player-id})])
+    (parser {} [`(m-player/save {::player/id   ~player-id
+                                 ::player/name ~player-name})])
+    (d/listen! conn
+               player-id
+               (fn [tx-report]
+                 (when (= (::game/id game) (::game/id (:tx-meta tx-report)))
+                   (bot/handle-change (assoc env :parser-env parser-env)
+                                      player-id
+                                      (::game/id game)))))
+    (parser parser-env [`(m-game/join-game {::player/id ~player-id
+                                            ::game/id   ~(::game/id game)})])
     nil))

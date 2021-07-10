@@ -11,5 +11,4 @@
     (swap! (:state env) assoc :ui/global-error msg)))
 
 (defn set-error! [app msg]
-  #p msg
   (comp/transact! app [(set-error {:msg msg})]))

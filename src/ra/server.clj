@@ -124,7 +124,8 @@
   (let [parser (atom (delay pathom-parser))]
     {:parser     parser
      :websockets (fws/start! (fws/make-websockets
-                              (fn [env query] (@@parser env query))
+                              (fn [env query]
+                                (@@parser env query))
                               {:http-server-adapter (get-sch-adapter)
                                :parser-accepts-env? true
                                :sente-options       {:csrf-token-fn nil}}))}))

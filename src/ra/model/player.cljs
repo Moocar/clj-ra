@@ -71,7 +71,7 @@
                                            (dr/change-route! (:app env) ["lobby"])
                                            (.pushState (.-history js/window) #js {} "" "/lobby")))))))
                  :error-action (fn [env]
-                                 (if-let [errors (:com.wsscode.pathom.core/errors (:body :result env))]
+                                 (if-let [errors (:com.wsscode.pathom.core/errors (:body (:result env)))]
                                    (if (= 1 (count errors))
                                      (let [error (:error (val (first errors)))
                                            data  (:data error)]
