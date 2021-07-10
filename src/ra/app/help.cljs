@@ -7,16 +7,15 @@
 
 (defn ui-help-modal [this]
   (dom/div :.h-screen.w-screen.flex.justify-center.items-center.absolute.top-0.left-0.p-4 {}
-    (dom/div :.flex.flex-col.shadow-lg.rounded.bg-gray-50.border-2.p-2.mb-4.relative.w-screen.h-screen
+    (dom/div :.absolute.top-0.left-0.w-screen.h-screen.z-10.bg-gray-500.opacity-75.z-10 {})
+    (dom/div :.flex.flex-col.shadow-lg.rounded.bg-gray-50.border-2.p-2.mb-4.relative.w-screen.h-full.z-20
       {:style {:maxHeight "38rem"
                :maxWidth "32rem"}}
       (dom/div :.flex.w-full.justify-center {}
-        (dom/div :.text-lg.font-bold {} "Help"))
+        (dom/div :.text-lg.font-bold.pb-2 {} "Help"))
       (dom/div :.text.lg.font-bold.cursor-pointer.absolute.top-2.right-2
         {:onClick (fn [] (m/set-value! this :ui/show-help-modal false))} "Close")
       (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}
-        (dom/div :.flex.w-full {}
-          (dom/div :.text-lg.font-bold {} "Tiles"))
         (dom/div :.flex.flex-col.gap-2 {}
           (dom/div :.flex.gap-2 {}
             (ui-tile/ui-tile {::tile/title "Ra"
