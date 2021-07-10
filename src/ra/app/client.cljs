@@ -50,5 +50,10 @@
   (let [app client-app/APP]
     (app/set-root! app Root {:initialize-state? true})
     (dr/change-route! app ["home"])
+    (set! (.-onpopstate js/window)
+          (fn [evt]
+            (let [path (.-pathname (.-location (.-document js/window)))
+                  elements (.split path "/")]
+              (dr/change-route! app (rest elements)))))
     (app/mount! app Root "app" {:initialize-state? false})
     (m-player/init! app)))

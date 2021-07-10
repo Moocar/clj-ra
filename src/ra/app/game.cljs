@@ -15,7 +15,6 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.app.routing :as routing]
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
 
 (declare Game)
@@ -24,15 +23,20 @@
   (first (filter #(= (::player/id %) (::player/id (:ui/current-player game)))
                  (::game/players game))))
 
-(defn menu-bar [{:keys [game epoch]}]
+(defn menu-bar [this {:keys [game epoch]}]
   (assert game)
-  (dom/div :.border-b-2.flex {}
-    (dom/div :.pw-2 {}
-      (dom/span {} "Game: ")
-      (dom/span {} (::game/short-id game)))
-    (dom/div {}
-      (dom/span :.pl-8 {} "Epoch: ")
-      (dom/span (::epoch/number epoch)))))
+  (dom/div :.border-b-2.flex.justify-between.pb-2 {}
+    (dom/div :.flex {}
+      (dom/div :.pw-2 {}
+        (dom/span {} "Game: ")
+        (dom/span {} (::game/short-id game)))
+      (dom/div {}
+        (dom/span :.pl-8 {} "Epoch: ")
+        (dom/span (::epoch/number epoch))))
+    (ui/button {:onClick (fn []
+                           (dr/change-route! this ["lobby"])
+                           (.pushState (.-history js/window) #js {} "" "/lobby"))}
+      "Leave Game")))
 
 (defmutation back-to-lobby [{}]
   (action [env]
@@ -40,7 +44,7 @@
 
 (defn ui-unstarted [this game]
   (dom/div {}
-    (menu-bar {:game game})
+    (menu-bar this {:game game})
     (dom/div :.flex-col.justify-center {}
       (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center.gap-6 {}
         (dom/div :.p-2 {} "Game has not started yet")
@@ -49,12 +53,6 @@
                                  (comp/transact! this [(m-game/join-game {::game/id   (::game/id game)
                                                                           ::player/id (::player/id (:ui/current-player game))})]))}
             "Join Game"))
-        (when-not (joined? game)
-          (ui/button {:onClick (fn []
-                                 (comp/transact! this [(back-to-lobby {})])
-                                 (dr/change-route! this ["lobby"])
-                                 (.back js/history))}
-            "Back"))
         (when (joined? game)
           (dom/div {}
             (ui/button {:onClick (fn []
@@ -65,7 +63,8 @@
             (ui/button {:onClick (fn []
                                    (comp/transact! this [(m-game/leave-game {::game/id   (::game/id game)
                                                                              ::player/id (::player/id (:ui/current-player game))})])
-                                   (routing/route-to! "/lobby"))}
+                                   (dr/change-route! this ["lobby"])
+                                   (.pushState (.-history js/window) #js {} "" "/lobby"))}
               "Leave Game")))))
     (dom/div {}
       (dom/div :.font-bold  {} "Event log")
@@ -159,7 +158,7 @@
 
 (defn ui-main-game [this {:keys [game epoch] :as props}]
   (dom/div :.flex.flex-col.p-2.gap-2 {}
-    (menu-bar props)
+    (menu-bar this props)
     (dom/div :.flex-col.w-screen {}
       (dom/div :.font-bold {} "Auctions Invoked")
       (ui-ra-track props))
@@ -201,7 +200,11 @@
                         (set! (.-title js/document) (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
    :route-segment ["game" ::game/id]
    :will-enter (fn [_ props]
-                 (dr/route-immediate [::game/id (uuid (::game/id props))]))}
+                 (dr/route-immediate [::game/id (uuid (::game/id props))]))
+   :allow-route-change? (fn [this] false)
+   :route-denied (fn [this router relative-path]
+                   (when (js/confirm "Are you sure you want to leave the game?")
+                     (dr/retry-route! this router relative-path )))}
   (dom/div :.w-screen.bg-white {}
    (cond
      (not (::game/started-at props))
