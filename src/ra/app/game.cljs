@@ -169,7 +169,7 @@
           (ui-discard-disaster-tiles this props)))
       (if (and (:my-go? props) (::epoch/auction (:epoch props)))
         (dom/div :.font-bold {}
-          (dom/span {} "Your bid"))
+          (dom/div :.animate-bounce {} "Your bid"))
         (dom/div :.font-bold {}
           (dom/span {} "Waiting for ")
           (dom/span {} (::player/name (::hand/player (:hand props)))))))))
