@@ -87,17 +87,18 @@
    4 9
    5 10})
 
-(defn ui-ra-track [{:keys [hands epoch ra-tiles] :as props}]
+(defn ui-ra-track [{:keys [hands ra-tiles] :as props}]
   (let [blank-spots (- (players->ra-count (count hands))
                        (count ra-tiles))]
-    (dom/div :.flex.flex-row.flex-initial.w-screen.gap-2 {}
-      (map (fn [ra-tile]
-             (dom/div :.border-2.flex.items-center.justify-center.rounded-md.cursor-default.justify-self-auto.w-8.h-8
-               (if ra-tile
-                 {:classes (ui-tile/type-classes (::tile/type ra-tile))}
-                 {})))
-           (concat ra-tiles
-                   (map (fn [_] nil) (range blank-spots)))))))
+    (dom/div :.flex.flex-row.flex-wrap.gap-2 {}
+      (concat (map (fn [_] (dom/div
+                             {:style {"animation-name"     "drawtile"
+                                      "animation-duration" "1s"
+                                      "transform"          "scale(1, 1)"}}
+                             (ui-tile/ra-tile)))
+                   ra-tiles)
+              (map (fn [_] (ui-tile/blank-ra-tile))
+                   (range blank-spots))))))
 
 (defn my-go? [{:keys [hand my-player]}]
   (= (::player/id (::hand/player hand))
@@ -177,13 +178,13 @@
   (dom/div :.flex.flex-col.p-2.gap-2 {}
     (menu-bar this props)
     (dom/div :.flex-col.w-screen {}
-      (dom/div :.font-bold {} "Auctions Invoked")
+      (dom/div :.font-bold {} "Auction Count")
       (ui-ra-track props))
     (dom/div :.flex-col.w-screen {}
-      (dom/div :.font-bold {} "Auction")
+      (dom/div :.font-bold {} "Tiles")
       (ui-epoch/ui-auction-track this props))
     (dom/div :.flex.items-center {}
-      (dom/div :.font-bold {} "Current Sun Disk")
+      (dom/div :.font-bold {} "Current Bid Disk")
       (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
     (dom/hr {})
     (ui-action-bar this props)

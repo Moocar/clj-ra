@@ -15,6 +15,14 @@
    ::tile-type/river ["bg-blue-300"]
    ::tile-type/flood ["bg-blue-300"]})
 
+(defn ra-tile []
+  (dom/div :.w-8.h-8.md:w-20.md:h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative.shadow-md.flex-shrink-0
+    (cond-> {:classes (get type-classes ::tile-type/ra)})
+    (dom/span :.text-center.align-middle.inline-block.text-sm.z-10 "Ra")))
+
+(defn blank-ra-tile []
+  (dom/div :.w-8.h-8.md:w-20.md:h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative.shadow-md.flex-shrink-0 {}))
+
 (defsc Tile [this props {:keys [selectable? dimmed? on-click stack-size]}]
   {:query [::tile/id
            ::tile/title
