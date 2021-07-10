@@ -2,9 +2,11 @@
   (:require [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
             [com.fulcrologic.fulcro.dom :as dom]
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
+            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [ra.app.epoch :as ui-epoch]
             [ra.app.event :as ui-event]
             [ra.app.hand :as ui-hand]
+            [ra.app.help :as ui-help]
             [ra.app.player :as ui-player]
             [ra.app.sun-disk :as ui-sun-disk]
             [ra.app.tile :as ui-tile]
@@ -14,8 +16,7 @@
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
-            [ra.specs.tile :as tile]
-            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
+            [ra.specs.tile :as tile]))
 
 (declare Game)
 
@@ -33,10 +34,15 @@
       (dom/div {}
         (dom/span :.pl-8 {} "Epoch: ")
         (dom/span (::epoch/number epoch))))
-    (ui/button {:onClick (fn []
-                           (dr/change-route! this ["lobby"])
-                           (.pushState (.-history js/window) #js {} "" "/lobby"))}
-      "Leave Game")))
+    (dom/div :.flex.gap-2 {}
+      (ui/button {:onClick (fn []
+                             (m/set-value! this :ui/show-help-modal true))}
+        "Help")
+      (ui/button {:onClick (fn []
+                             (dr/change-route! this ["lobby"])
+                             (.pushState (.-history js/window) #js {} "" "/lobby"))}
+        "Leave Game")
+      )))
 
 (defmutation back-to-lobby [{}]
   (action [env]
@@ -192,6 +198,7 @@
            ;;           {::game/tile-bag (comp/get-query Tile)}
            ::game/started-at
            ::game/short-id
+           :ui/show-help-modal
            {[:ui/current-player '_] (comp/get-query ui-player/Player)}
            ::game/id]
    :ident ::game/id
@@ -220,6 +227,8 @@
                             :hand     (::epoch/current-hand epoch)
                             :hands    (::epoch/hands epoch)
                             :auction  (::epoch/auction epoch)}]
-                     (assoc p :my-go? (my-go? p)))))))
+                     (assoc p :my-go? (my-go? p)))))
+    (when (:ui/show-help-modal props)
+      (ui-help/ui-help-modal this))))
 
 (def ui-game (comp/factory Game {:keyfn ::game/id}))
