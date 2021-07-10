@@ -3,6 +3,7 @@
             [com.wsscode.pathom.core :as p]
             [edn-query-language.core :as eql]
             [integrant.core :as ig]
+            [ra.model.bot :as m-bot]
             [ra.model.game :as m-game]
             [ra.model.player :as m-player]))
 
@@ -43,7 +44,7 @@
 (defn make-resolvers []
   [m-game/resolvers
    m-player/resolvers
-   m-player/resolvers
+   m-bot/resolvers
    index-explorer])
 
 (defn process-error [env err]

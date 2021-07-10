@@ -11,6 +11,7 @@
             [ra.app.sun-disk :as ui-sun-disk]
             [ra.app.tile :as ui-tile]
             [ra.app.ui :as ui]
+            [ra.model.bot :as m-bot]
             [ra.model.game :as m-game]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
@@ -59,6 +60,10 @@
                                  (comp/transact! this [(m-game/join-game {::game/id   (::game/id game)
                                                                           ::player/id (::player/id (:ui/current-player game))})]))}
             "Join Game"))
+        (ui/button {:onClick (fn []
+                               (comp/transact! this [(m-bot/add-to-game {::game/id   (::game/id game)
+                                                                         ::player/id (::player/id (:ui/current-player game))})]))}
+          "Add Bot")
         (when (joined? game)
           (dom/div {}
             (ui/button {:onClick (fn []

@@ -24,7 +24,6 @@
 (pc/defmutation save [{:keys [::db/conn]} {:keys [::player/id ::player/name] :as input}]
   {::pc/params #{::player/id}
    ::pc/output []}
-  (println "saving player" input)
   (d/transact! conn [[:db/add [::player/id id] ::player/name name]])
   {})
 

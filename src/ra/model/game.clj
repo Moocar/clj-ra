@@ -316,13 +316,16 @@
   (do-new-game conn (db/uuid)))
 
 (pc/defmutation join-game [{:keys [::db/conn]}
-                           {game-id ::game/id player-id ::player/id}]
+                           {game-id ::game/id player-id ::player/id :as input}]
   {::pc/params [::game/id ::player/id]
    ::pc/transform notify-other-clients
    ::pc/output [::game/id]}
-  (let [game (d/entity @conn [::game/id game-id])]
+  (let [game (d/entity @conn [::game/id game-id])
+        player (d/entity @conn [::player/id player-id])]
     (when (::game/started-at game)
       (throw (ex-info "Game already started" {})))
+    (when (some #{player} (::game/players game))
+      (throw (ex-info "You've already joined this game" {})))
     (if (>= (count (game->players game)) 5)
       (throw (ex-info "Maximum players already reached" {}))
       (d/transact! conn
