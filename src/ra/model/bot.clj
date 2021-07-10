@@ -9,9 +9,48 @@
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [ra.specs.auction.reason :as auction-reason]
+            [ra.specs.auction :as auction]))
 
-(defn handle-change [{:keys [::db/conn :parser] :as env} player-id game-id]
+(defn bid! [{:keys [:parser] :as env} epoch hand]
+  (let [available-sun-disks (::hand/available-sun-disks hand)
+        auction             (::epoch/auction epoch)
+        voluntary-auction?  (and (= hand (::epoch/last-ra-invoker epoch))
+                                (= ::auction-reason/invoke (::auction/reason auction)))
+        sun-disk            (rand-nth (cond-> (vec available-sun-disks) (not voluntary-auction?) (conj nil)))]
+    (parser env [`(m-game/bid {::hand/id ~(::hand/id hand)
+                               :sun-disk ~sun-disk})])))
+
+(defn discard-disaster-tiles! [{:keys [:parser] :as env} hand]
+  (let [tiles                  (set (::hand/tiles hand))
+        disaster-tiles         (set (filter ::tile/disaster? tiles))
+        without-disaster-tiles (set/difference tiles disaster-tiles)
+        selected-tiles         (loop [acc        []
+                                      tile-types (mapcat (fn [t] (repeat 2 (::tile/type t))) disaster-tiles)
+                                      tiles      without-disaster-tiles]
+                                 (if (or (empty? tile-types) (empty? tiles))
+                                   acc
+                                   (let [found (first (filter (fn [tile]
+                                                                (= (::tile/type tile) (first tile-types)))
+                                                              tiles))]
+                                     (if found
+                                       (recur (conj acc found)
+                                              (rest tile-types)
+                                              (disj tiles found))
+                                       (recur acc
+                                              (rest tile-types)
+                                              tiles)))))]
+    (parser env [`(m-game/discard-disaster-tiles {::hand/id ~(::hand/id hand)
+                                                  :tile-ids ~(map ::tile/id selected-tiles)})])))
+
+(defn invoke-ra! [{:keys [:parser] :as env} hand]
+  (parser env [`(m-game/invoke-ra {::hand/id ~(::hand/id hand)})]))
+
+(defn draw-tile! [{:keys [:parser] :as env} hand]
+  (parser env [`(m-game/draw-tile {::hand/id ~(::hand/id hand)})]))
+
+(defn handle-change [{:keys [::db/conn] :as env} player-id game-id]
   (assert player-id)
   (assert game-id)
   (let [player (d/entity @conn [::player/id player-id])
@@ -27,33 +66,14 @@
           (future
             (Thread/sleep 1000)
             (if (::epoch/auction epoch)
-              (let [available-sun-disks (::hand/available-sun-disks current-hand)]
-                (parser env [`(m-game/bid {::hand/id ~(::hand/id current-hand)
-                                                  :sun-disk ~(rand-nth (vec available-sun-disks))})]))
+              (bid! env epoch current-hand)
               (if (::epoch/in-disaster? epoch)
-                (let [tiles                  (set (::hand/tiles current-hand))
-                      disaster-tiles         (set (filter ::tile/disaster? tiles))
-                      without-disaster-tiles (set/difference tiles disaster-tiles)
-                      selected-tiles         (loop [acc        []
-                                                    tile-types (mapcat (fn [t] (repeat 2 (::tile/type t))) disaster-tiles)
-                                                    tiles      without-disaster-tiles]
-                                               (if (or (empty? tile-types) (empty? tiles))
-                                                 acc
-                                                 (let [found (first (filter (fn [tile]
-                                                                              (= (::tile/type tile) (first tile-types)))
-                                                                            tiles))]
-                                                   (if found
-                                                     (recur (conj acc found)
-                                                            (rest tile-types)
-                                                            (disj tiles found))
-                                                     (recur acc
-                                                            (rest tile-types)
-                                                            tiles)))))]
-                  (parser env [`(m-game/discard-disaster-tiles {::hand/id ~(::hand/id current-hand)
-                                                                       :tile-ids ~(map ::tile/id selected-tiles)})]))
+                (discard-disaster-tiles! env current-hand)
                 (if (m-game/auction-tiles-full? epoch)
-                  (parser env [`(m-game/invoke-ra {::hand/id ~(::hand/id current-hand)})])
-                  (parser env [`(m-game/draw-tile {::hand/id ~(::hand/id current-hand)})]))))
+                  (invoke-ra! env current-hand)
+                  (if (= 0 (rand-int 4))
+                    (invoke-ra! env current-hand)
+                    (draw-tile! env current-hand)))))
             (m-game/notify-clients (:websockets env) (:any @(:connected-uids env)) game-id)))))))
 
 (defn rand-char []
