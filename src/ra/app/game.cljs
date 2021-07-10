@@ -49,7 +49,7 @@
     (swap! (:state env) assoc :ui/current-game nil)))
 
 (defn ui-unstarted [this game]
-  (dom/div {}
+  (dom/div :.p-2 {}
     (menu-bar this {:game game})
     (dom/div :.flex-col.justify-center {}
       (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center.gap-6 {}
@@ -162,6 +162,17 @@
         (dom/span {} "Waiting for ")
         (dom/span {} (::player/name (::hand/player hand)))))))
 
+(defn ui-action-bar [this props]
+  (dom/div :.h-24.flex.justify-center.items-center {}
+    (if (:my-go? props)
+      (dom/div :.flex.flex-row.space-x-2.pb-2 {}
+        (ui-tile-bag this props)
+        (ui-invoke-ra this props)
+        (ui-discard-disaster-tiles this props))
+      (dom/div :.font-bold {}
+        (dom/span {} "Waiting for ")
+        (dom/span {} (::player/name (::hand/player (:hand props))))))))
+
 (defn ui-main-game [this {:keys [game epoch] :as props}]
   (dom/div :.flex.flex-col.p-2.gap-2 {}
     (menu-bar this props)
@@ -175,13 +186,7 @@
       (dom/div :.font-bold {} "Current Sun Disk")
       (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
     (dom/hr {})
-    (dom/div :.flex.flex-col {}
-      (dom/div :.py-2 {}
-        (ui-status props))
-      (dom/div :.flex.flex-row.space-x-2.pb-2 {}
-        (ui-tile-bag this props)
-        (ui-invoke-ra this props)
-        (ui-discard-disaster-tiles this props)))
+    (ui-action-bar this props)
     (dom/hr {})
     (dom/div {}
       (dom/h3 :.font-bold "Seats")
