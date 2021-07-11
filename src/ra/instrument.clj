@@ -61,7 +61,7 @@
     (d/transact! conn (concat tx (m-game/event-tx (m-game/hand->game hand)
                                                   (str (m-game/hand->player-name hand) " Drew tile " (::tile/title tile)) )))))
 
-(defn my-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
+#_(defn my-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
   (let [game (get-game @conn game-short-id)
         epoch (::game/current-epoch game)
         [h1 h2 h3] (get-hands epoch 3)]
@@ -71,7 +71,7 @@
     (m-game/notify-all-clients! env (::game/id game))
     nil))
 
-(defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
+#_(defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
   (let [game (get-game @conn game-short-id)
         players (::game/players game)]
     (doseq [player players]

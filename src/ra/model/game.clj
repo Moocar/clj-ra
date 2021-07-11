@@ -199,9 +199,79 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Resolvers
 
+(defn load-game [db query game-id]
+  (let [result (d/pull db query [::game/id game-id])]
+    (-> result
+        ;; TODO add zdt encoding to websocket transit
+        (update-when ::game/started-at str)
+        (update ::game/current-epoch
+                (fn [epoch]
+                  (-> epoch
+                      (update ::epoch/auction-tiles #(vec (sort-by :db/id %)))
+                      (update ::epoch/hands
+                              (fn [hands]
+                                (mapv (fn [hand]
+                                        (-> hand
+                                            (assoc ::hand/my-go? (= (::hand/seat hand)
+                                                                    (::hand/seat (::epoch/current-hand epoch))))))
+                                      hands)))))))))
+
+(def player-q
+  [::player/name
+   ::player/id])
+
+(def auction-q
+  [::auction/reason
+   {::auction/ra-hand [::hand/id]}
+   ::auction/tiles-full?
+   {::auction/bids [{::bid/hand [::hand/id {::hand/player [::player/name]}]}
+                    ::bid/sun-disk]}])
+
+(def tile-q
+  [::tile/id
+   ::tile/title
+   ::tile/disaster?
+   ::tile/type
+   ::tile/auction-track-position])
+
+(def hand-q
+  [::hand/available-sun-disks
+   ::hand/used-sun-disks
+   ::hand/my-go?
+   ::hand/seat
+   ::hand/score
+   ::hand/id
+   {::hand/tiles tile-q}
+   {::hand/player player-q}])
+
+(def epoch-q
+  [::epoch/current-sun-disk
+   ::epoch/number
+   ::epoch/id
+   {::epoch/auction auction-q}
+   ::epoch/in-disaster?
+   {::epoch/last-ra-invoker [::hand/id]}
+   {::epoch/current-hand hand-q}
+   {::epoch/ra-tiles tile-q}
+   {::epoch/auction-tiles tile-q}
+   {::epoch/hands hand-q}])
+
+(def event-q
+  [::event/id
+   ::event/description])
+
+(def game-query
+  [{::game/players player-q}
+   {::game/current-epoch epoch-q}
+   {::game/events event-q}
+   ::game/started-at
+   ::game/short-id
+   ::game/id])
+
+
 (pc/defresolver game-resolver [{:keys [::db/conn ::p/parent-query]}
                                {:keys [::game/id]}]
-  {::pc/input #{::game/id}
+  {::pc/input  #{::game/id}
    ::pc/output [{::game/tile-bag m-tile/q}
                 {::game/players m-player/q}
                 ::game/started-at
@@ -222,21 +292,7 @@
                                                        ::hand/my-go?
                                                        {::hand/player [::player/id]}]}]}
                 ::game/id]}
-  (let [result (d/pull @conn parent-query [::game/id id])]
-    (-> result
-        ;; TODO add zdt encoding to websocket transit
-        (update-when ::game/started-at str)
-        (update ::game/current-epoch
-                (fn [epoch]
-                  (-> epoch
-                      (update ::epoch/auction-tiles #(sort-by :db/id %))
-                      (update ::epoch/hands
-                              (fn [hands]
-                                (map (fn [hand]
-                                       (-> hand
-                                           (assoc ::hand/my-go? (= (::hand/seat hand)
-                                                                   (::hand/seat (::epoch/current-hand epoch))))))
-                                     hands)))))))))
+  (load-game @conn parent-query id))
 
 (pc/defresolver short-game-resolver [{:keys [::db/conn]}
                                {:keys [::game/short-id]}]
@@ -251,28 +307,29 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mutations
 
-(defn notify-clients [websockets cids game-id]
+(defn notify-clients [websockets cids game]
   (doseq [o cids]
-    (fws-protocols/push websockets o :refresh {::game/id game-id})))
+    (fws-protocols/push websockets o :refresh game)))
 
 (defn notify-other-clients [{:keys [::pc/mutate] :as mutation}]
   (assoc mutation
          ::pc/mutate
-         (fn [env params]
+         (fn [{:keys [::db/conn] :as env} params]
            (let [result (mutate env params)]
              (when (:connected-uids env)
                (when-let [game-id (::game/id result)]
-                 (let [other-cids (disj (:any @(:connected-uids env)) (:cid env))]
-                   (notify-clients (:websockets env) other-cids game-id))))
+                 (let [other-cids (disj (:any @(:connected-uids env)) (:cid env))
+                       game (load-game @conn game-query game-id)]
+                   (notify-clients (:websockets env) other-cids game))))
              result))))
 
 ;; full env
-(defn notify-all-clients! [env game-id]
+(defn notify-all-clients! [env game]
   (let [websockets (:ra.server/websockets env)
         connected-uids (:any @(:connected-uids (:websockets websockets)))
         websockets (:websockets websockets)
         cids connected-uids]
-    (notify-clients websockets cids game-id)))
+    (notify-clients websockets cids game)))
 
 (defn rand-char []
   (char (+ 65 (rand-int 26))))

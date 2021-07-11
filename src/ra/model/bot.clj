@@ -74,7 +74,8 @@
                   (if (= 0 (rand-int 4))
                     (invoke-ra! env current-hand)
                     (draw-tile! env current-hand)))))
-            (m-game/notify-clients (:websockets env) (:any @(:connected-uids env)) game-id)))))))
+            (let [game (m-game/load-game @conn m-game/game-query game-id)]
+              (m-game/notify-clients (:websockets env) (:any @(:connected-uids env)) game))))))))
 
 (defn rand-char []
   (char (+ 65 (rand-int 26))))

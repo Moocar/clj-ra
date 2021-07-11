@@ -6,7 +6,8 @@
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
             [com.fulcrologic.fulcro.networking.websockets :as fws]
             [edn-query-language.core :as eql]
-            [ra.specs.game :as game]))
+            [ra.specs.game :as game]
+            [com.fulcrologic.fulcro.algorithms.merge :as merge]))
 
 (defmutation hide-error [_]
   (action [env]
@@ -66,11 +67,13 @@
 
 (defonce APP
   (app/fulcro-app
-   {:remote-error?       remote-error?
-    :global-error-action global-error-action
+   {:remote-error?        remote-error?
+    :global-error-action  global-error-action
     :global-eql-transform global-eql-transform
-    :remotes             {:remote (fws/fulcro-websocket-remote
-                                   {:push-handler          (fn [{:keys [topic msg] :as all}]
-                                                             (let [{:keys [::game/id]} msg]
-                                                      (df/load! APP [::game/id id] (comp/registry-key->class :ra.app.game/Game))))
-                                    :global-error-callback #(comp/transact! APP [(show-error {})])})}}))
+    :remotes              {:remote (fws/fulcro-websocket-remote
+                                    {:push-handler          (fn [{:keys [ msg]}]
+                                                              (merge/merge-component! APP
+                                                                                      (comp/registry-key->class :ra.app.game/Game)
+                                                                                      msg
+                                                                                      :remove-missing? true))
+                                     :global-error-callback #(comp/transact! APP [(show-error {})])})}}))
