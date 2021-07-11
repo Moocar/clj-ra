@@ -12,7 +12,9 @@
             [ra.app.game :as ui-game]
             [ra.app.lobby :as ui-lobby]
             [ra.app.player :as ui-player]
-            [ra.model.player :as m-player]))
+            [ra.model.player :as m-player]
+            [clojure.core.async :as async]
+            [com.fulcrologic.fulcro.algorithms.merge :as merge]))
 
 (defsc Home [_ _]
   {:query []
@@ -51,9 +53,18 @@
     (app/set-root! app Root {:initialize-state? true})
     (dr/change-route! app ["home"])
     (set! (.-onpopstate js/window)
-          (fn [evt]
-            (let [path (.-pathname (.-location (.-document js/window)))
+          (fn [_]
+            (let [path     (.-pathname (.-location (.-document js/window)))
                   elements (.split path "/")]
               (dr/change-route! app (rest elements)))))
+    (async/go
+      (loop []
+        (let [game (async/<! client-app/loader-ch)]
+          (merge/merge-component! app
+                                  (comp/registry-key->class :ra.app.game/Game)
+                                  game
+                                  :remove-missing? true)
+          (async/<! (async/timeout 1000))
+          (recur))))
     (app/mount! app Root "app" {:initialize-state? false})
     (m-player/init! app)))

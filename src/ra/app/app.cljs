@@ -7,7 +7,8 @@
             [com.fulcrologic.fulcro.networking.websockets :as fws]
             [edn-query-language.core :as eql]
             [ra.specs.game :as game]
-            [com.fulcrologic.fulcro.algorithms.merge :as merge]))
+            [com.fulcrologic.fulcro.algorithms.merge :as merge]
+            [clojure.core.async :as async]))
 
 (defmutation hide-error [_]
   (action [env]
@@ -65,15 +66,15 @@
       (let [{:keys [error]} (val (first body))]
         (swap! (:state env) assoc :ui/global-error (:msg error))))))
 
+(def loader-ch
+  (async/chan))
+
 (defonce APP
   (app/fulcro-app
    {:remote-error?        remote-error?
     :global-error-action  global-error-action
     :global-eql-transform global-eql-transform
     :remotes              {:remote (fws/fulcro-websocket-remote
-                                    {:push-handler          (fn [{:keys [ msg]}]
-                                                              (merge/merge-component! APP
-                                                                                      (comp/registry-key->class :ra.app.game/Game)
-                                                                                      msg
-                                                                                      :remove-missing? true))
+                                    {:push-handler          (fn [{:keys [msg]}]
+                                                              (async/put! loader-ch msg))
                                      :global-error-callback #(comp/transact! APP [(show-error {})])})}}))

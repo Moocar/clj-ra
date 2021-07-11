@@ -66,7 +66,10 @@
           (future
             (Thread/sleep 1000)
             (if (::epoch/auction epoch)
-              (bid! env epoch current-hand)
+              (if (= (count (::auction/bids (::epoch/auction epoch)))
+                     (count (::game/players game)))
+                nil
+                (bid! env epoch current-hand))
               (if (::epoch/in-disaster? epoch)
                 (discard-disaster-tiles! env current-hand)
                 (if (m-game/auction-tiles-full? epoch)
@@ -86,7 +89,7 @@
 (pc/defmutation add-to-game
     [{:keys [::db/conn :parser] :as env} input]
   {::pc/params    #{::game/id}
-   ::pc/transform m-game/notify-other-clients
+   ::pc/transform m-game/notify-other-clients-transform
    ::pc/output    [::game/id]}
   (let [player-id   (db/uuid)
         player-name (new-bot-name)
