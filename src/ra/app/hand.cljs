@@ -35,20 +35,31 @@
                                    (::auction/bids auction)))]
     (dom/div :.flex.space-x-2.h-16 {}
       (concat
-       (when current-bid
-         [(ui-sun-disk/ui {:value (or (::bid/sun-disk current-bid) "Pass")
-                           :large true})])
        (map (fn [sun-disk]
               (let [used? ((set (::hand/used-sun-disks hand)) sun-disk)]
-                (ui-sun-disk/ui (cond-> {:value sun-disk}
+                (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")}
                                   (and my-go? (::hand/my-go? hand) auction (< (::bid/sun-disk highest-bid) sun-disk) (not used?))
                                   (assoc :onClick #(onClickSunDisk sun-disk))
                                   (and my-go? (::hand/my-go? hand) auction (< sun-disk (::bid/sun-disk highest-bid)) (not used?))
                                   (assoc :too-low? true)
                                   used?
-                                  (assoc :used? true)))))
+                                  (assoc :used? true)
+                                  (= (::bid/sun-disk current-bid) sun-disk)
+                                  (assoc :large true)))))
             (concat (::hand/used-sun-disks hand)
-                    (::hand/available-sun-disks hand)))
+                    (sort (fn [a b]
+                            (if (nil? a)
+                              1
+                              (if (nil? b)
+                                -1
+                                (if (< a b)
+                                  -1
+                                  (if (= a b)
+                                    0
+                                    1)))))
+                          (concat (::hand/available-sun-disks hand)
+                                  (when current-bid
+                                    [(::bid/sun-disk current-bid)])))))
        (when (and my-go? (::hand/my-go? hand) auction (can-pass? auction hand))
          [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})])))))
 
@@ -91,7 +102,7 @@
    :ident ::hand/id}
   (dom/div :.border-2.border-transparent.py-2.flex.flex-col
     (if (= (::hand/seat hand) (::hand/seat (::epoch/current-hand epoch)))
-      {:classes ["border-red-500"]}
+      {:classes ["bg-green-200"]}
       {:classes []})
     (dom/div :.flex.flex-row.justify-between {}
       (ui-player/ui-player (::hand/player hand))

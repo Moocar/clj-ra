@@ -187,15 +187,17 @@
       (dom/div :.font-bold {} "Current Bid Disk")
       (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
     (dom/hr {})
+    (dom/div :.flex-col.w-screen {}
+      (dom/h3 :.font-bold "Events")
+      (ui-event/ui-items (reverse (::game/events game))))
+    (dom/hr {})
     (ui-action-bar this props)
     (dom/hr {})
     (dom/div {}
       (dom/h3 :.font-bold "Seats")
       (dom/div {}
         (ui-hands this props)))
-    (dom/div :.flex-col.w-screen {}
-      (dom/h3 :.font-bold "Events")
-      (ui-event/ui-items (reverse (::game/events game))))))
+    ))
 
 (defsc Game [this props]
   {:query [{::game/players (comp/get-query ui-player/Player)}
