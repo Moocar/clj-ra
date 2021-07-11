@@ -119,6 +119,7 @@
     (dom/div {}
       (ui-sun-disks hand computed))
     (dom/div {}
-      (ui-tiles hand computed))))
+      (ui-tiles hand computed))
+    (dom/hr :.mt-2 {})))
 
 (def ui-hand (comp/factory Hand {:keyfn ::hand/seat}))

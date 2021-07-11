@@ -196,8 +196,7 @@
     (dom/div {}
       (dom/h3 :.font-bold "Seats")
       (dom/div {}
-        (ui-hands this props)))
-    ))
+        (ui-hands this props)))))
 
 (defsc Game [this props]
   {:query [{::game/players (comp/get-query ui-player/Player)}
