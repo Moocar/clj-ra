@@ -14,5 +14,5 @@
 (def ui-item (comp/factory Item {:keyfn ::event/id}))
 
 (defn ui-items [events]
-  (dom/div :.flex-col.overflow-hidden.h-24 {}
-           (reverse (map ui-item (take 4 events)))))
+  (dom/div :.flex-col.overflow-y-scroll.h-48 {}
+           (map ui-item events)))
