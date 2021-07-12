@@ -18,7 +18,10 @@
         auction             (::epoch/auction epoch)
         voluntary-auction?  (and (= hand (::epoch/last-ra-invoker epoch))
                                 (= ::auction-reason/invoke (::auction/reason auction)))
-        sun-disk            (rand-nth (cond-> (vec available-sun-disks) (not voluntary-auction?) (conj nil)))]
+        sun-disk            (if (and (not voluntary-auction?)
+                                     (zero? (rand-int 2)))
+                              nil
+                              (rand-nth (vec available-sun-disks)))]
     (parser env [`(m-game/bid {::hand/id ~(::hand/id hand)
                                :sun-disk ~sun-disk})])))
 

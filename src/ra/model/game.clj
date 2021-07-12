@@ -735,12 +735,15 @@
        ;; discard for them and move to the next hand
 
        ;; If everyone passed
-       (if (::auction/tiles-full? auction)
-         ;; If the auction track is full, then we discard all the tiles
-         [(discard-auction-tiles-op epoch)]
-         ;; If the auction track isn't full, and everyone else passed, you have to bid
-         (when (= ::auction-reason/invoke (::auction/reason auction))
-           (throw (ex-info "You voluntarily invoked ra. You must bid" {}))))))))
+       (concat
+        [[:db/add (:db/id epoch) ::epoch/current-hand (:db/id (next-hand (::epoch/last-ra-invoker epoch)))]]
+        ;; If everyone passed
+        (if (::auction/tiles-full? auction)
+          ;; If the auction track is full, then we discard all the tiles
+          [(discard-auction-tiles-op epoch)]
+          ;; If the auction track isn't full, and everyone else passed, you have to bid
+          (when (= ::auction-reason/invoke (::auction/reason auction))
+            (throw (ex-info "You voluntarily invoked ra. You must bid" {})))))))))
 
 (pc/defmutation bid
   [{:keys [::db/conn] :as env} {:keys [sun-disk] :as input}]
