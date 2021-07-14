@@ -10,7 +10,8 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [ra.model.bot :as m-bot]))
 
 (defn get-hands [epoch hand-count]
   (->> (::epoch/hands epoch)
@@ -52,30 +53,70 @@
 (defn find-tile-in-auction [epoch pred]
   (first (filter pred (::epoch/auction-tiles epoch))))
 
-(defn draw-tile* [conn hand tile]
+(defn draw-tile* [{:keys [::db/conn ::pathom/parser] :as env} hand tile]
   (let [db @conn
         hand (d/entity db (:db/id hand))
-        tx (if (m-tile/ra? tile)
-             (m-game/draw-ra-tx hand tile)
-             (m-game/draw-normal-tile-tx hand tile))]
-    (d/transact! conn (concat tx (m-game/event-tx (m-game/hand->game hand)
-                                                  (str (m-game/hand->player-name hand) " Drew tile " (::tile/title tile)) )))))
+        game (m-game/hand->game hand)
+        epoch (m-game/hand->epoch hand)]
+    (m-game/do-draw-tile env game epoch hand tile)))
 
-#_(defn my-scenario [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
+(defn rand-bid [{:keys [::pathom/parser]} hand]
+  (parser {} [`(m-game/bid {::hand/id ~(::hand/id hand)
+                            :sun-disk ~(first (::hand/available-sun-disks hand))})]))
+
+(defn pass-bid [{:keys [::pathom/parser]} hand]
+  (parser {} [`(m-game/bid {::hand/id ~(::hand/id hand)
+                            :sun-disk nil})]))
+
+(defn refresh-game [db game]
+  (let [game (get-game db (::game/short-id game))
+        epoch (::game/current-epoch game)
+        hands (get-hands epoch 3)]
+    {:game game
+     :epoch epoch
+     :hands hands}))
+
+(defn draws-bid-pass-pass
+  [{:keys [::db/conn ::pathom/parser] :as env}
+   game
+   & {:keys [winner hands]}]
+  (let [[h1 h2 h3] hands]
+    (draw-tile* env h1 (find-tile-p game m-tile/civ?))
+    (draw-tile* env h2 (find-tile-p game m-tile/pharoah?))
+    (draw-tile* env h3 (find-tile-p game m-tile/ra?))
+    (if (= winner h1)
+      (rand-bid env h1)
+      (pass-bid env h1))
+    (if (= winner h2)
+      (rand-bid env h2)
+      (pass-bid env h2))
+    (if (= winner h3)
+      (rand-bid env h3)
+      (pass-bid env h3))
+    (refresh-game @conn game)))
+
+;; Get to the end of the first epoch quickly
+(defn run [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
   (let [game (get-game @conn game-short-id)
         epoch (::game/current-epoch game)
-        [h1 h2 h3] (get-hands epoch 3)]
-    (draw-tile* conn h1 (find-tile-p game m-tile/god?))
-    (draw-tile* conn h2 (find-tile-p game m-tile/monument?))
-    (draw-tile* conn h3 (find-tile-p game ::tile/disaster?))
-    (m-game/notify-all-clients! env (::game/id game))
+        [h1 h2 h3 :as hands] (get-hands epoch 3)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
+        _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        {:keys [game hands]} (refresh-game @conn game)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
+        _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        {:keys [game hands]} (refresh-game @conn game)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
+        _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
+        ]
     nil))
 
-#_(defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
-  (let [game (get-game @conn game-short-id)
-        players (::game/players game)]
-    (doseq [player players]
-      (d/unlisten! conn (::player/id player)))
+(defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
+  (let [game (get-game @conn game-short-id)]
     (assert game)
     (parser {} [`(m-game/reset {::game/id ~(::game/id game)})])
     (m-game/notify-all-clients! env (::game/id game))

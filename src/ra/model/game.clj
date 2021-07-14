@@ -1,5 +1,6 @@
 (ns ra.model.game
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [com.fulcrologic.fulcro.networking.websocket-protocols
              :as
              fws-protocols]
@@ -11,6 +12,7 @@
             [ra.date :as date]
             [ra.db :as db]
             [ra.model.player :as m-player]
+            [ra.model.score :as m-score]
             [ra.model.tile :as m-tile]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
@@ -21,8 +23,7 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
-            [clojure.string :as str]))
+            [ra.specs.tile.type :as tile-type]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Rules
@@ -93,48 +94,6 @@
    3 8
    4 9
    5 10})
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Scoring
-
-(defn score-hands [hands]
-  (let [hand-scores (map (fn [hand]
-                           {::hand/id      (::hand/id hand)
-                            :db/id         (:db/id hand)
-                            :old-score     (::hand/score hand)
-                            :score         (let [tiles             (::hand/tiles hand)
-                                                 god-count         (count (filter m-tile/god? tiles))
-                                                 gold-count        (count (filter m-tile/gold? tiles))
-                                                 unique-civs-count (count (distinct (map ::tile/civilization-type (filter m-tile/civ? tiles))))
-                                                 flood-count       (count (filter m-tile/flood? tiles))
-                                                 nile-count        (count (filter m-tile/nile? tiles))]
-                                             (+ 0
-                                                (* 2 god-count)
-                                                (* 3 gold-count)
-                                                (case unique-civs-count
-                                                  0 -5
-                                                  1 0
-                                                  2 0
-                                                  3 5
-                                                  4 10
-                                                  5 15)
-                                                (if (pos? flood-count)
-                                                  (+ flood-count nile-count)
-                                                  0)))
-                            :pharoah-count (count (filter m-tile/pharoah? (::hand/tiles hand)))})
-                         hands)
-        sorted-by-pharoah (sort-by :pharoah-count hands)]
-    (if (= (:pharoah-count (first sorted-by-pharoah))
-           (:pharoah-count (last sorted-by-pharoah)))
-      hand-scores
-      (map (fn [hand]
-             (cond (= hand (first sorted-by-pharoah))
-                   (update hand :score - 2)
-                   (= hand (last sorted-by-pharoah))
-                   (update hand :score + 5)
-                   :else
-                   hand))
-           hand-scores))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Small helpers
@@ -587,11 +546,14 @@
 
 (defn finish-epoch-tx [epoch]
   (let [game         (epoch->game epoch)
-        hand-scores  (score-hands (::epoch/hands epoch))
+        hand-scores (m-score/score-epoch epoch)
         id-atom      (atom -1)
         new-epoch-id (swap! id-atom dec)]
-    (concat (mapv (fn [hand]
-                    [:db/add (:db/id hand) ::hand/score (+ (:old-score hand) (:score hand))])
+    (assert (< (::epoch/number epoch) 3))
+    (concat (mapv (fn [hand hand-scores]
+                    [:db/add (:db/id hand) ::hand/score (+ (::hand/score hand)
+                                                           (m-score/tally-hand hand-scores))])
+                  (::epoch/hands epoch)
                   hand-scores)
             (mapcat flip-sun-disks-tx (::epoch/hands epoch))
             (mapcat discard-non-scarabs-tx (::epoch/hands epoch))
@@ -626,15 +588,8 @@
       [:db/add (:db/id tile) ::tile/auction-track-position (inc (or (::tile/auction-track-position last-tile) 0))]]
      (event-tx game (str (hand->player-name hand) " drew tile " (::tile/title tile))))))
 
-(pc/defmutation draw-tile [{:keys [::db/conn] :as env} input]
-  {::pc/params [::hand/id]
-   ::pc/transform notify-other-clients-transform
-   ::pc/output [::game/id]}
-  (let [hand (d/entity @conn [::hand/id (::hand/id input)])
-        epoch (hand->epoch hand)
-        game (hand->game hand)
-        tile (d/entity @conn (sample-tile @conn game))]
-    (when (auction-tiles-full? epoch)
+(defn do-draw-tile [{:keys [::db/conn] :as env} game epoch hand tile]
+  (when (auction-tiles-full? epoch)
       (throw (ex-info "Auction Track full" {})))
     (when (::epoch/in-disaster? epoch)
       (throw (ex-info "Waiting for players to discard disaster tiles" {})))
@@ -650,7 +605,17 @@
         (when (last-ra? epoch)
           (let [tx (finish-epoch-tx epoch)]
             (d/transact! conn tx {::game/id (::game/id game)})
-            (notify-other-clients! env (load-game @conn game-query (::game/id game)))))))
+            (notify-other-clients! env (load-game @conn game-query (::game/id game))))))))
+
+(pc/defmutation draw-tile [{:keys [::db/conn] :as env} input]
+  {::pc/params [::hand/id]
+   ::pc/transform notify-other-clients-transform
+   ::pc/output [::game/id]}
+  (let [hand (d/entity @conn [::hand/id (::hand/id input)])
+        epoch (hand->epoch hand)
+        game (hand->game hand)
+        tile (d/entity @conn (sample-tile @conn game))]
+    (do-draw-tile env game epoch hand tile)
     {::game/id (::game/id (hand->game hand))}))
 
 (defn waiting-on-last-bid?

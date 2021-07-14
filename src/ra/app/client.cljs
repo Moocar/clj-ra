@@ -41,7 +41,7 @@
                    {:>/global-error (comp/get-query ui-error/Error)}]
    :initial-state {:ui/router {}
                    :>/global-error {}}}
-  (dom/div :.relative {}
+  (dom/div :.relative.bg-gray-50 {}
     (ui-root-router (:ui/router props))
     (ui-error/ui-modal (:>/global-error props))))
 

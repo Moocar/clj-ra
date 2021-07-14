@@ -175,32 +175,33 @@
           (dom/span {} (::player/name (::hand/player (:hand props)))))))))
 
 (defn ui-main-game [this {:keys [game epoch] :as props}]
-  (dom/div :.flex.flex-col.md:p-2.gap-2.overflow-hidden {}
-           (menu-bar this props)
-           (dom/div :.flex.flex-col.xl:flex-row {}
-             (dom/div :.flex.flex-col.xl:w-96 {}
-               (dom/div :.flex-col.w-screen.xl:w-96 {}
-                        (dom/div :.font-bold {} "Auction Count")
-                        (ui-ra-track props))
-               (dom/div :.flex-col.w-screen.xl:w-96 {}
-                        (dom/div :.font-bold {} "Tiles")
-                        (ui-epoch/ui-auction-track this props))
-               (dom/div :.flex.items-center {}
-                        (dom/div :.font-bold {} "Current Bid Disk")
-                        (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
-               (dom/hr {})
-               (dom/div :.xl:order-first {}
-                 (ui-action-bar this props)
-                 (dom/hr :.xl:hidden {}))
-               (dom/div :.hidden.xl:block {}
-                        (dom/div :.flex-col.w-screen  {}
-                                 (dom/h3 :.font-bold "Events")
-                                 (ui-event/ui-items (reverse (::game/events game))))
-                        (dom/hr {})))
-             (dom/div :.xl:w-full {}
-               (dom/h3 :.font-bold "Seats")
-               (dom/div {}
-                 (ui-hands this props))))))
+  (dom/div :.bg-gray-100 {}
+    (dom/div :.flex.flex-col.md:p-2.gap-2.overflow-hidden.container.mx-auto.bg-white {}
+             (menu-bar this props)
+             (dom/div :.flex.flex-col.lg:flex-row {}
+                      (dom/div :.flex.flex-col.lg:w-96 {}
+                               (dom/div :.flex-col.w-screen.lg:w-96 {}
+                                        (dom/div :.font-bold {} "Auction Count")
+                                        (ui-ra-track props))
+                               (dom/div :.flex-col.w-screen.lg:w-96 {}
+                                        (dom/div :.font-bold {} "Tiles")
+                                        (ui-epoch/ui-auction-track this props))
+                               (dom/div :.flex.items-center {}
+                                        (dom/div :.font-bold {} "Current Bid Disk")
+                                        (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::epoch/current-sun-disk epoch)})))
+                               (dom/hr {})
+                               (dom/div :.lg:order-first {}
+                                        (ui-action-bar this props)
+                                        (dom/hr :.lg:hidden {}))
+                               (dom/div :.hidden.lg:block {}
+                                        (dom/div :.flex-col.w-screen  {}
+                                                 (dom/h3 :.font-bold "Events")
+                                                 (ui-event/ui-items (reverse (::game/events game))))
+                                        (dom/hr {})))
+                      (dom/div :.lg:w-full {}
+                               (dom/h3 :.font-bold "Seats")
+                               (dom/div {}
+                                 (ui-hands this props)))))))
 
 (defsc Game [this props]
   {:query [{::game/players (comp/get-query ui-player/Player)}

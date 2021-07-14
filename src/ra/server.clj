@@ -162,7 +162,7 @@
      [:link {:rel  "shortcut icon"
              :type "image/svg"
              :href "/favicon.svg"}]]
-    [:body {:class "bg-gray-50"}
+    [:body {:class "bg-gray-100"}
      [:div {:id "app"} ""]
      [:script {:src main-js-path}]]]))
 
