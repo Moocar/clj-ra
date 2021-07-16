@@ -573,12 +573,16 @@
              [:db/retract (:db/id epoch) ::epoch/current-hand]
              [:db/add (:db/id game) ::game/current-epoch new-epoch-id]
              [:db/add (:db/id game) ::game/epochs new-epoch-id]]
-            (event-tx game ::event-type/finish-epoch {}))))
+            (event-tx game
+                      ::event-type/finish-epoch
+                      {:hand-scores (map (fn [hand-score]
+                                           (select-keys hand-score [::hand/id :tile-scores :sun-disks]))
+                                         hand-scores)}))))
 
 (defn draw-ra-tx [hand tile]
   (let [epoch (hand->epoch hand)
         game  (epoch->game epoch)
-        db (d/entity-db tile)]
+        db    (d/entity-db tile)]
     (concat
      (move-thing-tx (:db/id tile) [game ::game/tile-bag] [epoch ::epoch/ra-tiles])
      (event-tx game

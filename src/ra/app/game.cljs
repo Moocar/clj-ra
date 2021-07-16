@@ -8,6 +8,7 @@
             [ra.app.hand :as ui-hand]
             [ra.app.help :as ui-help]
             [ra.app.player :as ui-player]
+            [ra.app.score :as ui-score]
             [ra.app.sun-disk :as ui-sun-disk]
             [ra.app.tile :as ui-tile]
             [ra.app.ui :as ui]
@@ -17,7 +18,8 @@
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [ra.specs.game.event :as event]))
 
 (declare Game)
 
@@ -203,6 +205,10 @@
                                (dom/div {}
                                  (ui-hands this props)))))))
 
+(defmutation show-score-modal [{:keys [game-id]}]
+  (action [env]
+    (swap! (:state env) assoc-in [::game/id game-id :ui/show-score-modal] true)))
+
 (defsc Game [this props]
   {:query [{::game/players (comp/get-query ui-player/Player)}
            {::game/current-epoch (comp/get-query ui-epoch/Epoch)}
@@ -211,6 +217,7 @@
            ::game/started-at
            ::game/short-id
            :ui/show-help-modal
+           :ui/show-score-modal
            {[:ui/current-player '_] (comp/get-query ui-player/Player)}
            ::game/id]
    :ident ::game/id
@@ -225,22 +232,25 @@
                    (when (js/confirm "Are you sure you want to leave the game?")
                      (dr/retry-route! this router relative-path )))}
   (dom/div :.w-screen.bg-white {}
-   (cond
-     (not (::game/started-at props))
-     (ui-unstarted this props)
-     :else
-     (ui-main-game this
-                   (let [game props
-                         epoch (::game/current-epoch game)
-                         p {:game     game
-                            :my-player   (:ui/current-player game)
-                            :ra-tiles (::epoch/ra-tiles epoch)
-                            :epoch    epoch
-                            :hand     (::epoch/current-hand epoch)
-                            :hands    (::epoch/hands epoch)
-                            :auction  (::epoch/auction epoch)}]
-                     (assoc p :my-go? (my-go? p)))))
+    (cond
+      (not (::game/started-at props))
+      (ui-unstarted this props)
+      :else
+      (ui-main-game this
+                    (let [game  props
+                          epoch (::game/current-epoch game)
+                          p     {:game      game
+                                 :my-player (:ui/current-player game)
+                                 :ra-tiles  (::epoch/ra-tiles epoch)
+                                 :epoch     epoch
+                                 :hand      (::epoch/current-hand epoch)
+                                 :hands     (::epoch/hands epoch)
+                                 :auction   (::epoch/auction epoch)}]
+                      (assoc p :my-go? (my-go? p)))))
     (when (:ui/show-help-modal props)
-      (ui-help/ui-help-modal this))))
+      (ui-help/ui-help-modal this))
+    (when (:ui/show-score-modal props)
+      (ui-score/ui-modal this {:hand-scores (:hand-scores (::event/data (last (::game/events props))))
+                               :close-prop :ui/show-score-modal}))))
 
 (def ui-game (comp/factory Game {:keyfn ::game/id}))

@@ -14,7 +14,10 @@
             [ra.app.player :as ui-player]
             [ra.model.player :as m-player]
             [clojure.core.async :as async]
-            [com.fulcrologic.fulcro.algorithms.merge :as merge]))
+            [com.fulcrologic.fulcro.algorithms.merge :as merge]
+            [ra.specs.game.event :as event]
+            [ra.specs.game :as game]
+            [ra.specs.game.event.type :as event-type]))
 
 (defsc Home [_ _]
   {:query []
@@ -64,6 +67,8 @@
                                   (comp/registry-key->class :ra.app.game/Game)
                                   game
                                   :remove-missing? true)
+          (when (= ::event-type/finish-epoch (::event/type (last (::game/events game))))
+            (comp/transact! app [(ui-game/show-score-modal {:game-id (::game/id game)})]))
           (async/<! (async/timeout 1000))
           (recur))))
     (app/mount! app Root "app" {:initialize-state? false})
