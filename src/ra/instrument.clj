@@ -113,6 +113,7 @@
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
         _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
         ]
+    (m-game/notify-all-clients! env (::game/id game))
     nil))
 
 (defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]

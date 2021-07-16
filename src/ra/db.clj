@@ -36,6 +36,8 @@
    :ra.specs.epoch/current-hand    {:db/valueType :db.type/ref}
    :ra.specs.epoch/last-ra-invoker {:db/valueType :db.type/ref}
 
+   :ra.specs.event/id           {:db/unique :db.unique/value}
+
    :ra.specs.game/id            {:db/unique :db.unique/value}
    :ra.specs.game/short-id      {:db/unique :db.unique/value}
    :ra.specs.game/tile-bag      {:db/cardinality :db.cardinality/many
