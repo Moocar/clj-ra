@@ -30,19 +30,19 @@
   (dom/div :.font-bold {} (::tile/title tile)))
 
 (defmethod ui-body ::event-type/join-game [s _ {:keys [player]}]
-  (let [player (get-in s [::hand/id (::player/id player)])]
-    (dom/div :.flex.flex-row {}
+  (let [player (get-in s [::player/id (::player/id player)])]
+    (dom/div :.flex.flex-row.gap-2 {}
       (ui-player-name player)
       " joined game")))
 
 (defmethod ui-body ::event-type/leave-game [s _ {:keys [player]}]
   (let [player (get-in s [::hand/id (::player/id player)])]
-    (dom/div :.flex.flex-row {}
+    (dom/div :.flex.flex-row.gap-2 {}
       (ui-player-name player)
       " left game")))
 
 (defmethod ui-body ::event-type/game-started [_ _ _]
-  (dom/div :.flex.flex-row {}
+  (dom/div :.flex.flex-row.border-t-2.mt-2 {}
     "Game started"))
 
 (defmethod ui-body ::event-type/draw-tile [s _ {:keys [hand tile]}]
@@ -75,6 +75,28 @@
   (dom/div :.flex.flex-col {}
     (dom/div :.flex.flex-row.gap-2.border-t-2 {}
       "Epoch Finished")))
+
+(defmethod ui-body ::event-type/invoke-ra [s _ {:keys [hand]}]
+  (dom/div :.flex.flex-row.gap-2 {}
+    (let [hand (get-in s [::hand/id (::hand/id hand)])
+          player (get-in s (::hand/player hand))]
+      (ui-player-name player))
+    (dom/div {} " invoked Auction")))
+
+(defmethod ui-body ::event-type/discard-disaster-tiles [s _ {:keys [hand]}]
+  (dom/div :.flex.flex-row.gap-2 {}
+    (let [hand (get-in s [::hand/id (::hand/id hand)])
+          player (get-in s (::hand/player hand))]
+      (ui-player-name player))
+    (dom/div {} " discarded disaster tiles")))
+
+(defmethod ui-body ::event-type/use-god-tile [s _ {:keys [hand tile]}]
+  (dom/div :.flex.flex-row.gap-2 {}
+    (let [hand (get-in s [::hand/id (::hand/id hand)])
+          player (get-in s (::hand/player hand))]
+      (ui-player-name player))
+    (dom/div {} " used god tile: ")
+    (ui-tile tile)))
 
 (defmethod ui-body :default [_ event-type _]
   (dom/div :.flex.flex-row {}

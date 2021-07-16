@@ -19,7 +19,9 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.game.event :as event]))
+            [ra.specs.game.event :as event]
+            [ra.specs.game.event.type :as event-type]
+            [com.fulcrologic.fulcro.algorithms.merge :as merge]))
 
 (declare Game)
 
@@ -210,27 +212,34 @@
     (swap! (:state env) assoc-in [::game/id game-id :ui/show-score-modal] true)))
 
 (defsc Game [this props]
-  {:query [{::game/players (comp/get-query ui-player/Player)}
-           {::game/current-epoch (comp/get-query ui-epoch/Epoch)}
-           {::game/events (comp/get-query ui-event/Item)}
-           ;;           {::game/tile-bag (comp/get-query Tile)}
-           ::game/started-at
-           ::game/short-id
-           :ui/show-help-modal
-           :ui/show-score-modal
-           {[:ui/current-player '_] (comp/get-query ui-player/Player)}
-           ::game/id]
-   :ident ::game/id
-   :initial-state {}
-   :componentDidMount (fn [this]
-                        (set! (.-title js/document) (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
-   :route-segment ["game" ::game/id]
-   :will-enter (fn [_ props]
-                 (dr/route-immediate [::game/id (uuid (::game/id props))]))
+  {:query               [{::game/players (comp/get-query ui-player/Player)}
+                         {::game/current-epoch (comp/get-query ui-epoch/Epoch)}
+                         {::game/events (comp/get-query ui-event/Item)}
+                         ;;           {::game/tile-bag (comp/get-query Tile)}
+                         ::game/started-at
+                         ::game/short-id
+                         :ui/show-help-modal
+                         :ui/show-score-modal
+                         {[:ui/current-player '_] (comp/get-query ui-player/Player)}
+                         ::game/id]
+   :ident               ::game/id
+   :initial-state       {}
+   :pre-merge           (fn [{:keys [data-tree current-normalized]}]
+                          (let [game data-tree]
+                            (merge current-normalized
+                                   (cond-> data-tree
+                                     (and (not= ::merge/not-found (::game/events game))
+                                          (= ::event-type/finish-epoch (::event/type (last (::game/events game)))))
+                                     (assoc :ui/show-score-modal true)))))
+   :componentDidMount   (fn [this]
+                          (set! (.-title js/document) (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
+   :route-segment       ["game" ::game/id]
+   :will-enter          (fn [_ props]
+                          (dr/route-immediate [::game/id (uuid (::game/id props))]))
    :allow-route-change? (fn [this] false)
-   :route-denied (fn [this router relative-path]
-                   (when (js/confirm "Are you sure you want to leave the game?")
-                     (dr/retry-route! this router relative-path )))}
+   :route-denied        (fn [this router relative-path]
+                          (when (js/confirm "Are you sure you want to leave the game?")
+                            (dr/retry-route! this router relative-path )))}
   (dom/div :.w-screen.bg-white {}
     (cond
       (not (::game/started-at props))
@@ -251,6 +260,7 @@
       (ui-help/ui-help-modal this))
     (when (:ui/show-score-modal props)
       (ui-score/ui-modal this {:hand-scores (:hand-scores (::event/data (last (::game/events props))))
-                               :close-prop :ui/show-score-modal}))))
+                               :game        props
+                               :close-prop  :ui/show-score-modal}))))
 
 (def ui-game (comp/factory Game {:keyfn ::game/id}))

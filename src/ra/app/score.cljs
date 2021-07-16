@@ -15,7 +15,8 @@
                        (dom/th {} "Gods")
                        (dom/th {} "Civs")
                        (dom/th {} "Rivers")
-                       (dom/th {} "Pharoahs")))
+                       (dom/th {} "Pharoahs")
+                       (dom/th {} "Epoch Total")))
     (dom/tbody {}
                (map (fn [hand-score]
                       (let [tile-scores (:tile-scores hand-score)
@@ -27,7 +28,9 @@
                                 (dom/td {} (::tile-type/god tile-scores))
                                 (dom/td {} (::tile-type/civilization tile-scores))
                                 (dom/td {} (::tile-type/river tile-scores))
-                                (dom/td {} (::tile-type/pharoah tile-scores)))))
+                                (dom/td {} (::tile-type/pharoah tile-scores))
+                                (dom/td :.font-bold {} (+ (reduce + (vals tile-scores))
+                                                          (or (:sun-disks hand-scores) 0))))))
                     hand-scores))))
 
 (defn ui-modal [this {:keys [close-prop hand-scores]}]
@@ -37,7 +40,7 @@
       {:style {:maxHeight "38rem"
                :maxWidth "32rem"}}
       (dom/div :.flex.w-full.justify-center {}
-        (dom/div :.text-lg.font-bold.pb-2 {} "Epoch Finished!"))
+        (dom/div :.text-lg.font-bold.pb-2 {} "Epoch Finished"))
       (dom/div :.text.lg.font-bold.cursor-pointer.absolute.top-2.right-2
         {:onClick (fn [] (m/set-value! this close-prop false))} "Close")
       (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}

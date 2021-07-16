@@ -2,7 +2,8 @@
   (:require [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
             [com.fulcrologic.fulcro.components :as comp]
             [ra.specs.game :as game]
-            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
+            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
+            [ra.specs.tile :as tile]))
 
 (defn game-component []
   (comp/registry-key->class :ra.app.game/Game))
@@ -75,7 +76,9 @@
               (m/with-target [:ui/current-game]))))
 
 (defmutation use-god-tile [input]
+  (action [env]
+    (swap! (:state env) assoc-in [::tile/id (:auction-track-tile-id input) :ui/selected?] false))
   (remote [{:keys [state] :as env}]
-          (-> env
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))

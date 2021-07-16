@@ -861,7 +861,8 @@
                   ;; TODO include the aquired tile in the event
                   (event-tx (hand->game hand)
                             ::event-type/use-god-tile
-                            {:hand {::hand/id (::hand/id hand)}})
+                            {:hand {::hand/id (::hand/id hand)}
+                             :tile (d/pull db tile-q (:db/id auction-track-tile))})
                   (rotate-current-hand-tx epoch hand))
                  {::game/id (::game/id (hand->game hand))})
     {::game/id (::game/id (hand->game hand))}))
