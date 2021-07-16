@@ -526,7 +526,7 @@
     (d/transact! conn
                  (concat
                   (invoke-ra-tx hand ::auction-reason/invoke)
-                  (event-tx game ::event-type/invoke-ra {:hand {::hand/id hand}}))
+                  (event-tx game ::event-type/invoke-ra {:hand {::hand/id (::hand/id hand)}}))
                  {::game/id (::game/id (hand->game hand))})
     {::game/id (::game/id (hand->game hand))}))
 

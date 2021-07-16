@@ -25,7 +25,7 @@
                                 (dom/td :.font-bold {} (::player/name player))
                                 (dom/td {} (::tile-type/gold tile-scores))
                                 (dom/td {} (::tile-type/god tile-scores))
-                                (dom/td {} (::tile-type/civilzation tile-scores))
+                                (dom/td {} (::tile-type/civilization tile-scores))
                                 (dom/td {} (::tile-type/river tile-scores))
                                 (dom/td {} (::tile-type/pharoah tile-scores)))))
                     hand-scores))))
