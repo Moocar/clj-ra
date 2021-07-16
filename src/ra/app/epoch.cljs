@@ -11,7 +11,8 @@
             [ra.specs.epoch :as epoch]
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]
-            [ra.specs.player :as player]))
+            [ra.specs.player :as player]
+            [ra.specs.tile.type :as tile-type]))
 
 (defn swap-god-tile [this props tile]
   (m/set-value! this :ui/selected-god-tile nil)
@@ -36,8 +37,10 @@
                                    "animation-duration" "1s"
                                    "transform"          "scale(1, 1)"}}
                           (ui-tile/ui-tile (comp/computed tile (cond-> {}
-                                                                 (:ui/selected-god-tile epoch)
-                                                                 (assoc :on-click #(swap-god-tile this epoch %)))))))))
+                                                                 (and (:ui/selected-god-tile epoch)
+                                                                      (not (= ::tile-type/god (::tile/type tile))))
+                                                                 (assoc :on-click #(swap-god-tile this epoch %)
+                                                                        :selectable? true))))))))
             (fill-blank-ra-spots (::epoch/auction-tiles epoch)))))
 
 (defn highest-bid [auction]

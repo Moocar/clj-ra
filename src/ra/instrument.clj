@@ -27,6 +27,14 @@
 (defn get-hand [db hand-id]
   (d/entity db [::hand/id hand-id]))
 
+(defn refresh-game [db game]
+  (let [game (get-game db (::game/short-id game))
+        epoch (::game/current-epoch game)
+        hands (get-hands epoch 3)]
+    {:game game
+     :epoch epoch
+     :hands hands}))
+
 (defn find-tile-p [game pred]
   (first (filter pred (::game/tile-bag game))))
 
@@ -53,6 +61,9 @@
 (defn find-tile-in-auction [epoch pred]
   (first (filter pred (::epoch/auction-tiles epoch))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actions
+
 (defn draw-tile* [{:keys [::db/conn ::pathom/parser] :as env} hand tile]
   (let [db @conn
         hand (d/entity db (:db/id hand))
@@ -68,13 +79,8 @@
   (parser {} [`(m-game/bid {::hand/id ~(::hand/id hand)
                             :sun-disk nil})]))
 
-(defn refresh-game [db game]
-  (let [game (get-game db (::game/short-id game))
-        epoch (::game/current-epoch game)
-        hands (get-hands epoch 3)]
-    {:game game
-     :epoch epoch
-     :hands hands}))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Scenarios
 
 (defn draws-bid-pass-pass
   [{:keys [::db/conn ::pathom/parser] :as env}
@@ -94,6 +100,18 @@
       (rand-bid env h3)
       (pass-bid env h3))
     (refresh-game @conn game)))
+
+(comment
+  ;; examples
+  (let [game                 (get-game @conn game-short-id)
+        epoch                (::game/current-epoch game)
+        [h1 h2 h3 :as hands] (get-hands epoch 3)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
+        _                    (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        {:keys [game hands]} (refresh-game @conn game)
+        ]
+    (m-game/notify-all-clients! env (::game/id game))
+    nil))
 
 ;; Get to the end of the first epoch quickly
 (defn run [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
