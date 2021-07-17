@@ -164,6 +164,7 @@
     (-> result
         ;; TODO add zdt encoding to websocket transit
         (update-when ::game/started-at str)
+        (update-when ::game/finished-at str)
         (update ::game/current-epoch
                 (fn [epoch]
                   (-> epoch
@@ -226,6 +227,7 @@
    {::game/current-epoch epoch-q}
    {::game/events event-q}
    ::game/started-at
+   ::game/finished-at
    ::game/short-id
    ::game/id])
 
@@ -236,6 +238,7 @@
    ::pc/output [{::game/tile-bag m-tile/q}
                 {::game/players m-player/q}
                 ::game/started-at
+                ::game/finished-at
                 {::game/current-epoch [::epoch/number
                                        ::epoch/current-sun-disk
                                        {::epoch/auction [::auction/reason
@@ -561,20 +564,21 @@
                                                            (m-score/tally-hand hand-scores))])
                   (::epoch/hands epoch)
                   hand-scores)
-            (mapcat flip-sun-disks-tx (::epoch/hands epoch))
-            (mapcat discard-non-scarabs-tx (::epoch/hands epoch))
-            (when (= (::epoch/number epoch) 3)
-              [[:db/add (:db/id game) ::game/finished-at (date/zdt)]])
-            [[:db/add (:db/id game) ::game/current-epoch new-epoch-id]
-             {:db/id new-epoch-id
-              ::epoch/current-hand (:db/id (::epoch/current-hand epoch))
-              ::epoch/current-sun-disk (::epoch/current-sun-disk epoch)
-              ::epoch/hands (map :db/id hand-scores)
-              ::epoch/id (db/uuid)
-              ::epoch/number (inc (::epoch/number epoch))}
-             [:db/retract (:db/id epoch) ::epoch/current-hand]
-             [:db/add (:db/id game) ::game/current-epoch new-epoch-id]
-             [:db/add (:db/id game) ::game/epochs new-epoch-id]]
+            (if (= (::epoch/number epoch) 3)
+              [[:db/add (:db/id game) ::game/finished-at (date/zdt)]]
+              (concat
+               (mapcat flip-sun-disks-tx (::epoch/hands epoch))
+               (mapcat discard-non-scarabs-tx (::epoch/hands epoch))
+               [[:db/add (:db/id game) ::game/current-epoch new-epoch-id]
+                {:db/id                   new-epoch-id
+                 ::epoch/current-hand     (:db/id (::epoch/current-hand epoch))
+                 ::epoch/current-sun-disk (::epoch/current-sun-disk epoch)
+                 ::epoch/hands            (map :db/id hand-scores)
+                 ::epoch/id               (db/uuid)
+                 ::epoch/number           (inc (::epoch/number epoch))}
+                [:db/retract (:db/id epoch) ::epoch/current-hand]
+                [:db/add (:db/id game) ::game/current-epoch new-epoch-id]
+                [:db/add (:db/id game) ::game/epochs new-epoch-id]]))
             (event-tx game
                       ::event-type/finish-epoch
                       {:hand-scores (map (fn [hand-score]

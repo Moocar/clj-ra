@@ -237,7 +237,7 @@
    :route-segment       ["game" ::game/id]
    :will-enter          (fn [_ props]
                           (dr/route-immediate [::game/id (uuid (::game/id props))]))
-   :allow-route-change? (fn [this] false)
+   :allow-route-change? (fn [_] false)
    :route-denied        (fn [this router relative-path]
                           (when (js/confirm "Are you sure you want to leave the game?")
                             (dr/retry-route! this router relative-path )))}

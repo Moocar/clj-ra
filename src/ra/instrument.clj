@@ -145,8 +145,23 @@
         _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
         {:keys [game hands]} (refresh-game @conn game)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
-        ; _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
+        _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
 
+        game (get-game @conn game-short-id)
+        epoch (::game/current-epoch game)
+        [h1 h2 h3 :as hands] (get-hands epoch 3)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
+        _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        {:keys [game hands]} (refresh-game @conn game)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
+        _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        {:keys [game hands]} (refresh-game @conn game)
+        {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
+        ; _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
 
 
         ]
