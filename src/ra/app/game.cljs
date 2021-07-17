@@ -217,6 +217,7 @@
                          {::game/events (comp/get-query ui-event/Item)}
                          ;;           {::game/tile-bag (comp/get-query Tile)}
                          ::game/started-at
+                         ::game/finished-at
                          ::game/short-id
                          :ui/show-help-modal
                          :ui/show-score-modal

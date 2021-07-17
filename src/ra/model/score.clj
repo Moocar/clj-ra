@@ -10,7 +10,7 @@
                     (::hand/used-sun-disks hand))))
 
 (defn score-epoch [epoch]
-  (assert (< (::epoch/number epoch) 3))
+  (assert (< (::epoch/number epoch) 4))
   (let [hands                 (::epoch/hands epoch)
         sort-by-pharoah-count (sort
                                (map (fn [hand]
@@ -51,7 +51,7 @@
                                                                         (= pharoah-count least-pharoas) -2
                                                                         :else 0))})}
                ;; last epoch
-               (= (::epoch/number epoch) 2)
+               (= (::epoch/number epoch) 3)
                (-> (assoc-in [:tile-scores ::tile-type/monument]
                              (let [monument-groups (group-by ::tile/monument-type (filter m-tile/monument? tiles))]
                                (+ (case (count monument-groups)

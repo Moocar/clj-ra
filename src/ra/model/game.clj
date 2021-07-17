@@ -555,7 +555,7 @@
         hand-scores (m-score/score-epoch epoch)
         id-atom      (atom -1)
         new-epoch-id (swap! id-atom dec)]
-    (assert (< (::epoch/number epoch) 3))
+    (assert (< (::epoch/number epoch) 4))
     (concat (mapv (fn [hand hand-scores]
                     [:db/add (:db/id hand) ::hand/score (+ (::hand/score hand)
                                                            (m-score/tally-hand hand-scores))])
@@ -563,6 +563,8 @@
                   hand-scores)
             (mapcat flip-sun-disks-tx (::epoch/hands epoch))
             (mapcat discard-non-scarabs-tx (::epoch/hands epoch))
+            (when (= (::epoch/number epoch) 3)
+              [[:db/add (:db/id game) ::game/finished-at (date/zdt)]])
             [[:db/add (:db/id game) ::game/current-epoch new-epoch-id]
              {:db/id new-epoch-id
               ::epoch/current-hand (:db/id (::epoch/current-hand epoch))
