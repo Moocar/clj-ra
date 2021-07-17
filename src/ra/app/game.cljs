@@ -240,7 +240,7 @@
    :allow-route-change? (fn [_] false)
    :route-denied        (fn [this router relative-path]
                           (when (js/confirm "Are you sure you want to leave the game?")
-                            (dr/retry-route! this router relative-path )))}
+                            (dr/retry-route! this router relative-path)))}
   (dom/div :.w-screen.bg-white {}
     (cond
       (not (::game/started-at props))

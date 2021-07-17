@@ -27,6 +27,7 @@
   {:router-targets [Home
                     ui-player/NewForm
                     ui-lobby/Lobby
+                    ui-lobby/JoinGameModal
                     ui-game/Game]
    :initial-state {}}
   (case (:current-state props)
