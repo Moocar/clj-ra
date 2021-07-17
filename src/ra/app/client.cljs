@@ -14,7 +14,8 @@
             [ra.app.game :as ui-game]
             [ra.app.lobby :as ui-lobby]
             [ra.app.player :as ui-player]
-            [ra.model.player :as m-player]))
+            [ra.model.player :as m-player]
+            [ra.app.routing :as routing]))
 
 (defsc Home [_ _]
   {:query []
@@ -54,10 +55,7 @@
     (app/set-root! app Root {:initialize-state? true})
     (dr/change-route! app ["home"])
     (set! (.-onpopstate js/window)
-          (fn [_]
-            (let [path     (.-pathname (.-location (.-document js/window)))
-                  elements (.split path "/")]
-              (dr/change-route! app (rest elements)))))
+          (fn [_] (routing/handle-window! app)))
     (async/go
       (loop []
         (let [game (async/<! client-app/loader-ch)]

@@ -21,7 +21,9 @@
             [ra.specs.tile :as tile]
             [ra.specs.game.event :as event]
             [ra.specs.game.event.type :as event-type]
-            [com.fulcrologic.fulcro.algorithms.merge :as merge]))
+            [com.fulcrologic.fulcro.algorithms.merge :as merge]
+            [com.fulcrologic.fulcro.data-fetch :as df]
+            [ra.app.routing :as routing]))
 
 (declare Game)
 
@@ -43,9 +45,7 @@
       (ui/button {:onClick (fn []
                              (m/set-value! this :ui/show-help-modal true))}
         "Help")
-      (ui/button {:onClick (fn []
-                             (dr/change-route! this ["lobby"])
-                             (.pushState (.-history js/window) #js {} "" "/lobby"))}
+      (ui/button {:onClick (fn [] (routing/to! this ["lobby"]))}
         "Leave Game")
       )))
 
@@ -78,8 +78,7 @@
             (ui/button {:onClick (fn []
                                    (comp/transact! this [(m-game/leave-game {::game/id   (::game/id game)
                                                                              ::player/id (::player/id (:ui/current-player game))})])
-                                   (dr/change-route! this ["lobby"])
-                                   (.pushState (.-history js/window) #js {} "" "/lobby"))}
+                                   (routing/to! this ["lobby"]))}
               "Leave Game")))))
     (dom/div {}
       (dom/div :.font-bold  {} "Event log")
@@ -211,6 +210,9 @@
   (action [env]
     (swap! (:state env) assoc-in [::game/id game-id :ui/show-score-modal] true)))
 
+(defn is-uuid? [s]
+  (re-find #"[a-f0-9]{8}(-[a-f0-9]{4}){4}[a-f0-9]{8}" s))
+
 (defsc Game [this props]
   {:query               [{::game/players (comp/get-query ui-player/Player)}
                          {::game/current-epoch (comp/get-query ui-epoch/Epoch)}
@@ -235,8 +237,17 @@
    :componentDidMount   (fn [this]
                           (set! (.-title js/document) (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
    :route-segment       ["game" ::game/id]
-   :will-enter          (fn [_ props]
-                          (dr/route-immediate [::game/id (uuid (::game/id props))]))
+   :will-enter          (fn [app props]
+                          (let [game-id (uuid (::game/id props))
+                                ident [::game/id game-id]]
+                            (dr/route-deferred ident
+                                               (fn []
+                                                 (df/load! app
+                                                           ident
+                                                           Game
+                                                           {:target               [:ui/current-game]
+                                                            :post-mutation        `dr/target-ready
+                                                            :post-mutation-params {:target ident}})))))
    :allow-route-change? (fn [_] false)
    :route-denied        (fn [this router relative-path]
                           (when (js/confirm "Are you sure you want to leave the game?")

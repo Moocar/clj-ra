@@ -12,7 +12,8 @@
             [ra.model.game :as m-game]
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [ra.model.error :as m-error]
-            [goog.object :as gobj]))
+            [goog.object :as gobj]
+            [ra.app.routing :as routing]))
 
 (defmutation set-current-game [{:keys [ident]}]
   (action [env]
@@ -24,8 +25,7 @@
                             (if-let [game-id (get-in env [:result :body [::game/short-id short-id] ::game/id])]
                               (do (merge/merge-component! this ui-game/Game (get-in env [:result :body [::game/short-id short-id]]))
                                   (comp/transact! this [(set-current-game {:ident [::game/id game-id]})])
-                                  (dr/change-route! this ["game" (str game-id)])
-                                  (.pushState (.-history js/window) #js {} "" (str "/game/" (str game-id))))
+                                  (routing/to! this ["game" (str game-id)]))
                               (m-error/set-error! this "Game doesn't exist")))}))
 
 (defsc JoinGameModal [this props]
@@ -61,8 +61,8 @@
                              (click-join-game this (:ui/join-game-code props)))}
         "Load Game")
       (ui/button {:onClick (fn []
-                             (dr/change-route! this ["lobby"])
-                             (.back (.-history js/window)))}
+                             ;; Ugly
+                             (routing/back! this ["lobby"]))}
         "Back"))))
 
 (def ui-join-game-modal (comp/factory JoinGameModal))
@@ -82,8 +82,7 @@
                              (comp/transact! this [(m-game/new-game {})]))}
         "Create New Game")
       (ui/button {:onClick (fn []
-                             (dr/change-route! this ["lobby" "join-game"])
-                             (.pushState (.-history js/window) #js {} "" "/lobby/join-game"))}
+                             (routing/to! this ["lobby" "join-game"]))}
         "Join Game"))))
 
 (def ui-lobby (comp/factory Lobby))

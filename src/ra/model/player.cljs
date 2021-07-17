@@ -1,12 +1,12 @@
 (ns ra.model.player
-  (:require [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
+  (:require [clojure.string :as str]
             [com.fulcrologic.fulcro.algorithms.merge :as merge]
-            [ra.specs.player :as player]
             [com.fulcrologic.fulcro.components :as comp]
             [com.fulcrologic.fulcro.data-fetch :as df]
+            [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
-            [clojure.string :as str]
-            [ra.specs.game :as game]))
+            [ra.app.routing :as routing]
+            [ra.specs.player :as player]))
 
 (def local-storage-id-key "player.id")
 
@@ -29,23 +29,11 @@
                    (merge/merge-component (new-form-component) input)
                    (assoc :ui/current-player [::player/id new-id]))))
       (set-local-storage-id! new-id)
-      (dr/change-route! (:app env) ["player" (str new-id)])
-      (.pushState (.-history js/window) #js {} "" (str "/player/" (str new-id))))))
+      (routing/to! (:app env) ["player" (str new-id)]))))
 
 (defn init-new-player! [app]
   (comp/transact! app [(new-player {::player/id   (random-uuid)
                                     ::player/name ""})]))
-
-(defn is-uuid? [s]
-  (re-find #"[a-f0-9]{8}(-[a-f0-9]{4}){4}[a-f0-9]{8}" s))
-
-(defn load-game! [app game-id]
-  (df/load! app
-            [::game/id game-id]
-            (comp/registry-key->class :ra.app.game/Game)
-            {:target [:ui/current-game]
-             :post-action (fn [_]
-                            (dr/change-route! app ["game" (str game-id)]))}))
 
 (defn init! [app]
   (if-let [local-storage-id (get-id-from-local-storage)]
@@ -58,18 +46,8 @@
                  :post-action  (fn [env]
                                  (let [player (get-in @(:state env) ident)]
                                    (if (str/blank? (::player/name player))
-                                     (do
-                                       (dr/change-route! (:app env) ["player" (str player-id)])
-                                       (.pushState (.-history js/window) #js {} "" (str "/player/" (str player-id))))
-                                     (let [path (-> js/window .-location .-pathname)]
-                                       (if (str/starts-with? path "/game/")
-                                         (let [game-id (second (re-find #"/game/(.*)" path))]
-                                           (if (is-uuid? game-id)
-                                             (load-game! app (uuid game-id))
-                                             (js/console.error "game URL is not a UUID")))
-                                         (do
-                                           (dr/change-route! (:app env) ["lobby"])
-                                           (.pushState (.-history js/window) #js {} "" "/lobby")))))))
+                                     (routing/to! (:app env) ["player" (str player-id)])
+                                     (routing/handle-window! app))))
                  :error-action (fn [env]
                                  (if-let [errors (:com.wsscode.pathom.core/errors (:body (:result env)))]
                                    (if (= 1 (count errors))
@@ -87,5 +65,4 @@
     (swap! state assoc-in [::player/id (::player/id input) ::player/name] (::player/name input)))
   (remote [_] true)
   (ok-action [env]
-    (dr/change-route! (:app env) ["lobby"])
-    (.pushState (.-history js/window) #js {} "" "/lobby")))
+    (routing/to! (:app env) ["lobby"])))

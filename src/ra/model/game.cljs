@@ -1,8 +1,8 @@
 (ns ra.model.game
-  (:require [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
-            [com.fulcrologic.fulcro.components :as comp]
+  (:require [com.fulcrologic.fulcro.components :as comp]
+            [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
+            [ra.app.routing :as routing]
             [ra.specs.game :as game]
-            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [ra.specs.tile :as tile]))
 
 (defn game-component []
@@ -15,14 +15,7 @@
         (m/with-target [:ui/current-game])))
   (ok-action [{:keys [result] :as env}]
     (let [game-id (get-in result [:body `new-game ::game/id])]
-      (dr/change-route! (:app env) ["game" (str game-id)])
-      (.pushState (.-history js/window) #js {} "" (str "/game/" (str game-id))))
-    #_(let [game-id (get-in result [:body `new-game ::game/id])]
-        (-> js/window
-            .-history
-            (.pushState #js{:game-id game-id}
-                        "Game in progress"
-                        (str "/game/" (str game-id)))))))
+      (routing/to! (:app env) ["game" (str game-id)]))))
 
 (defmutation join-game [_]
   (remote [env] true
