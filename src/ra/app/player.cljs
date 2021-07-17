@@ -5,7 +5,8 @@
             [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [ra.app.ui :as ui]
             [ra.model.player :as m-player]
-            [ra.specs.player :as player]))
+            [ra.specs.player :as player]
+            [goog.object :as gobj]))
 
 (defsc Player [_ {:keys [::player/name]}]
   {:query [::player/name
@@ -19,18 +20,24 @@
   {:query         [::player/id ::player/temp-name ::player/name]
    :ident         ::player/id
    :initial-state {::player/temp-name ""}
+   :initLocalState (fn [this _]
+                     {:save-ref (fn [r] (gobj/set this "name" r))})
+   :componentDidMount (fn [this _ _]
+                        (when-let [name-field (gobj/get this "name")]
+                          (.focus name-field)))
    :route-segment ["player" ::player/id]
    :will-enter (fn [_ {:keys [::player/id]}]
                  (dr/route-immediate [::player/id (uuid id)]))}
   (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
     (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center {}
       (dom/label :.block.text-gray-700.text-sm.font-bold.mb-2 {:htmlFor "username"}
-          "What shall we call you?")
+        "What shall we call you?")
       (dom/div {}
         (ui/input props ::player/temp-name
           {:id          "username"
            :type        "text"
            :placeholder "Name"
+           :ref         (comp/get-state this :save-ref)
            :onKeyUp     (fn [evt]
                           (when (= (.-keyCode evt) 13)
                             (comp/transact! this [(m-player/save
