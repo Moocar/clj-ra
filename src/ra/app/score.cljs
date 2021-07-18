@@ -8,32 +8,41 @@
             [ra.specs.game :as game]
             [ra.specs.epoch :as epoch]))
 
-(defn ui-table [s hand-scores]
-  (dom/table :.text-left {}
-    (dom/thead {}
-               (dom/tr {}
-                       (dom/th {} "")
-                       (dom/th {} "Gold")
-                       (dom/th {} "Gods")
-                       (dom/th {} "Civs")
-                       (dom/th {} "Rivers")
-                       (dom/th {} "Pharoahs")
-                       (dom/th {} "Epoch Total")))
-    (dom/tbody {}
-               (map (fn [hand-score]
-                      (let [tile-scores (:tile-scores hand-score)
-                            hand        (get-in s [::hand/id (::hand/id hand-score)])
-                            player      (get-in s (::hand/player hand))]
-                        (dom/tr {}
-                                (dom/td :.font-bold {} (::player/name player))
-                                (dom/td {} (::tile-type/gold tile-scores))
-                                (dom/td {} (::tile-type/god tile-scores))
-                                (dom/td {} (::tile-type/civilization tile-scores))
-                                (dom/td {} (::tile-type/river tile-scores))
-                                (dom/td {} (::tile-type/pharoah tile-scores))
-                                (dom/td :.font-bold {} (+ (reduce + (vals tile-scores))
-                                                          (or (:sun-disks hand-scores) 0))))))
-                    hand-scores))))
+(defn ui-table [s hand-scores game]
+  (let [last-epoch? (::game/finished-at game)]
+    (dom/table :.text-left {}
+      (dom/thead {}
+                 (dom/tr {}
+                         (dom/th {} "")
+                         (dom/th {} "Gold")
+                         (dom/th {} "Gods")
+                         (dom/th {} "Civs")
+                         (dom/th {} "Rivers")
+                         (dom/th {} "Pharoahs")
+                         (when last-epoch?
+                           (dom/th {} "Monuments"))
+                         (when last-epoch?
+                           (dom/th {} "Sun Disks"))
+                         (dom/th {} "Epoch Total")))
+      (dom/tbody {}
+                 (map (fn [hand-score]
+                        (let [tile-scores (:tile-scores hand-score)
+                              hand        (get-in s [::hand/id (::hand/id hand-score)])
+                              player      (get-in s (::hand/player hand))]
+                          (dom/tr {}
+                                  (dom/td :.font-bold {} (::player/name player))
+                                  (dom/td {} (::tile-type/gold tile-scores))
+                                  (dom/td {} (::tile-type/god tile-scores))
+                                  (dom/td {} (::tile-type/civilization tile-scores))
+                                  (dom/td {} (::tile-type/river tile-scores))
+                                  (dom/td {} (::tile-type/pharoah tile-scores))
+                                  (when last-epoch?
+                                    (dom/td {} (::tile-type/monument tile-scores)))
+                                  (when last-epoch?
+                                    (dom/td {} (str (:sun-disks hand-score))))
+                                  (dom/td :.font-bold {} (+ (reduce + (vals tile-scores))
+                                                            (or (:sun-disks hand-scores) 0))))))
+                      hand-scores)))))
 
 (defn ui-final-scores [hands]
   (dom/table {}
@@ -60,7 +69,7 @@
         (dom/div :.text.lg.font-bold.cursor-pointer.absolute.top-2.right-2
           {:onClick (fn [] (m/set-value! this close-prop false))} "Close")
         (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}
-          (ui-table state-map hand-scores)
+          (ui-table state-map hand-scores game)
           (when (::game/finished-at game)
             (dom/div :.flex.flex-col.w-full.justify-center {}
               (dom/div :.text-lg.font-bold.pb-2.text-center.pt-4 {} "Final scores")

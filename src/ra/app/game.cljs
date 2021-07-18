@@ -219,6 +219,7 @@
                          ::game/short-id
                          :ui/show-help-modal
                          :ui/show-score-modal
+                         :ui/last-hand-scores
                          {[:ui/current-player '_] (comp/get-query ui-player/Player)}
                          ::game/id]
    :ident               ::game/id
@@ -229,7 +230,8 @@
                                    (cond-> data-tree
                                      (and (not= ::merge/not-found (::game/events game))
                                           (= ::event-type/finish-epoch (::event/type (last (::game/events game)))))
-                                     (assoc :ui/show-score-modal true)))))
+                                     (assoc :ui/show-score-modal true
+                                            :ui/last-hand-scores (:hand-scores (::event/data (last (::game/events game)))))))))
    :componentDidMount   (fn [this]
                           (set! (.-title js/document) (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
    :route-segment       ["game" ::game/id]
@@ -267,7 +269,7 @@
     (when (:ui/show-help-modal props)
       (ui-help/ui-help-modal this))
     (when (:ui/show-score-modal props)
-      (ui-score/ui-modal this {:hand-scores (:hand-scores (::event/data (last (::game/events props))))
+      (ui-score/ui-modal this {:hand-scores (:ui/last-hand-scores props)
                                :game        props
                                :close-prop  :ui/show-score-modal}))))
 
