@@ -210,14 +210,10 @@
   (action [env]
     (swap! (:state env) assoc-in [::game/id game-id :ui/show-score-modal] true)))
 
-(defn is-uuid? [s]
-  (re-find #"[a-f0-9]{8}(-[a-f0-9]{4}){4}[a-f0-9]{8}" s))
-
 (defsc Game [this props]
   {:query               [{::game/players (comp/get-query ui-player/Player)}
                          {::game/current-epoch (comp/get-query ui-epoch/Epoch)}
                          {::game/events (comp/get-query ui-event/Item)}
-                         ;;           {::game/tile-bag (comp/get-query Tile)}
                          ::game/started-at
                          ::game/finished-at
                          ::game/short-id
@@ -239,7 +235,7 @@
    :route-segment       ["game" ::game/id]
    :will-enter          (fn [app props]
                           (let [game-id (uuid (::game/id props))
-                                ident [::game/id game-id]]
+                                ident   [::game/id game-id]]
                             (dr/route-deferred ident
                                                (fn []
                                                  (df/load! app
