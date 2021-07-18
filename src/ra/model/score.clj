@@ -59,8 +59,8 @@
                                     8 15
                                     (count monument-groups))
                                   (->> monument-groups
-                                       (map (fn [group]
-                                              (case (count group)
+                                       (map (fn [[_ tiles]]
+                                              (case (count tiles)
                                                 3 5
                                                 4 10
                                                 5 15
