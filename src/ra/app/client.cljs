@@ -63,7 +63,7 @@
                                   (comp/registry-key->class :ra.app.game/Game)
                                   game
                                   :remove-missing? true)
-          (async/<! (async/timeout 1000))
+          (async/<! (async/timeout 1))
           (recur))))
     (app/mount! app Root "app" {:initialize-state? false})
     (m-player/init! app)))

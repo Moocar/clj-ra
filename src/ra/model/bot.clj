@@ -67,6 +67,7 @@
         (if-not (= player (::hand/player current-hand))
           nil
           (future
+            (Thread/sleep 500)
             (if (::epoch/auction epoch)
               (if (= (count (::auction/bids (::epoch/auction epoch)))
                      (count (::game/players game)))
