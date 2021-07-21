@@ -107,25 +107,16 @@
   (= (::player/id (::hand/player hand))
      (::player/id my-player)))
 
-(defn ui-tile-bag [this {:keys [epoch hand auction my-go?]}]
+(defn ui-tile-bag [this {:keys [hand]}]
   (ui/button
-    (if (and my-go?
-             (not auction)
-             (not (::epoch/in-disaster? epoch))
-             (not (ui-epoch/auction-tiles-full? epoch)))
-      {:onClick (fn []
+    {:onClick (fn []
                   (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)})]))}
-      {:disabled true})
     "Draw Tile"))
 
-(defn ui-invoke-ra [this {:keys [epoch hand auction my-go?]}]
-  (ui/button
-    (if (and my-go?
-             (not auction)
-             (not (::epoch/in-disaster? epoch)))
-      {:onClick (fn []
-                  (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id hand)})]))}
-      {:disabled true})
+(defn ui-invoke-ra [this {:keys [hand]}]
+  (dom/button :.bg-red-500.text-white.font-bold.py-2.px-4.rounded.focus:outline-none.focus:shadow-outline.active:bg-red-700.focus:ring-2.focus:ring-green-500.md:hover:bg-red-700
+    {:onClick (fn []
+                (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id hand)})]))}
     "Invoke Auction"))
 
 (defn ui-discard-disaster-tiles [this {:keys [hand my-go?]}]
