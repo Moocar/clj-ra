@@ -192,6 +192,7 @@
   [::tile/id
    ::tile/title
    ::tile/disaster?
+   ::tile/scarab?
    ::tile/type
    ::tile/auction-track-position])
 

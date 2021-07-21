@@ -1,5 +1,5 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure    {:mvn/version "1.10.3"}
+ :deps  {org.clojure/clojure    {:mvn/version "1.11.0-alpha1"}
 
          ;; For clojure spec
          org.clojure/spec.alpha {:mvn/version "0.2.194"}
@@ -61,6 +61,11 @@
                                  hashp/hashp {:mvn/version "0.2.1"}
                                  }
                     :jvm-opts   ["-Dnashorn.args=--no-deprecation-warning"]}}}
+
+;; Run client watch with npx shadow-cljs -d nrepl/nrepl:0.8.3 -d cider/piggieback:0.5.2 -d refactor-nrepl/refactor-nrepl:2.5.1 -d cider/cider-nrepl:0.26.0 server
+
+
+;; -- old YMMV
 
 ;; Run server with clj -Anrepl:server:server-dev
 
