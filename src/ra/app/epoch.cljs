@@ -12,12 +12,14 @@
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]
             [ra.specs.player :as player]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [ra.specs.game :as game]))
 
-(defn swap-god-tile [this props tile]
+(defn swap-god-tile [this {:keys [epoch game]} tile]
   (m/set-value! this :ui/selected-god-tile nil)
-  (comp/transact! this [(m-game/use-god-tile {:god-tile-id (::tile/id (:ui/selected-god-tile props))
-                                              ::hand/id (get-in props [:ui/selected-god-tile ::tile/hand ::hand/id])
+  (comp/transact! this [(m-game/use-god-tile {:god-tile-id (::tile/id (:ui/selected-god-tile epoch))
+                                              ::hand/id (get-in epoch [:ui/selected-god-tile ::tile/hand ::hand/id])
+                                              ::game/id (::game/id game)
                                               :auction-track-tile-id (::tile/id tile)})]))
 
 (defn fill-blank-ra-spots [auction-tiles]
@@ -27,7 +29,7 @@
        (range)
        (map (fn [_] (ui-tile/ui-tile {})))))
 
-(defn ui-auction-track [this {:keys [epoch]}]
+(defn ui-auction-track [this {:keys [epoch] :as props}]
   (dom/div :.flex.flex-row.flex-wrap.gap-2 {}
     (concat (->> (::epoch/auction-tiles epoch)
                  (sort-by ::tile/auction-track-position)
@@ -39,7 +41,7 @@
                           (ui-tile/ui-tile (comp/computed tile (cond-> {}
                                                                  (and (:ui/selected-god-tile epoch)
                                                                       (not (= ::tile-type/god (::tile/type tile))))
-                                                                 (assoc :on-click #(swap-god-tile this epoch %)
+                                                                 (assoc :on-click #(swap-god-tile this props %)
                                                                         :selectable? true))))))))
             (fill-blank-ra-spots (::epoch/auction-tiles epoch)))))
 

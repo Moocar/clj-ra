@@ -13,7 +13,7 @@
             [ra.specs.auction.reason :as auction-reason]
             [ra.specs.auction :as auction]))
 
-(defn bid! [{:keys [:parser] :as env} epoch hand]
+(defn bid! [{:keys [:parser] :as env} epoch hand game]
   (let [available-sun-disks (::hand/available-sun-disks hand)
         auction             (::epoch/auction epoch)
         voluntary-auction?  (and (= hand (::epoch/last-ra-invoker epoch))
@@ -23,6 +23,7 @@
                               nil
                               (rand-nth (vec available-sun-disks)))]
     (parser env [`(m-game/bid {::hand/id ~(::hand/id hand)
+                               ::game/id ~(::game/id game)
                                :sun-disk ~sun-disk})])))
 
 (defn discard-disaster-tiles! [{:keys [:parser] :as env} hand]
@@ -50,8 +51,9 @@
 (defn invoke-ra! [{:keys [:parser] :as env} hand]
   (parser env [`(m-game/invoke-ra {::hand/id ~(::hand/id hand)})]))
 
-(defn draw-tile! [{:keys [:parser] :as env} hand]
-  (parser env [`(m-game/draw-tile {::hand/id ~(::hand/id hand)})]))
+(defn draw-tile! [{:keys [:parser] :as env} hand game]
+  (parser env [`(m-game/draw-tile {::hand/id ~(::hand/id hand)
+                                   ::game/id ~(::game/id game)})]))
 
 (defn handle-change [{:keys [::db/conn] :as env} player-id game-id]
   (assert player-id)
@@ -72,14 +74,14 @@
               (if (= (count (::auction/bids (::epoch/auction epoch)))
                      (count (::game/players game)))
                 nil
-                (bid! env epoch current-hand))
+                (bid! env epoch current-hand game))
               (if (::epoch/in-disaster? epoch)
                 (discard-disaster-tiles! env current-hand)
                 (if (m-game/auction-tiles-full? epoch)
                   (invoke-ra! env current-hand)
                   (if (= 0 (rand-int 4))
                     (invoke-ra! env current-hand)
-                    (draw-tile! env current-hand)))))
+                    (draw-tile! env current-hand game)))))
             (let [game (m-game/load-game @conn m-game/game-query game-id)]
               (m-game/notify-clients (:websockets env) (:any @(:connected-uids env)) game))))))))
 

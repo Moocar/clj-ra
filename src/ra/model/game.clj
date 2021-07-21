@@ -97,10 +97,15 @@
 (defn auction->game [auction]
   (epoch->game (auction->epoch auction)))
 
-(defn hand-turn? [hand]
-  (= (:db/id hand)
-     (:db/id (current-hand (hand->game hand)))))
+(defn hand-turn? [game hand]
+  (= (::epoch/current-hand (::game/current-epoch game))
+     hand))
 
+(defn check-current-hand [game hand]
+  (when-not (hand-turn? game hand)
+    (throw (ex-info "It's not your turn"
+                    {:current-hand (::hand/seat (::epoch/current-hand (::game/current-epoch game)))
+                     :tried-hand   (::hand/seat hand)}))))
 
 (defn move-thing-tx
   "Moves something from from to to"
@@ -588,36 +593,34 @@
                 :tile (d/pull db tile-q (:db/id tile))}))))
 
 (defn do-draw-tile [{:keys [::db/conn] :as env} game epoch hand tile]
+  (check-current-hand game hand)
   (when (auction-tiles-full? epoch)
-      (throw (ex-info "Auction Track full" {})))
-    (when (::epoch/in-disaster? epoch)
-      (throw (ex-info "Waiting for players to discard disaster tiles" {})))
-    (when (not (hand-turn? hand))
-      (throw (ex-info "not your turn" {:current-hand (::epoch/current-hand epoch)
-                                       :tried-hand   hand})))
-    (let [tx (if (m-tile/ra? tile)
-               (draw-ra-tx hand tile)
-               (draw-normal-tile-tx hand tile))]
-      (d/transact! conn tx {::game/id (::game/id game)})
-      (notify-other-clients! env (load-game @conn game-query (::game/id game)))
-      (when (m-tile/ra? tile)
-        (let [tx (if (last-ra? epoch)
-                   ;; finish epoch
-                   (finish-epoch-tx epoch)
-                   ;; normal ra tile
-                   (concat
-                    [[:db/add (:db/id epoch) ::epoch/in-auction? true]]
-                    (rotate-current-hand-tx epoch hand)))]
-          (d/transact! conn tx {::game/id (::game/id game)})
-          (notify-other-clients! env (load-game @conn game-query (::game/id game)))))))
+    (throw (ex-info "Auction Track full" {})))
+  (when (::epoch/in-disaster? epoch)
+    (throw (ex-info "Waiting for players to discard disaster tiles" {})))
+  (let [tx (if (m-tile/ra? tile)
+             (draw-ra-tx hand tile)
+             (draw-normal-tile-tx hand tile))]
+    (d/transact! conn tx {::game/id (::game/id game)})
+    (notify-other-clients! env (load-game @conn game-query (::game/id game)))
+    (when (m-tile/ra? tile)
+      (let [tx (if (last-ra? epoch)
+                 ;; finish epoch
+                 (finish-epoch-tx epoch)
+                 ;; normal ra tile
+                 (concat
+                  [[:db/add (:db/id epoch) ::epoch/in-auction? true]]
+                  (rotate-current-hand-tx epoch hand)))]
+        (d/transact! conn tx {::game/id (::game/id game)})
+        (notify-other-clients! env (load-game @conn game-query (::game/id game)))))))
 
 (pc/defmutation draw-tile [{:keys [::db/conn] :as env} input]
-  {::pc/params [::hand/id]
+  {::pc/params [::hand/id ::game/id]
    ::pc/transform notify-other-clients-transform
    ::pc/output [::game/id]}
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])
-        epoch (hand->epoch hand)
-        game (hand->game hand)
+        game (d/entity @conn [::game/id (::game/id input)])
+        epoch (::game/current-epoch game)
         tile (d/entity @conn (sample-tile @conn game))]
     (do-draw-tile env game epoch hand tile)
     {::game/id (::game/id (hand->game hand))}))
@@ -726,17 +729,18 @@
 
 (pc/defmutation bid
   [{:keys [::db/conn] :as env} {:keys [sun-disk] :as input}]
-  {::pc/params    #{::hand/id :sun-disk}
+  {::pc/params    #{::hand/id ::game/id :sun-disk}
    ::pc/output    [::game/id]}
   (assert (contains? input :sun-disk))
   (assert (::hand/id input))
   (let [hand  (d/entity @conn [::hand/id (::hand/id input)])
-        epoch (hand->epoch hand)
+        game (d/entity @conn [::game/id (::game/id input)])
+        epoch (::game/current-epoch game)
         auction (::epoch/auction epoch)
-        game (hand->game hand)
         new-bid {::bid/hand     hand
                  ::bid/sun-disk sun-disk}
         winning-bid (calc-winning-bid auction new-bid)]
+    (check-current-hand game hand)
     (when (= (count (::auction/bids auction))
              (game/player-count game))
       (throw (ex-info "Auction finished" {})))
@@ -759,7 +763,7 @@
                           {:hand {::hand/id (::hand/id hand)}
                            :sun-disk sun-disk})))]
       (d/transact! conn tx
-                   {::game/id (::game/id game)})
+                   (select-keys input [::game/id]))
       (notify-other-clients! env (load-game @conn game-query (::game/id game)))
       (when (waiting-on-last-bid? auction)
         ;; Perform a fake tx to find out if we have run out of sun disks. And if so,
@@ -770,10 +774,9 @@
               tx (if (sun-disks-in-play? new-epoch)
                    tx
                    (concat tx (finish-epoch-tx new-epoch)))]
-          (d/transact! conn tx
-                       {::game/id (::game/id (hand->game hand))})
+          (d/transact! conn tx (select-keys input [::game/id]))
           (notify-other-clients! env (load-game @conn game-query (::game/id game)))))
-      {::game/id (::game/id game)})))
+      (select-keys input [::game/id]))))
 
 (defn discard-tile-op [hand tile]
   [:db/retract (:db/id hand) ::hand/tiles (:db/id tile)])
@@ -830,14 +833,16 @@
 
 (pc/defmutation use-god-tile
   [{:keys [::db/conn]} input]
-  {::pc/params    #{::hand/id :god-tile-id :auction-track-tile-id}
+  {::pc/params    #{::hand/id ::game/id :god-tile-id :auction-track-tile-id}
    ::pc/transform notify-other-clients-transform
    ::pc/output    [::game/id]}
   (let [db @conn
         god-tile (d/entity db [::tile/id (:god-tile-id input)])
         hand (d/entity db [::hand/id (::hand/id input)])
         auction-track-tile (d/entity @conn [::tile/id (:auction-track-tile-id input)])
-        epoch (hand->epoch hand)]
+        game (d/entity db [::game/id (::game/id input)])
+        epoch (::game/current-epoch game)]
+    (check-current-hand game hand)
     (when (= (::tile/type auction-track-tile) ::tile-type/god)
       (throw (ex-info "Can't use god tile on a god tile" {})))
     (d/transact! conn
@@ -850,8 +855,8 @@
                             {:hand {::hand/id (::hand/id hand)}
                              :tile (d/pull db tile-q (:db/id auction-track-tile))})
                   (rotate-current-hand-tx epoch hand))
-                 {::game/id (::game/id (hand->game hand))})
-    {::game/id (::game/id (hand->game hand))}))
+                 (select-keys input [::game/id]))
+    (select-keys input [::game/id])))
 
 (defmethod ig/init-key ::ref-data [_ {:keys [::db/conn]}]
   (let [tiles (d/q '[:find ?t

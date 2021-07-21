@@ -107,10 +107,11 @@
   (= (::player/id (::hand/player hand))
      (::player/id my-player)))
 
-(defn ui-tile-bag [this {:keys [hand]}]
+(defn ui-tile-bag [this {:keys [hand game]}]
   (ui/button
     {:onClick (fn []
-                  (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)})]))}
+                  (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)
+                                                           ::game/id (::game/id game)})]))}
     "Draw Tile"))
 
 (defn ui-invoke-ra [this {:keys [hand]}]
@@ -131,7 +132,7 @@
       {:disabled true})
     "Discard Disasters"))
 
-(defn ui-hands [this {:keys [auction epoch hands my-player] :as props}]
+(defn ui-hands [this {:keys [auction epoch hands my-player game] :as props}]
   (dom/div {}
     (->> (concat hands hands)
          (drop-while (fn [hand]
@@ -143,7 +144,9 @@
                  (if auction
                    (comp/computed hand (assoc props
                                               :onClickSunDisk (fn [sun-disk]
-                                                                (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand) :sun-disk sun-disk})]))
+                                                                (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand)
+                                                                                                   ::game/id (::game/id game)
+                                                                                                   :sun-disk sun-disk})]))
                                               :highest-bid    (ui-epoch/highest-bid auction)))
                    (comp/computed hand (assoc props
                                               :click-god-tile (fn [hand tile]

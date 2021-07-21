@@ -1,10 +1,9 @@
 (ns ra.model.tile
   (:require [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
             [ra.specs.tile.civilization :as civilization]
             [ra.specs.tile.monument :as monument]
             [ra.specs.tile.river :as river]
-            [datascript.core :as d]))
+            [ra.specs.tile.type :as tile-type]))
 
 (def q
   [::tile/id

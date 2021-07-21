@@ -46,7 +46,6 @@
 (defmutation draw-tile [input]
   (remote [env]
     (-> env
-        (m/with-params (merge input {::game/id (get-in @(:state env) [:ui/current-game 1])}))
         (m/returning (game-component))
         (m/with-target [:ui/current-game]))))
 
