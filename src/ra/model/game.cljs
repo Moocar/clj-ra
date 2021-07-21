@@ -9,7 +9,7 @@
   (comp/registry-key->class :ra.app.game/Game))
 
 (defmutation new-game [_]
-  (remote [env] true
+  (remote [env]
     (-> env
         (m/returning (game-component))
         (m/with-target [:ui/current-game])))
@@ -18,16 +18,16 @@
       (routing/to! (:app env) ["game" (str game-id)]))))
 
 (defmutation join-game [_]
-  (remote [env] true
-          (-> env
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+  (remote [env]
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
 
 (defmutation start-game [_]
-  (remote [env] true
-          (-> env
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+  (remote [env]
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
 
 (defmutation leave-game [_]
   (remote [env]
@@ -39,39 +39,46 @@
 
 (defmutation reset [_]
   (remote [env] true
-          (-> env
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
 
 (defmutation draw-tile [input]
-  (remote [{:keys [state] :as env}]
-          (-> env
-              (m/with-params (merge input {::game/id (get-in @state [:ui/current-game 1])}))
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+  (remote [env]
+    (-> env
+        (m/with-params (merge input {::game/id (get-in @(:state env) [:ui/current-game 1])}))
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
 
 (defmutation invoke-ra [_]
-  (remote [{:keys [state] :as env}]
-          (-> env
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+  (remote [env]
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
 
 (defmutation bid [_]
-  (remote [{:keys [state] :as env}]
-          (-> env
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+  (remote [env]
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
+
+(defn unselect-tile [state-map tile-id]
+  (assoc-in state-map [::tile/id tile-id :ui/selected?] false))
 
 (defmutation discard-disaster-tiles [input]
-  (remote [{:keys [state] :as env}]
-          (-> env
-              (m/returning (game-component))
-              (m/with-target [:ui/current-game]))))
+  (action [env]
+    (swap! (:state env)
+           (fn [s]
+             (reduce unselect-tile s (:tile-ids input)))))
+  (remote [env]
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
 
 (defmutation use-god-tile [input]
   (action [env]
-    (swap! (:state env) assoc-in [::tile/id (:auction-track-tile-id input) :ui/selected?] false))
-  (remote [{:keys [state] :as env}]
+    (swap! (:state env) unselect-tile))
+  (remote [env]
     (-> env
         (m/returning (game-component))
         (m/with-target [:ui/current-game]))))
