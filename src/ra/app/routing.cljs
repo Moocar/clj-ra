@@ -4,8 +4,11 @@
 
 (defn handle-window! [app]
   (let [path     (-> js/window .-location .-pathname)
-        elements (.split path "/")]
-    (dr/change-route! app (vec (rest elements)))))
+        elements (.split path "/")
+        route (vec (rest elements))]
+    (if (= [""] route)
+      (dr/change-route! app ["lobby"])
+      (dr/change-route! app route))))
 
 (defn to! [app to]
   (dr/change-route! app to)
