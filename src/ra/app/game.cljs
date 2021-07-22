@@ -84,14 +84,8 @@
       (dom/div :.font-bold  {} "Event log")
       (ui-event/ui-items (reverse (::game/events game))))))
 
-(def players->ra-count
-  {2 6
-   3 8
-   4 9
-   5 10})
-
 (defn ui-ra-track [{:keys [hands ra-tiles] :as props}]
-  (let [blank-spots (- (players->ra-count (count hands))
+  (let [blank-spots (- (game/ras-per-epoch (count hands))
                        (count ra-tiles))]
     (dom/div :.flex.flex-row.flex-wrap.gap-2 {}
       (concat (map (fn [_] (dom/div

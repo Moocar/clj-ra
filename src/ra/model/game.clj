@@ -452,6 +452,7 @@
   (let [hand  (d/entity @conn [::hand/id (::hand/id input)])
         game  (d/entity @conn [::game/id (::game/id input)])
         epoch (::game/current-epoch game)]
+    (println [(::hand/seat hand) ::event-type/invoke-ra])
     (check-current-hand game hand)
     (d/transact! conn
                  (concat
@@ -563,6 +564,7 @@
         game (d/entity @conn [::game/id (::game/id input)])
         epoch (::game/current-epoch game)
         tile (d/entity @conn (sample-tile @conn game))]
+    (println [(::hand/seat hand) ::event-type/draw-tile])
     (do-draw-tile env game epoch hand tile)
     (select-keys input [::game/id])))
 
@@ -638,7 +640,8 @@
                    :sun-disk    (::bid/sun-disk new-bid)
                    :last?       true
                    :winning-bid {::bid/hand {::hand/id (::hand/id (::bid/hand winning-bid))}
-                                 ::bid/sun-disk (::bid/sun-disk winning-bid)}})
+                                 ::bid/sun-disk (::bid/sun-disk winning-bid)}
+                   :tiles-won (map #(select-keys % tile-q) (::epoch/auction-tiles epoch))})
         (when (some ::tile/disaster? (::epoch/auction-tiles epoch))
           [[:db/add (:db/id epoch) ::epoch/in-disaster? true]])
 
@@ -680,6 +683,7 @@
         new-bid {::bid/hand     hand
                  ::bid/sun-disk sun-disk}
         winning-bid (calc-winning-bid auction new-bid)]
+    (println [(::hand/seat hand) ::event-type/bid sun-disk])
     (check-current-hand game hand)
     (when (= (count (::auction/bids auction))
              (game/player-count game))

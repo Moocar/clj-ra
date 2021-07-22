@@ -76,7 +76,7 @@
 
 (defmutation use-god-tile [input]
   (action [env]
-    (swap! (:state env) unselect-tile))
+    (swap! (:state env) unselect-tile (:auction-track-tile-id input)))
   (remote [env]
     (-> env
         (m/returning (game-component))

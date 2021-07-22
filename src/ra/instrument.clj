@@ -113,7 +113,14 @@
         {:keys [game hands]} (refresh-game @conn game)
         ]
     (m-game/notify-all-clients! env (::game/id game))
-    nil))
+    nil)
+
+  ;; print out all hands
+  (let [db @(::db/conn (s))
+        game (d/entity @(::db/conn (s)) [::game/short-id "VJFD"])]
+    (map (fn [h] (d/pull db m-game/hand-q (:db/id h)))
+         (::epoch/hands (::game/current-epoch game))))
+  )
 
 ;; Get to the end of the first epoch quickly
 (defn run [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]

@@ -14,6 +14,9 @@
 (s/def ::disaster? boolean?)
 (s/def ::scarab? boolean?)
 
+(defn disaster? [t]
+  (::disaster? t))
+
 (defn type= [tile type]
   (= type (::type tile)))
 
@@ -25,30 +28,30 @@
 
 (defn civ? [t]
   (and (type= t ::tile-type/civilization)
-       (not (::disaster? t))))
+       (not (disaster? t))))
 
 (defn pharoah? [t]
   (and (type= t ::tile-type/pharoah)
-       (not (::disaster? t))))
+       (not (disaster? t))))
 
 (defn monument? [t]
   (and (type= t ::tile-type/monument)
-       (not (::disaster? t))))
+       (not (disaster? t))))
 
 (defn ra? [t]
   (type= t ::tile-type/ra))
 
 (defn river? [t]
   (and (type= t ::tile-type/river)
-       (not (::disaster? t))))
+       (not (disaster? t))))
 
 (defn nile? [t]
   (and (= (::river-type t) ::river/nile)
-       (not (::disaster? t))))
+       (not (disaster? t))))
 
 (defn flood? [t]
   (= (::river-type t) ::river/flood))
 
 (defn drought? [t]
   (and (type= t ::tile-type/river)
-       (::disaster? t)))
+       (disaster? t)))

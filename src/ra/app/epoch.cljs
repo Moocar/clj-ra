@@ -9,11 +9,10 @@
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
             [ra.specs.epoch :as epoch]
+            [ra.specs.game :as game]
             [ra.specs.hand :as hand]
-            [ra.specs.tile :as tile]
             [ra.specs.player :as player]
-            [ra.specs.tile.type :as tile-type]
-            [ra.specs.game :as game]))
+            [ra.specs.tile :as tile]))
 
 (defn swap-god-tile [this {:keys [epoch game]} tile]
   (m/set-value! this :ui/selected-god-tile nil)
@@ -40,7 +39,8 @@
                                    "transform"          "scale(1, 1)"}}
                           (ui-tile/ui-tile (comp/computed tile (cond-> {}
                                                                  (and (:ui/selected-god-tile epoch)
-                                                                      (not (tile/god? tile)))
+                                                                      (not (tile/god? tile))
+                                                                      (not (tile/disaster? tile)))
                                                                  (assoc :on-click #(swap-god-tile this props %)
                                                                         :selectable? true))))))))
             (fill-blank-ra-spots (::epoch/auction-tiles epoch)))))
@@ -62,9 +62,6 @@
               (-> s
                   (assoc-in (conj [::epoch/id (::epoch/id epoch)] :ui/selected-god-tile) tile-ident)
                   (assoc-in (conj tile-ident ::tile/hand) hand-ident)))))))
-
-(defn auction-tiles-full? [epoch]
-  (= 8 (count (::epoch/auction-tiles epoch))))
 
 (defsc Epoch [_ _]
   {:query [::epoch/current-sun-disk

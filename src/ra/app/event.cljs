@@ -53,7 +53,7 @@
     (dom/div {} " drew a ")
     (ui-tile tile)))
 
-(defmethod ui-body ::event-type/bid [s _ {:keys [hand sun-disk last? winning-bid]}]
+(defmethod ui-body ::event-type/bid [s _ {:keys [hand sun-disk last? winning-bid tiles-won]}]
   (dom/div {} (if last?
                 (dom/div :.flex.flex-col.border-t-2.mt-2 {}
                   (if winning-bid
@@ -62,7 +62,8 @@
                       (dom/div :.flex.flex-row.gap-2 {}
                         (ui-player-name player)
                         " won auction with "
-                        (str (::bid/sun-disk winning-bid))))
+                        (str (::bid/sun-disk winning-bid))
+                        (dom/ul :.pl-4 (map (fn [t] (dom/li (::tile/title t))) tiles-won))))
                     "Auction finished (everyone passed)"))
                 (let [hand   (get-in s [::hand/id (::hand/id hand)])
                       player (get-in s (::hand/player hand))]
