@@ -10,3 +10,8 @@
 (s/def ::auction-tiles (s/coll-of (s/keys :req [::tile/id])))
 (s/def ::last-ra-invokee (s/keys :req [::player/id]))
 (s/def ::player-hands (s/coll-of (s/keys :req [::player/id])))
+
+(defn auction-tiles-full?
+  "Returns true if the auction track is full"
+  [epoch]
+  (= 8 (count (::auction-tiles epoch))))

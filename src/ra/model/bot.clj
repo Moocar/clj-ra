@@ -77,7 +77,7 @@
                 (bid! env epoch current-hand game))
               (if (::epoch/in-disaster? epoch)
                 (discard-disaster-tiles! env current-hand)
-                (if (m-game/auction-tiles-full? epoch)
+                (if (epoch/auction-tiles-full? epoch)
                   (invoke-ra! env current-hand)
                   (if (= 0 (rand-int 4))
                     (invoke-ra! env current-hand)

@@ -64,11 +64,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Actions
 
-(defn draw-tile* [{:keys [::db/conn ::pathom/parser] :as env} hand tile]
+(defn draw-tile* [{:keys [::db/conn ::pathom/parser] :as env} game hand tile]
   (let [db @conn
         hand (d/entity db (:db/id hand))
-        game (m-game/hand->game hand)
-        epoch (m-game/hand->epoch hand)]
+        game (d/entity db (:db/id game))
+        epoch (::game/current-epoch game)]
     (m-game/do-draw-tile env game epoch hand tile)))
 
 (defn rand-bid [{:keys [::pathom/parser]} hand game]
@@ -89,9 +89,9 @@
    game
    & {:keys [winner hands]}]
   (let [[h1 h2 h3] hands]
-    (draw-tile* env h1 (find-tile-p game tile/civ?))
-    (draw-tile* env h2 (find-tile-p game tile/pharoah?))
-    (draw-tile* env h3 (find-tile-p game tile/ra?))
+    (draw-tile* env game h1 (find-tile-p game tile/civ?))
+    (draw-tile* env game h2 (find-tile-p game tile/pharoah?))
+    (draw-tile* env game h3 (find-tile-p game tile/ra?))
     (if (= winner h1)
       (rand-bid env h1 game)
       (pass-bid env h1 game))
@@ -123,12 +123,12 @@
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        _ (draw-tile* env (first hands) (find-tile-p game tile/monument?))
+        _ (draw-tile* env game (first hands) (find-tile-p game tile/monument?))
         {:keys [game hands]} (refresh-game @conn game)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        _ (draw-tile* env (first hands) (find-tile-p game tile/monument?))
+        _ (draw-tile* env game (first hands) (find-tile-p game tile/monument?))
         {:keys [game hands]} (refresh-game @conn game)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
 ;        _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))

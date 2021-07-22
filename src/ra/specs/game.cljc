@@ -35,8 +35,12 @@
   (let [sun-disk-set (get sun-disk-sets (count (::players game)))]
     (last (sort (map #(apply max %) sun-disk-set)))))
 
-(defn players [game]
-  (::players game))
-
 (defn player-count [game]
   (count (::players game)))
+
+(defn max-ras [game]
+  (get ras-per-epoch (player-count game)))
+
+(defn last-ra? [game]
+  (= (inc (count (::epoch/ra-tiles (::current-epoch game))))
+     (max-ras game)))
