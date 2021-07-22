@@ -40,7 +40,7 @@
                                    "transform"          "scale(1, 1)"}}
                           (ui-tile/ui-tile (comp/computed tile (cond-> {}
                                                                  (and (:ui/selected-god-tile epoch)
-                                                                      (not (= ::tile-type/god (::tile/type tile))))
+                                                                      (not (tile/god? tile)))
                                                                  (assoc :on-click #(swap-god-tile this props %)
                                                                         :selectable? true))))))))
             (fill-blank-ra-spots (::epoch/auction-tiles epoch)))))

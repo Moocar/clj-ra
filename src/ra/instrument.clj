@@ -89,9 +89,9 @@
    game
    & {:keys [winner hands]}]
   (let [[h1 h2 h3] hands]
-    (draw-tile* env h1 (find-tile-p game m-tile/civ?))
-    (draw-tile* env h2 (find-tile-p game m-tile/pharoah?))
-    (draw-tile* env h3 (find-tile-p game m-tile/ra?))
+    (draw-tile* env h1 (find-tile-p game tile/civ?))
+    (draw-tile* env h2 (find-tile-p game tile/pharoah?))
+    (draw-tile* env h3 (find-tile-p game tile/ra?))
     (if (= winner h1)
       (rand-bid env h1 game)
       (pass-bid env h1 game))
@@ -109,7 +109,7 @@
         epoch                (::game/current-epoch game)
         [h1 h2 h3 :as hands] (get-hands epoch 3)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        _                    (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        _                    (draw-tile* env (first hands) (find-tile-p game tile/monument?))
         {:keys [game hands]} (refresh-game @conn game)
         ]
     (m-game/notify-all-clients! env (::game/id game))
@@ -123,12 +123,12 @@
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        _ (draw-tile* env (first hands) (find-tile-p game tile/monument?))
         {:keys [game hands]} (refresh-game @conn game)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
+        _ (draw-tile* env (first hands) (find-tile-p game tile/monument?))
         {:keys [game hands]} (refresh-game @conn game)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
 ;        _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))

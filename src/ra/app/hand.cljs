@@ -83,7 +83,7 @@
            (map (fn [[_ [tile :as tiles]]]
                   (comp/computed tile
                                  (merge {:stack-size (count tiles)}
-                                        (if (and (= ::tile-type/god (::tile/type tile)) my-go? (::hand/my-go? hand))
+                                        (if (and (tile/god? tile) my-go? (::hand/my-go? hand))
                                           {:selectable? true
                                            :on-click    (fn [tile] (click-god-tile hand tile))}
                                           {})))))

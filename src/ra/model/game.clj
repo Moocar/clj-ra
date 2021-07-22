@@ -598,12 +598,12 @@
     (throw (ex-info "Auction Track full" {})))
   (when (::epoch/in-disaster? epoch)
     (throw (ex-info "Waiting for players to discard disaster tiles" {})))
-  (let [tx (if (m-tile/ra? tile)
+  (let [tx (if (tile/ra? tile)
              (draw-ra-tx hand tile)
              (draw-normal-tile-tx hand tile))]
     (d/transact! conn tx {::game/id (::game/id game)})
     (notify-other-clients! env (load-game @conn game-query (::game/id game)))
-    (when (m-tile/ra? tile)
+    (when (tile/ra? tile)
       (let [tx (if (last-ra? epoch)
                  ;; finish epoch
                  (finish-epoch-tx epoch)
@@ -802,9 +802,9 @@
     (when-not (seq disaster-tiles)
       (throw (ex-info "No disaster tiles in hand" {})))
 
-    (when-let [drought-tiles (seq (filter m-tile/drought? disaster-tiles))]
-      (let [flood-tiles-in-hand (filter m-tile/flood? (::hand/tiles hand))
-            flood-tiles-selected (filter m-tile/flood? selected-tiles)
+    (when-let [drought-tiles (seq (filter tile/drought? disaster-tiles))]
+      (let [flood-tiles-in-hand (filter tile/flood? (::hand/tiles hand))
+            flood-tiles-selected (filter tile/flood? selected-tiles)
             needed (min (count flood-tiles-in-hand) (* (count drought-tiles) 2))]
         (when (< (count flood-tiles-selected) needed)
           (throw (ex-info "Need to select more flood tiles" {})))))

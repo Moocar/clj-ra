@@ -14,7 +14,7 @@
   (let [hands                 (::epoch/hands epoch)
         sort-by-pharoah-count (sort
                                (map (fn [hand]
-                                      (count (filter m-tile/pharoah? (::hand/tiles hand))))
+                                      (count (filter tile/pharoah? (::hand/tiles hand))))
                                     hands))
         most-pharoahs         (last sort-by-pharoah-count)
         least-pharoas         (first sort-by-pharoah-count)
@@ -24,20 +24,20 @@
              (cond-> {::hand/id    (::hand/id hand)
                       :db/id       (:db/id hand)
                       :tile-scores (cond-> {::tile-type/river
-                                            (let [flood-count (count (filter m-tile/flood? tiles))
-                                                  nile-count  (count (filter m-tile/nile? tiles))]
+                                            (let [flood-count (count (filter tile/flood? tiles))
+                                                  nile-count  (count (filter tile/nile? tiles))]
                                               (if (pos? flood-count)
                                                 (+ flood-count nile-count)
                                                 0))
 
                                             ::tile-type/god
-                                            (* 2 (count (filter m-tile/god? tiles)))
+                                            (* 2 (count (filter tile/god? tiles)))
 
                                             ::tile-type/gold
-                                            (* 3 (count (filter m-tile/gold? tiles)))
+                                            (* 3 (count (filter tile/gold? tiles)))
 
                                             ::tile-type/civilization
-                                            (let [unique-civs-count (count (distinct (map ::tile/civilization-type (filter m-tile/civ? tiles))))]
+                                            (let [unique-civs-count (count (distinct (map ::tile/civilization-type (filter tile/civ? tiles))))]
                                               (case unique-civs-count
                                                 0 -5
                                                 1 0
@@ -46,14 +46,14 @@
                                                 4 10
                                                 5 15))
 
-                                            ::tile-type/pharoah (let [pharoah-count (count (filter m-tile/pharoah? tiles))]
+                                            ::tile-type/pharoah (let [pharoah-count (count (filter tile/pharoah? tiles))]
                                                                   (cond (= pharoah-count most-pharoahs) 5
                                                                         (= pharoah-count least-pharoas) -2
                                                                         :else 0))})}
                ;; last epoch
                (= (::epoch/number epoch) 3)
                (-> (assoc-in [:tile-scores ::tile-type/monument]
-                             (let [monument-groups (group-by ::tile/monument-type (filter m-tile/monument? tiles))]
+                             (let [monument-groups (group-by ::tile/monument-type (filter tile/monument? tiles))]
                                (+ (case (count monument-groups)
                                     7 10
                                     8 15
