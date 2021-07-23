@@ -17,3 +17,6 @@
                  (assoc a k v)))
              {}
              m))
+
+(defn rand-char []
+  (char (+ 65 (rand-int 26))))

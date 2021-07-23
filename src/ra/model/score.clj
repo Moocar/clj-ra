@@ -1,9 +1,8 @@
 (ns ra.model.score
-  (:require [ra.model.tile :as m-tile]
+  (:require [ra.specs.epoch :as epoch]
             [ra.specs.hand :as hand]
-            [ra.specs.tile.type :as tile-type]
             [ra.specs.tile :as tile]
-            [ra.specs.epoch :as epoch]))
+            [ra.specs.tile.type :as tile-type]))
 
 (defn count-sun-disks [hand]
   (reduce + (concat (::hand/available-sun-disks hand)

@@ -2,16 +2,11 @@
   (:require [datascript.core :as d]
             [ra.db :as db]
             [ra.model.game :as m-game]
-            [ra.model.player :as m-player]
-            [ra.model.tile :as m-tile]
             [ra.pathom :as pathom]
             [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
-            [ra.specs.player :as player]
-            [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]
-            [ra.model.bot :as m-bot]))
+            [ra.specs.tile :as tile]))
 
 (defn get-hands [epoch hand-count]
   (->> (::epoch/hands epoch)
@@ -24,9 +19,6 @@
 (defn get-game [db short-id]
   (d/entity db [::game/short-id short-id]))
 
-(defn get-hand [db hand-id]
-  (d/entity db [::hand/id hand-id]))
-
 (defn refresh-game [db game]
   (let [game (get-game db (::game/short-id game))
         epoch (::game/current-epoch game)
@@ -37,29 +29,6 @@
 
 (defn find-tile-p [game pred]
   (first (filter pred (::game/tile-bag game))))
-
-(defn find-tile-by-type [game tile-type]
-  (find-tile-p game (fn [tile]
-                      (::tile/type tile)
-                      (and (= tile-type (::tile/type tile))
-                           (not (::tile/disaster? tile))))))
-
-(defn find-tile [conn game-id tile-type]
-  (find-tile-p (d/entity @conn game-id) (fn [tile]
-                              (and (= tile-type (::tile/type tile))
-                                   (not (::tile/disaster? tile))))))
-
-(defn god-tile? [t]
-  (= ::tile-type/god (::tile/type t)))
-
-(defn find-tile-in [thing pred]
-  (first (filter pred thing)))
-
-(defn find-tile-in-hand [hand pred]
-  (first (filter pred (::hand/tiles hand))))
-
-(defn find-tile-in-auction [epoch pred]
-  (first (filter pred (::epoch/auction-tiles epoch))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Actions

@@ -2,7 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [ra.specs.epoch :as epoch]
             [ra.specs.player :as player]
-            [ra.specs :as rs]))
+            [ra.specs :as rs]
+            [ra.core :as core]))
 
 (s/def ::id nat-int?)
 (s/def ::current-epoch (s/keys :req [::epoch/number]))
@@ -31,16 +32,37 @@
    4 9
    5 10})
 
-(defn highest-sun-disk [game]
+(defn highest-sun-disk
+  "The highest possible sun disk. E.g with 2 players, it's 9. With 3
+  players it's 13."
+  [game]
   (let [sun-disk-set (get sun-disk-sets (count (::players game)))]
     (last (sort (map #(apply max %) sun-disk-set)))))
 
-(defn player-count [game]
+(defn player-count
+  [game]
   (count (::players game)))
 
-(defn max-ras [game]
+(defn max-ras
+  "The total size of the ra track"
+  [game]
   (get ras-per-epoch (player-count game)))
 
-(defn last-ra? [game]
+(defn last-ra?
+  "Is the current epoch waiting for the final ra? (e.g has 7 or 8 ras
+  out)"
+  [game]
   (= (inc (count (::epoch/ra-tiles (::current-epoch game))))
      (max-ras game)))
+
+(defn current-hand
+  "Returns the current hand in the current epoch in the game"
+  [game]
+  (-> game
+      ::current-epoch
+      ::epoch/current-hand))
+
+(defn new-short-id
+  "Returns a short 4 character human readable game ID"
+  []
+  (apply str (repeatedly 4 core/rand-char)))

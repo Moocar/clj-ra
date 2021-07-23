@@ -11,7 +11,8 @@
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
             [ra.specs.auction.reason :as auction-reason]
-            [ra.specs.auction :as auction]))
+            [ra.specs.auction :as auction]
+            [ra.core :as core]))
 
 (defn bid! [{:keys [:parser] :as env} epoch hand game]
   (let [available-sun-disks (::hand/available-sun-disks hand)
@@ -90,11 +91,8 @@
             (println ["error in hand" (::hand/seat current-hand) (::player/name player)])
             (throw e)))))))
 
-(defn rand-char []
-  (char (+ 65 (rand-int 26))))
-
 (defn new-bot-name []
-  (apply str (concat ["Bot "] (repeatedly 4 rand-char))))
+  (apply str (concat ["Bot "] (repeatedly 4 core/rand-char))))
 
 (pc/defmutation add-to-game
     [{:keys [::db/conn :parser] :as env} input]
