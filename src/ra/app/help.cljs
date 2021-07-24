@@ -81,6 +81,7 @@
                               ::tile/scarab? true
                               ::tile/type  ::tile-type/monument})
             (dom/div :.flex.flex-col {}
+              (dom/div {} (dom/span "Only scored at end of game."))
               (dom/div {} (dom/span :.font-bold "1 point each"))
               (dom/div {} (dom/span :.font-bold {} "5, 10 or 15 points" ) " per set of 3, 4, or 5. ")
               (dom/div {} (dom/span :.font-bold {} "10, 15 points ") " for 7, 8 different types." )))

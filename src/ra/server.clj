@@ -150,7 +150,7 @@
   (html
    [:html
     {:lang  "en"
-     :class "text-gray-900 leading-light"}
+     :class "text-gray-900 leading-light cursor-default"}
     [:head
      [:meta {:charset "UTF-8"}]
      [:meta {:name    "viewport"

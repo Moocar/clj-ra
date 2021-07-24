@@ -6,7 +6,7 @@
     (cond-> {}
       onClick (-> (assoc :onClick (fn [_] (onClick)))
                   (assoc :classes ["cursor-pointer" "hover:bg-red-500"]))
-      (or too-low? used?) (update :classes concat ["cursor-not-allowed" "opacity-50"])
+      (or too-low? used?) (update :classes concat ["opacity-50"])
       large (update :classes concat ["border-4" "border-red-700"]))
     (if used?
       (dom/div :.flex.w-full.h-full.items-center.justify-center.opacity-0.hover:opacity-100 {} (str value))
