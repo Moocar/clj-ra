@@ -1,12 +1,13 @@
 (ns ra.specs.game
   (:require [clojure.spec.alpha :as s]
-            [ra.specs.epoch :as epoch]
             [ra.specs.player :as player]
             [ra.specs :as rs]
-            [ra.core :as core]))
+            [ra.core :as core]
+            [ra.specs.hand :as hand]
+            [ra.specs.auction :as auction]))
 
 (s/def ::id nat-int?)
-(s/def ::current-epoch (s/keys :req [::epoch/number]))
+(s/def ::epoch #{1 2 3})
 (s/def ::started-at rs/zoned-datetime?)
 (s/def ::players (s/coll-of (s/keys :req [::player/id])))
 
@@ -52,17 +53,34 @@
   "Is the current epoch waiting for the final ra? (e.g has 7 or 8 ras
   out)"
   [game]
-  (= (inc (count (::epoch/ra-tiles (::current-epoch game))))
+  (= (inc (count (::ra-tiles game)))
      (max-ras game)))
 
 (defn current-hand
   "Returns the current hand in the current epoch in the game"
   [game]
-  (-> game
-      ::current-epoch
-      ::epoch/current-hand))
+  (::current-hand game))
 
 (defn new-short-id
   "Returns a short 4 character human readable game ID"
   []
   (apply str (repeatedly 4 core/rand-char)))
+
+(defn auction-tiles-full?
+  "Returns true if the auction track is full"
+  [game]
+  (= 8 (count (::auction-tiles game))))
+
+(defn active-bidder-count
+  "Returns the number of hands that can still bid"
+  [game]
+  (count (filter (fn [hand]
+                   (seq (::hand/available-sun-disks hand)))
+                 (::hands game))))
+
+(defn bid-count [game]
+  (count (::auction/bids (::auction game))))
+
+(defn hand-with-highest-sun-disk
+  [game]
+  (last (sort-by hand/highest-sun-disk (::hands game))))

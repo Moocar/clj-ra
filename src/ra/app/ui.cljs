@@ -1,6 +1,5 @@
 (ns ra.app.ui
-  (:require [com.fulcrologic.fulcro.dom :as dom]
-            [com.fulcrologic.fulcro.components :as comp]))
+  (:require [com.fulcrologic.fulcro.dom :as dom]))
 
 (defn button [options text]
   (dom/button :.bg-indigo-500.text-white.font-bold.py-2.px-4.rounded.focus:outline-none.focus:shadow-outline.active:bg-indigo-700.focus:ring-2.focus:ring-green-500

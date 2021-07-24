@@ -1,14 +1,11 @@
 (ns ra.app.app
-  (:require [clojure.string :as str]
+  (:require [clojure.core.async :as async]
+            [clojure.string :as str]
             [com.fulcrologic.fulcro.application :as app]
             [com.fulcrologic.fulcro.components :as comp]
-            [com.fulcrologic.fulcro.data-fetch :as df]
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
             [com.fulcrologic.fulcro.networking.websockets :as fws]
-            [edn-query-language.core :as eql]
-            [ra.specs.game :as game]
-            [com.fulcrologic.fulcro.algorithms.merge :as merge]
-            [clojure.core.async :as async]))
+            [edn-query-language.core :as eql]))
 
 (defmutation hide-error [_]
   (action [env]
@@ -75,6 +72,6 @@
     :global-error-action  global-error-action
     :global-eql-transform global-eql-transform
     :remotes              {:remote (fws/fulcro-websocket-remote
-                                    {:push-handler          (fn [{:keys [msg]}]
+                                    {:push-handler          (fn [{:keys [msg] :as full}]
                                                               (async/put! loader-ch msg))
                                      :global-error-callback #(comp/transact! APP [(show-error {})])})}}))

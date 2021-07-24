@@ -24,31 +24,20 @@
                               :db/valueType   :db.type/ref}
    :ra.specs.auction/ra-hand {:db/valueType :db.type/ref}
 
-   :ra.specs.epoch/auction {:db/valueType :db.type/ref}
+   :ra.specs.event/id {:db/unique :db.unique/value}
 
-   :ra.specs.epoch/id              {:db/unique :db.unique/value}
-   :ra.specs.epoch/hands           {:db/cardinality :db.cardinality/many
-                                    :db/valueType   :db.type/ref}
-   :ra.specs.epoch/auction-tiles   {:db/cardinality :db.cardinality/many
-                                    :db/valueType   :db.type/ref}
-   :ra.specs.epoch/ra-tiles        {:db/cardinality :db.cardinality/many
-                                    :db/valueType   :db.type/ref}
-   :ra.specs.epoch/current-hand    {:db/valueType :db.type/ref}
-   :ra.specs.epoch/last-ra-invoker {:db/valueType :db.type/ref}
-
-   :ra.specs.event/id           {:db/unique :db.unique/value}
-
-   :ra.specs.game/id            {:db/unique :db.unique/value}
-   :ra.specs.game/short-id      {:db/unique :db.unique/value}
-   :ra.specs.game/tile-bag      {:db/cardinality :db.cardinality/many
-                                 :db/valueType   :db.type/ref}
-   :ra.specs.game/players       {:db/cardinality :db.cardinality/many
-                                 :db/valueType   :db.type/ref}
-   :ra.specs.game/epochs        {:db/cardinality :db.cardinality/many
-                                 :db/valueType   :db.type/ref}
-   :ra.specs.game/events        {:db/cardinality :db.cardinality/many
-                                 :db/valueType   :db.type/ref}
-   :ra.specs.game/current-epoch {:db/valueType :db.type/ref}})
+   :ra.specs.game/auction         {:db/valueType :db.type/ref}
+   :ra.specs.game/auction-tiles   {:db/cardinality :db.cardinality/many :db/valueType :db.type/ref}
+   :ra.specs.game/current-hand    {:db/valueType :db.type/ref}
+   :ra.specs.game/events          {:db/cardinality :db.cardinality/many :db/valueType :db.type/ref}
+   :ra.specs.game/hands           {:db/cardinality :db.cardinality/many :db/valueType :db.type/ref}
+   :ra.specs.game/id              {:db/unique :db.unique/value}
+   :ra.specs.game/last-ra-invoker {:db/valueType :db.type/ref}
+   :ra.specs.game/players         {:db/cardinality :db.cardinality/many :db/valueType :db.type/ref}
+   :ra.specs.game/ra-tiles        {:db/cardinality :db.cardinality/many :db/valueType :db.type/ref}
+   :ra.specs.game/short-id        {:db/unique :db.unique/value}
+   :ra.specs.game/tile-bag        {:db/cardinality :db.cardinality/many :db/valueType :db.type/ref}
+   })
 
 (defmethod ig/init-key ::conn [_ _]
   (let [conn (d/create-conn schema)]

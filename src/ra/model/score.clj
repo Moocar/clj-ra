@@ -1,16 +1,16 @@
 (ns ra.model.score
-  (:require [ra.specs.epoch :as epoch]
-            [ra.specs.hand :as hand]
+  (:require [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            [ra.specs.game :as game]))
 
 (defn count-sun-disks [hand]
   (reduce + (concat (::hand/available-sun-disks hand)
                     (::hand/used-sun-disks hand))))
 
-(defn score-epoch [epoch]
-  (assert (< (::epoch/number epoch) 4))
-  (let [hands                 (::epoch/hands epoch)
+(defn score-epoch [game]
+  (assert (< (::game/epoch game) 4))
+  (let [hands                 (::game/hands game)
         sort-by-pharoah-count (sort
                                (map (fn [hand]
                                       (count (filter tile/pharoah? (::hand/tiles hand))))
@@ -50,7 +50,7 @@
                                                                         (= pharoah-count least-pharoas) -2
                                                                         :else 0))})}
                ;; last epoch
-               (= (::epoch/number epoch) 3)
+               (= (::game/epoch game) 3)
                (-> (assoc-in [:tile-scores ::tile-type/monument]
                              (let [monument-groups (group-by ::tile/monument-type (filter tile/monument? tiles))]
                                (+ (case (count monument-groups)

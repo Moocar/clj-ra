@@ -3,17 +3,16 @@
             [ra.db :as db]
             [ra.model.game :as m-game]
             [ra.pathom :as pathom]
-            [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]))
 
-(defn get-hands [epoch hand-count]
-  (->> (::epoch/hands epoch)
+(defn get-hands [game hand-count]
+  (->> (::game/hands game)
        (sort-by ::hand/seat)
        (repeat 2)
        (apply concat)
-       (drop-while #(not= (:db/id (::epoch/current-hand epoch)) (:db/id %)))
+       (drop-while #(not= (:db/id (::game/current-hand game)) (:db/id %)))
        (take hand-count)))
 
 (defn get-game [db short-id]
@@ -21,10 +20,8 @@
 
 (defn refresh-game [db game]
   (let [game (get-game db (::game/short-id game))
-        epoch (::game/current-epoch game)
-        hands (get-hands epoch 3)]
+        hands (get-hands game 3)]
     {:game game
-     :epoch epoch
      :hands hands}))
 
 (defn find-tile-p [game pred]
@@ -36,9 +33,8 @@
 (defn draw-tile* [{:keys [::db/conn ::pathom/parser] :as env} game hand tile]
   (let [db @conn
         hand (d/entity db (:db/id hand))
-        game (d/entity db (:db/id game))
-        epoch (::game/current-epoch game)]
-    (m-game/do-draw-tile env game epoch hand tile)))
+        game (d/entity db (:db/id game))]
+    (m-game/do-draw-tile env game hand tile)))
 
 (defn rand-bid [{:keys [::pathom/parser]} hand game]
   (parser {} [`(m-game/bid {::hand/id ~(::hand/id hand)
@@ -75,8 +71,7 @@
 (comment
   ;; examples
   (let [game                 (get-game @conn game-short-id)
-        epoch                (::game/current-epoch game)
-        [h1 h2 h3 :as hands] (get-hands epoch 3)
+        [h1 h2 h3 :as hands] (get-hands game 3)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
         _                    (draw-tile* env (first hands) (find-tile-p game tile/monument?))
         {:keys [game hands]} (refresh-game @conn game)
@@ -88,14 +83,13 @@
   (let [db @(::db/conn (s))
         game (d/entity @(::db/conn (s)) [::game/short-id "VJFD"])]
     (map (fn [h] (d/pull db m-game/hand-q (:db/id h)))
-         (::epoch/hands (::game/current-epoch game))))
+         (::game/hands game)))
   )
 
 ;; Get to the end of the first epoch quickly
 (defn run [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
   (let [game (get-game @conn game-short-id)
-        epoch (::game/current-epoch game)
-        [h1 h2 h3 :as hands] (get-hands epoch 3)
+        [h1 h2 h3 :as hands] (get-hands game 3)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
@@ -108,40 +102,6 @@
         {:keys [game hands]} (refresh-game @conn game)
         {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
 ;        _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
-
-        ;; game (get-game @conn game-short-id)
-        ;; epoch (::game/current-epoch game)
-        ;; [h1 h2 h3 :as hands] (get-hands epoch 3)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        ;; _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
-        ;; {:keys [game hands]} (refresh-game @conn game)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        ;; _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
-        ;; {:keys [game hands]} (refresh-game @conn game)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
-        ;; _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
-
-        ;; game (get-game @conn game-short-id)
-        ;; epoch (::game/current-epoch game)
-        ;; [h1 h2 h3 :as hands] (get-hands epoch 3)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        ;; _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
-        ;; {:keys [game hands]} (refresh-game @conn game)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        ;; _ (draw-tile* env (first hands) (find-tile-p game m-tile/monument?))
-        ;; {:keys [game hands]} (refresh-game @conn game)
-        ;; {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
-        ; _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
-
-
         ]
     (m-game/notify-all-clients! env (::game/id game))
     nil))

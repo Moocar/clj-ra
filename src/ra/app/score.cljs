@@ -5,8 +5,7 @@
             [ra.specs.tile.type :as tile-type]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
-            [ra.specs.game :as game]
-            [ra.specs.epoch :as epoch]))
+            [ra.specs.game :as game]))
 
 (defn ui-table [s hand-scores game]
   (let [last-epoch? (::game/finished-at game)]
@@ -73,4 +72,4 @@
           (when (::game/finished-at game)
             (dom/div :.flex.flex-col.w-full.justify-center {}
               (dom/div :.text-lg.font-bold.pb-2.text-center.pt-4 {} "Final scores")
-              (ui-final-scores (::epoch/hands (::game/current-epoch game))))))))))
+              (ui-final-scores (::game/hands game)))))))))

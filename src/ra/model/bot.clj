@@ -5,7 +5,6 @@
             [ra.db :as db]
             [ra.model.game :as m-game]
             [ra.model.player :as m-player]
-            [ra.specs.epoch :as epoch]
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
@@ -14,10 +13,10 @@
             [ra.specs.auction :as auction]
             [ra.core :as core]))
 
-(defn bid! [{:keys [:parser] :as env} epoch hand game]
+(defn bid! [{:keys [:parser] :as env} hand game]
   (let [available-sun-disks (::hand/available-sun-disks hand)
-        auction             (::epoch/auction epoch)
-        voluntary-auction?  (and (= hand (::epoch/last-ra-invoker epoch))
+        auction             (::game/auction game)
+        voluntary-auction?  (and (= hand (::game/last-ra-invoker game))
                                 (= ::auction-reason/invoke (::auction/reason auction)))
         sun-disk            (if (and (not voluntary-auction?)
                                      (zero? (rand-int 2)))
@@ -67,25 +66,24 @@
     (assert game)
     (if-not (::game/started-at game)
       nil
-      (let [epoch        (::game/current-epoch game)
-            current-hand (::epoch/current-hand epoch)]
+      (let [current-hand (::game/current-hand game)]
         (try
           (if-not (= player (::hand/player current-hand))
             nil
             (do
-              (if (::epoch/auction epoch)
-                (if (<= (epoch/active-bidder-count epoch)
-                        (epoch/bid-count epoch))
+              (if (::game/auction game)
+                (if (<= (game/active-bidder-count game)
+                        (game/bid-count game))
                   nil
-                  (bid! env epoch current-hand game))
-                (if (::epoch/in-disaster? epoch)
+                  (bid! env current-hand game))
+                (if (::game/in-disaster? game)
                   (discard-disaster-tiles! env game current-hand)
-                  (if (epoch/auction-tiles-full? epoch)
+                  (if (game/auction-tiles-full? game)
                     (invoke-ra! env game current-hand)
                     (if (= 0 (rand-int 4))
                       (invoke-ra! env game current-hand)
                       (draw-tile! env current-hand game)))))
-              (let [game (m-game/load-game @conn m-game/game-query game-id)]
+              (let [game (m-game/load-game @conn m-game/game-q game-id)]
                 (m-game/notify-clients (:websockets env) (:any @(:connected-uids env)) game))))
           (catch Exception e
             (println ["error in hand" (::hand/seat current-hand) (::player/name player)])
