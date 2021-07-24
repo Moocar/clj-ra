@@ -68,5 +68,8 @@
   (try
     (check-selected-disaster-tiles hand selected-tiles)
     true
-    (catch #?(:clj Exception) #?(:cljs :default) _ false))
-  )
+    (catch #?(:clj Exception) #?(:cljs :default) _ false)))
+
+(defn pharoah-count
+  [hand]
+  (count (filter tile/pharoah? (::tiles hand))))

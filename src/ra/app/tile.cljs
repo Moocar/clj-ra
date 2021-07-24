@@ -23,7 +23,7 @@
 (defn blank-ra-tile []
   (dom/div :.w-8.h-8.md:w-20.md:h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative.shadow-md.flex-shrink-0 {}))
 
-(defsc Tile [this props {:keys [selectable? dimmed? on-click stack-size]}]
+(defsc Tile [this props {:keys [selectable? dimmed? on-click stack-size most-pharoahs]}]
   {:query [::tile/id
            ::tile/title
            ::tile/disaster?
@@ -52,7 +52,10 @@
                     (str stack-size)))
                 (when (::tile/scarab? props)
                   (dom/div :.absolute.bottom-0.left-0.pl-1 {}
-                    "\u267E")))))
+                    "\u267E"))
+                (when (and (tile/pharoah? props) most-pharoahs)
+                  (dom/div :.absolute.top-0.right-0.pr-1 {}
+                    "\u03A3")))))
 
 (def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 

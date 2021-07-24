@@ -3,18 +3,18 @@
 
          ;; For clojure spec
          org.clojure/spec.alpha {:mvn/version "0.2.194"}
-         edn-query-language/eql {:mvn/version "2021.02.28"}
+         edn-query-language/eql {:mvn/version "2021.07.18"}
 
          ;; For Graphql requests
          ;; com.wsscode/pathom     {:local/root "/Users/amarcar/dev/github/wilkerlucio/pathom"}
          com.wsscode/pathom                  {:mvn/version "2.4.0"}
 
          ;; For http requests
-         cheshire/cheshire {:mvn/version "5.10.0"}
+         cheshire/cheshire {:mvn/version "5.10.1"}
 
          ;; Fulcro
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
-         com.fulcrologic/fulcro {:mvn/version "3.5.0"}
+         com.fulcrologic/fulcro {:mvn/version "3.5.1"}
 
          ;; Websockets
          ;; com.fulcrologic/fulcro-websockets {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro-websockets"}
@@ -22,7 +22,7 @@
          com.taoensso/sente                {:mvn/version "1.16.2"}
 
          ;; http server
-         ring/ring-core    {:mvn/version "1.9.3"}
+         ring/ring-core    {:mvn/version "1.9.4"}
          http-kit/http-kit {:mvn/version "2.5.3"}
 
          ;; TODO instead of generating html in server. Move into build system to
@@ -53,8 +53,8 @@
                                       integrant/repl {:mvn/version "0.3.2"}}
                         :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
 
-           :ui {:extra-deps {org.clojure/clojurescript           {:mvn/version "1.10.866"}
-                             thheller/shadow-cljs                {:mvn/version "2.14.6"}}}
+           :ui {:extra-deps {org.clojure/clojurescript           {:mvn/version "1.10.879"}
+                             thheller/shadow-cljs                {:mvn/version "2.15.2"}}}
 
            :ui-dev {:extra-deps {binaryage/devtools {:mvn/version "1.0.3"}
                                  ;; Debugging

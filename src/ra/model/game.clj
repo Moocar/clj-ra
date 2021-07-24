@@ -393,6 +393,7 @@
         (mapcat discard-non-scarabs-tx (::game/hands game))
         [[:db/add (:db/id game) ::game/epoch (inc (::game/epoch game))]
          [:db/retract (:db/id game) ::game/last-ra-invoker]
+         [:db/retract (:db/id game) ::game/auction]
          [:db/retract (:db/id game) ::game/in-disaster?]
          [:db/retract (:db/id game) ::game/ra-tiles]
          [:db/retract (:db/id game) ::game/auction-tiles]]

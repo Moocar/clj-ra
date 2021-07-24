@@ -84,3 +84,8 @@
 (defn hand-with-highest-sun-disk
   [game]
   (last (sort-by hand/highest-sun-disk (::hands game))))
+
+(defn highest-pharoah-count
+  "Returns the highest number of pharoahs in a hand"
+  [game]
+  (last (sort (map hand/pharoah-count (::hands game)))))

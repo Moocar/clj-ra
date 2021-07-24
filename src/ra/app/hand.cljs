@@ -45,7 +45,7 @@
        (when (and my-go? (::hand/my-go? hand) auction (auction/can-pass? auction hand))
          [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})])))))
 
-(defn ui-tiles [hand {:keys [click-god-tile my-go?]}]
+(defn ui-tiles [hand {:keys [click-god-tile my-go? game]}]
   (let [tiles (::hand/tiles hand)
         discard-disaster-tiles? (seq (filter ::tile/disaster? tiles))
         disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
@@ -68,7 +68,10 @@
                                         (if (and (tile/god? tile) my-go? (::hand/my-go? hand))
                                           {:selectable? true
                                            :on-click    (fn [tile] (click-god-tile hand tile))}
-                                          {})))))
+                                          {})
+                                        (when (and (tile/pharoah? tile)
+                                                   (= (hand/pharoah-count hand) (game/highest-pharoah-count game)))
+                                          {:most-pharoahs true})))))
            (sort-by (juxt ::tile/type ::tile/title))
            (ui-tile/ui-tiles)))))
 
