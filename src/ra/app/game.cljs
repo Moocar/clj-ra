@@ -24,7 +24,8 @@
             [ra.app.routing :as routing]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
-            [ra.app.audio :as audio]))
+            [ra.app.audio :as audio]
+            [com.fulcrologic.fulcro.application :as app]))
 
 (declare Game)
 
@@ -266,6 +267,18 @@
            {::auction/bids [{::bid/hand [::hand/id {::hand/player [::player/name]}]}
                             ::bid/sun-disk]}]})
 
+(defn ui-finished [this props]
+  (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
+    (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center
+      (dom/h2 :.text-lg.font-bold.pb-4 {} "Game Finished")
+      (ui-score/ui-content (app/current-state this)
+                           {:hand-scores (:ui/last-hand-scores props)
+                            :game        props})
+      (dom/div :.flex.flex-row.gap-4.pt-4 {}
+        (ui/button {:onClick (fn []
+                               (routing/to! this ["lobby"]))}
+          "Back to lobby")))))
+
 (defsc Game [this props]
   {:query               [{::game/players (comp/get-query ui-player/Player)}
                          {::game/events (comp/get-query ui-event/Item)}
@@ -311,12 +324,15 @@
                                                            {:target               [:ui/current-game]
                                                             :post-mutation        `dr/target-ready
                                                             :post-mutation-params {:target ident}})))))
-   :allow-route-change? (fn [_] false)
+   :allow-route-change? (fn [this]
+                          (boolean (::game/finished-at (comp/props this))))
    :route-denied        (fn [this router relative-path]
                           (when (js/confirm "Are you sure you want to leave the game?")
                             (dr/retry-route! this router relative-path)))}
   (dom/div :.w-screen.bg-white {}
     (cond
+      (::game/finished-at props)
+      (ui-finished this props)
       (not (::game/started-at props))
       (ui-unstarted this props)
       :else
@@ -331,7 +347,8 @@
                       (assoc p :my-go? (my-go? p)))))
     (when (:ui/show-help-modal props)
       (ui-help/ui-help-modal this))
-    (when (:ui/show-score-modal props)
+    (when (and (not (::game/finished-at props))
+               (:ui/show-score-modal props))
       (ui-score/ui-modal this {:hand-scores (:ui/last-hand-scores props)
                                :game        props
                                :close-prop  :ui/show-score-modal}))))

@@ -22,7 +22,7 @@
                            (dom/th {} "Monuments"))
                          (when last-epoch?
                            (dom/th {} "Sun Disks"))
-                         (dom/th {} "Epoch Total")))
+                         (dom/th {} "Total")))
       (dom/tbody {}
                  (map (fn [hand-score]
                         (let [tile-scores (:tile-scores hand-score)
@@ -54,7 +54,15 @@
                                    (dom/td :.font-bold {} (::player/name (::hand/player hand)))
                                    (dom/td {} (str (::hand/score hand))))))))))
 
-(defn ui-modal [this {:keys [game close-prop hand-scores]}]
+(defn ui-content [state-map {:keys [game hand-scores]}]
+  (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}
+    (ui-table state-map hand-scores game)
+    (when (::game/finished-at game)
+      (dom/div :.flex.flex-col.w-full.justify-center {}
+        (dom/div :.text-lg.font-bold.pb-2.text-center.pt-4 {} "Final scores")
+        (ui-final-scores (::game/hands game))))))
+
+(defn ui-modal [this {:keys [game close-prop] :as props}]
   (let [state-map (app/current-state this)]
     (dom/div :.h-screen.w-screen.flex.justify-center.items-center.absolute.top-0.left-0.p-4 {}
       (dom/div :.absolute.top-0.left-0.w-screen.h-screen.z-10.bg-gray-500.opacity-75.z-10 {})
@@ -67,9 +75,4 @@
                                                  "Epoch Finished")))
         (dom/div :.text.lg.font-bold.cursor-pointer.absolute.top-2.right-2
           {:onClick (fn [] (m/set-value! this close-prop false))} "Close")
-        (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}
-          (ui-table state-map hand-scores game)
-          (when (::game/finished-at game)
-            (dom/div :.flex.flex-col.w-full.justify-center {}
-              (dom/div :.text-lg.font-bold.pb-2.text-center.pt-4 {} "Final scores")
-              (ui-final-scores (::game/hands game)))))))))
+        (ui-content state-map props )))))
