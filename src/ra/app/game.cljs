@@ -109,6 +109,7 @@
                (not auction)
                (not (game/auction-tiles-full? game)))
         {:onClick (fn []
+                    (js/console.log "draw tile")
                     (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)
                                                              ::game/id (::game/id game)})]))}
         {:disabled true})
@@ -166,6 +167,7 @@
                  (if auction
                    (comp/computed hand (assoc props
                                               :onClickSunDisk (fn [sun-disk]
+                                                                (js/console.log "bid" sun-disk)
                                                                 (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand)
                                                                                                    ::game/id (::game/id game)
                                                                                                    :sun-disk sun-disk})]))

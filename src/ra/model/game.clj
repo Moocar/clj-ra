@@ -354,7 +354,10 @@
                   (start-auction-tx {:hand           hand
                                      :auction-reason ::auction-reason/invoke
                                      :game          game})
-                  (rotate-current-hand-tx game hand))
+                  (rotate-current-hand-tx game hand)
+                  (event-tx game
+                            ::event-type/invoke-ra
+                            {:hand {::hand/id (::hand/id hand)}}))
                  (select-keys input [::game/id]))
     (select-keys input [::game/id])))
 

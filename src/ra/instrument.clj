@@ -80,10 +80,10 @@
     nil)
 
   ;; print out all hands
-  (let [db @(::db/conn (s))
-        game (d/entity @(::db/conn (s)) [::game/short-id "VJFD"])]
-    (map (fn [h] (d/pull db m-game/hand-q (:db/id h)))
-         (::game/hands game)))
+  (let [db @(:ra.db/conn (s))
+        game (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/short-id "VJFD"])]
+    (map (fn [h] (datascript.core/pull db ra.model.game/hand-q (:db/id h)))
+         (:ra.specs.game/hands game)))
   )
 
 ;; Get to the end of the first epoch quickly
