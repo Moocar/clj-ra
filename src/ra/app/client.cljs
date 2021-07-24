@@ -10,12 +10,16 @@
              :refer
              [defrouter]]
             [ra.app.app :as client-app]
+            [ra.app.audio :as audio]
             [ra.app.error :as ui-error]
             [ra.app.game :as ui-game]
             [ra.app.lobby :as ui-lobby]
             [ra.app.player :as ui-player]
+            [ra.app.routing :as routing]
             [ra.model.player :as m-player]
-            [ra.app.routing :as routing]))
+            [ra.specs.player :as player]
+            [ra.specs.game :as game]
+            [ra.specs.hand :as hand]))
 
 (defsc Home [_ _]
   {:query []
@@ -63,7 +67,12 @@
                                   (comp/registry-key->class :ra.app.game/Game)
                                   game
                                   :remove-missing? true)
+          (let [state-map (app/current-state app)]
+            (when (= (::player/id (::hand/player (::game/current-hand game)))
+                     (second (get state-map :ui/current-player)))
+              (audio/play-ding! state-map)))
           (async/<! (async/timeout 1))
           (recur))))
     (app/mount! app Root "app" {:initialize-state? false})
-    (m-player/init! app)))
+    (m-player/init! app)
+    (audio/load-and-store-ding! app)))

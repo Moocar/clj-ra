@@ -392,6 +392,8 @@
         (mapcat flip-sun-disks-tx (::game/hands game))
         (mapcat discard-non-scarabs-tx (::game/hands game))
         [[:db/add (:db/id game) ::game/epoch (inc (::game/epoch game))]
+         [:db/retract (:db/id game) ::game/last-ra-invoker]
+         [:db/retract (:db/id game) ::game/in-disaster?]
          [:db/retract (:db/id game) ::game/ra-tiles]
          [:db/retract (:db/id game) ::game/auction-tiles]]
         ;; The first hand of the next epoch is the one with the highest sun disk
@@ -441,7 +443,6 @@
 
 (pc/defmutation draw-tile [{:keys [::db/conn] :as env} input]
   {::pc/params [::hand/id ::game/id]
-   ::pc/transform notify-other-clients-transform
    ::pc/output [::game/id]}
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])
         game (d/entity @conn [::game/id (::game/id input)])
@@ -613,38 +614,13 @@
    ::pc/output    [::game/id]}
   (let [hand                 (d/entity @conn [::hand/id (::hand/id input)])
         game                 (d/entity @conn [::game/id (::game/id input)])
-        disaster-tiles       (set (filter ::tile/disaster? (::hand/tiles hand)))
-        selected-tiles       (set (map (fn [tile-id] (d/entity @conn [::tile/id tile-id])) (:tile-ids input)))
-        possible-tiles       (set (filter (fn [tile]
-                                            (and (not (::tile/disaster? tile))
-                                                 ((set (map ::tile/type disaster-tiles)) (::tile/type tile))))
-                                          (::hand/tiles hand)))
-        disaster-type->count (->> disaster-tiles
-                                  (group-by ::tile/type)
-                                  (reduce-kv (fn [a k v]
-                                               (assoc a k (count v)))
-                                             {}))]
+        disaster-tiles       (hand/disaster-tiles hand)
+        selected-tiles       (set (map (fn [tile-id] (d/entity @conn [::tile/id tile-id])) (:tile-ids input)))]
     (check-current-hand game hand)
     (when-not (seq disaster-tiles)
       (throw (ex-info "No disaster tiles in hand" {})))
 
-    (when-let [drought-tiles (seq (filter tile/drought? disaster-tiles))]
-      (let [flood-tiles-in-hand (filter tile/flood? (::hand/tiles hand))
-            flood-tiles-selected (filter tile/flood? selected-tiles)
-            needed (min (count flood-tiles-in-hand) (* (count drought-tiles) 2))]
-        (when (< (count flood-tiles-selected) needed)
-          (throw (ex-info "Need to select more flood tiles" {})))))
-
-    (doseq [[disaster-type disaster-count] disaster-type->count]
-      (let [candidates     (set (filter #(= disaster-type (::tile/type %)) possible-tiles))
-            expected-count (min (count candidates) (* disaster-count 2))
-            selected       (set (filter #(= disaster-type (::tile/type %)) selected-tiles))]
-        (when (not= expected-count (count selected))
-          (throw (ex-info "Invalid number of disaster tiles to discard"
-                          {:expected-count expected-count
-                           :received       (count selected)})))
-        (when-not (set/subset? selected candidates)
-          (throw (ex-info "Invalid selected disaster tiles" {})))))
+    (hand/check-selected-disaster-tiles hand selected-tiles)
 
     (d/transact! conn
                  (concat (mapv #(discard-tile-op hand %)

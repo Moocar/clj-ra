@@ -73,7 +73,7 @@
                                    ]})]
     (fn wrapped-parser [env tx]
       (try
-        (real-parser env (conj tx :com.wsscode.pathom/trace))
+        (real-parser env tx #_(conj tx :com.wsscode.pathom/trace))
         (catch Exception e
           (println e)
           e)))))

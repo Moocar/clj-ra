@@ -4,7 +4,6 @@
             [com.fulcrologic.fulcro.components :as comp]
             [com.fulcrologic.fulcro.data-fetch :as df]
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
-            [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
             [ra.app.routing :as routing]
             [ra.specs.player :as player]))
 

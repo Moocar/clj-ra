@@ -6,23 +6,9 @@
             [ra.app.tile :as ui-tile]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
-            [ra.specs.auction.reason :as auction-reason]
             [ra.specs.game :as game]
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]))
-
-(defn all-passes? [{:keys [::auction/bids]}]
-  (empty? (filter ::bid/sun-disk bids)))
-
-(defn can-pass? [{:keys [::auction/ra-hand ::auction/reason ::auction/tiles-full?] :as auction} hand]
-  (or (not= (::hand/id ra-hand) (::hand/id hand))
-      (not= reason ::auction-reason/invoke)
-      (not (all-passes? auction))
-      tiles-full?))
-
-(defn disaster-candidate? [disaster-types tile]
-  (and (not (::tile/disaster? tile))
-       (disaster-types (::tile/type tile))))
 
 (defn ui-sun-disks [hand {:keys [onClickSunDisk my-go? highest-bid auction]}]
   (let [current-bid (first (filter (fn [bid]
@@ -56,7 +42,7 @@
                           (concat (::hand/available-sun-disks hand)
                                   (when current-bid
                                     [(::bid/sun-disk current-bid)])))))
-       (when (and my-go? (::hand/my-go? hand) auction (can-pass? auction hand))
+       (when (and my-go? (::hand/my-go? hand) auction (auction/can-pass? auction hand))
          [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})])))))
 
 (defn ui-tiles [hand {:keys [click-god-tile my-go?]}]

@@ -23,7 +23,8 @@
             [com.fulcrologic.fulcro.data-fetch :as df]
             [ra.app.routing :as routing]
             [ra.specs.auction :as auction]
-            [ra.specs.auction.bid :as bid]))
+            [ra.specs.auction.bid :as bid]
+            [ra.app.audio :as audio]))
 
 (declare Game)
 
@@ -102,41 +103,46 @@
      (::player/id my-player)))
 
 (defn ui-tile-bag [this {:keys [hand game auction]}]
-  (ui/button
-    (if (and my-go?
-             (not auction)
-             (not (::game/in-disaster? game))
-             (not (game/auction-tiles-full? game)))
-      {:onClick (fn []
-                  (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)
-                                                           ::game/id (::game/id game)})]))}
-      {:disabled true})
-    "Draw Tile"))
+  (when-not (::game/in-disaster? game)
+    (ui/button
+      (if (and my-go?
+               (not auction)
+               (not (game/auction-tiles-full? game)))
+        {:onClick (fn []
+                    (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)
+                                                             ::game/id (::game/id game)})]))}
+        {:disabled true})
+      "Draw Tile")))
 
 (defn ui-invoke-ra [this {:keys [hand game auction]}]
-  (dom/button :.bg-red-500.text-white.font-bold.py-2.px-4.rounded.focus:outline-none.focus:shadow-outline.active:bg-red-700.focus:ring-2.focus:ring-green-500.md:hover:bg-red-700
-    (if (and my-go?
-             (not auction)
-             (not (::game/in-disaster? game)))
-      {:onClick (fn []
-                  (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id hand)
-                                                           ::game/id (::game/id game)})]))}
-      {:disabled true
-       :classes  ["opacity-50" "cursor-default"]})
-    "Invoke Auction"))
+  (when-not (::game/in-disaster? game)
+    (dom/button :.bg-red-500.text-white.font-bold.py-2.px-4.rounded.focus:outline-none.focus:shadow-outline.active:bg-red-700.focus:ring-2.focus:ring-green-500.md:hover:bg-red-700
+      (if (and my-go?
+               (not auction))
+        {:onClick (fn []
+                    (comp/transact! this [(m-game/invoke-ra {::hand/id (::hand/id hand)
+                                                             ::game/id (::game/id game)})]))}
+        {:disabled true
+         :classes  ["opacity-50" "cursor-default"]})
+      "Invoke Auction")))
 
 (defn ui-discard-disaster-tiles [this {:keys [hand my-go? game]}]
   (filter ::tile/disaster? (::hand/tiles hand))
-  (ui/button
-    (if (and my-go?
-             (seq (filter ::tile/disaster? (::hand/tiles hand))))
-      {:onClick (fn []
-                  (comp/transact! this [(m-game/discard-disaster-tiles
-                                         {::hand/id (::hand/id hand)
-                                          ::game/id (::game/id game)
-                                          :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
-      {:disabled true})
-    "Discard Disasters"))
+  (dom/div :.flex.flex-row.gap-2 {}
+    (dom/div :.flex.flex-col {}
+      (dom/div :.font-bold {} "Disaster! ")
+      (dom/div {} "Select and discard tiles"))
+    (ui/button
+      (if (and my-go?
+               (seq (filter ::tile/disaster? (::hand/tiles hand)))
+               (hand/selected-disaster-tiles-valid? hand (filter :ui/selected? (::hand/tiles hand))))
+        {:onClick (fn []
+                    (comp/transact! this [(m-game/discard-disaster-tiles
+                                           {::hand/id (::hand/id hand)
+                                            ::game/id (::game/id game)
+                                            :tile-ids (map ::tile/id (filter :ui/selected? (::hand/tiles hand)))})]))}
+        {:disabled true})
+      "Discard selected")))
 
 (m/defmutation select-god-tile [{:keys [hand tile game]}]
   (action [env]
