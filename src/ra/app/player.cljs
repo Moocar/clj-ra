@@ -16,10 +16,10 @@
 
 (def ui-player (comp/factory Player {:keyfn ::player/id}))
 
-(defsc NewForm [this {:keys [::player/id ::player/temp-name] :as props}]
-  {:query         [::player/id ::player/temp-name ::player/name]
+(defsc NewForm [this {:keys [::player/id :ui/temp-name] :as props}]
+  {:query         [::player/id :ui/temp-name ::player/name]
    :ident         ::player/id
-   :initial-state {::player/temp-name ""}
+   :initial-state {:ui/temp-name ""}
    :initLocalState (fn [this _]
                      {:save-ref (fn [r] (gobj/set this "name" r))})
    :componentDidMount (fn [this _ _]
@@ -33,7 +33,7 @@
       (dom/label :.block.text-gray-700.text-sm.font-bold.mb-2 {:htmlFor "username"}
         "What shall we call you?")
       (dom/div {}
-        (ui/input props ::player/temp-name
+        (ui/input props :ui/temp-name
           {:id          "username"
            :type        "text"
            :placeholder "Name"
@@ -45,7 +45,7 @@
                                                     ::player/name temp-name})]
                                             {:refresh [:ui/current-player]})))
            :onChange    (fn [evt _]
-                          (m/set-string! this ::player/temp-name :event evt))}))
+                          (m/set-string! this :ui/temp-name :event evt))}))
       (ui/button {:onClick (fn []
                              (comp/transact! this [(m-player/save
                                                     {::player/id   id

@@ -67,11 +67,14 @@
                   (if winning-bid
                     (let [hand   (get-in s [::hand/id (::hand/id (::bid/hand winning-bid))])
                           player (get-in s (::hand/player hand))]
-                      (dom/div :.flex.flex-row.gap-2 {}
-                        (ui-player-name player)
-                        " won auction with "
-                        (ui-sun-disk (::bid/sun-disk winning-bid))
-                        (dom/ul :.pl-4 (map (fn [t] (dom/li (ui-tile t))) tiles-won))))
+                      (dom/div :.flex.flex-col.gap-2 {}
+                        (dom/div :.flex.flex-row.gap-2 {}
+                          (ui-player-name player)
+                          " won auction with "
+                          (ui-sun-disk (::bid/sun-disk winning-bid)))
+                        (dom/div :.flex.flex-row.gap-2 {}
+                          (dom/div {} "Won:")
+                          (map (fn [t] (ui-tile t)) tiles-won))))
                     "Auction finished (everyone passed)"))
                 (let [hand   (get-in s [::hand/id (::hand/id hand)])
                       player (get-in s (::hand/player hand))]
@@ -122,5 +125,5 @@
 (def ui-item (comp/factory Item {:keyfn ::event/id}))
 
 (defn ui-items [events]
-  (dom/div :.flex.flex-col.overflow-y-scroll.h-48.w-max.gap-2 {}
+  (dom/div :.flex.flex-col.overflow-y-scroll.h-48.w-screen.md:w-max.gap-2 {}
            (map ui-item events)))

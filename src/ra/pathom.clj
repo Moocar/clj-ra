@@ -35,7 +35,7 @@
   (try
     {:com.wsscode.pathom.viz.index-explorer/index
      (get env ::pc/indexes)}
-    (catch Exception e (println e))))
+    (catch Exception e e)))
 
 (defn log-requests [{:keys [env tx] :as req}]
   (println "Pathom transaction:" (pr-str tx))
@@ -48,7 +48,9 @@
    index-explorer])
 
 (defn process-error [env err]
-  (println err)
+  (if (:user-error? (ex-data err))
+    (println (ex-message err) (dissoc (ex-data err) :user-error?))
+    (println err))
   {:error {:msg (.getMessage err)
            :data (ex-data err)}})
 
@@ -75,7 +77,6 @@
       (try
         (real-parser env tx #_(conj tx :com.wsscode.pathom/trace))
         (catch Exception e
-          (println e)
           e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

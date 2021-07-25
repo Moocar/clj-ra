@@ -1,6 +1,5 @@
 (ns ra.model.player
   (:require [clojure.string :as str]
-            [com.fulcrologic.fulcro.algorithms.merge :as merge]
             [com.fulcrologic.fulcro.components :as comp]
             [com.fulcrologic.fulcro.data-fetch :as df]
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
@@ -19,20 +18,19 @@
   (comp/registry-key->class :ra.app.player/NewForm))
 
 (defmutation new-player [input]
-  (remote [_] true)
+  (remote [env]
+    (-> env
+        (m/returning (new-form-component))
+        (m/with-target [:ui/current-player])))
   (ok-action [env]
     (let [new-id (::player/id input)]
-      (swap! (:state env)
-             (fn [s]
-               (-> s
-                   (merge/merge-component (new-form-component) input)
-                   (assoc :ui/current-player [::player/id new-id]))))
       (set-local-storage-id! new-id)
       (routing/to! (:app env) ["player" (str new-id)]))))
 
 (defn init-new-player! [app]
-  (comp/transact! app [(new-player {::player/id   (random-uuid)
-                                    ::player/name ""})]))
+  (let [id (random-uuid)]
+    (comp/transact! app [(new-player {::player/id   id
+                                      ::player/name ""})])))
 
 (defn init! [app]
   (if-let [local-storage-id (get-id-from-local-storage)]
@@ -60,8 +58,7 @@
     (init-new-player! app)))
 
 (defmutation save [input]
-  (action [{:keys [state]}]
-    (swap! state assoc-in [::player/id (::player/id input) ::player/name] (::player/name input)))
-  (remote [_] true)
+  (remote [env]
+    (m/returning env (new-form-component)))
   (ok-action [env]
     (routing/to! (:app env) ["lobby"])))

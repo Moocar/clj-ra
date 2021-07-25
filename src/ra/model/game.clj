@@ -36,6 +36,11 @@
                     {:current-hand (::hand/seat (game/current-hand game))
                      :tried-hand   (::hand/seat hand)}))))
 
+(defn check-has-sun-disks [game hand]
+  (when (empty? (::hand/available-sun-disks hand))
+    (throw (ex-info "You have no sun disks"
+                    {:current-hand (::hand/seat (game/current-hand game))}))))
+
 (defn move-thing-tx
   "Moves something from from to to"
   [thing from to]
@@ -415,6 +420,7 @@
 
 (defn do-draw-tile [{:keys [::db/conn] :as env} game hand tile]
   (check-current-hand game hand)
+  (check-has-sun-disks game hand)
   (when (game/auction-tiles-full? game)
     (throw (ex-info "Auction Track full" {})))
   (when (::game/in-disaster? game)
@@ -575,6 +581,7 @@
         winning-bid (calc-winning-bid auction new-bid)]
     (println [(::hand/seat hand) ::event-type/bid sun-disk])
     (check-current-hand game hand)
+    (check-has-sun-disks game hand)
     (when (= (count (::auction/bids auction))
              (game/player-count game))
       (throw (ex-info "Auction finished" {})))

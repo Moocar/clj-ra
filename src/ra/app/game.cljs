@@ -173,27 +173,30 @@
                                                                                                         :game game
                                                                                                         :tile tile})])))))))))))
 
-(defn ui-bid-actions [hand {:keys [onClickSunDisk highest-bid auction]}]
-  (dom/div :.flex.space-x-2.h-16.rounded-lg {}
-    (concat
-     (map (fn [sun-disk]
-            (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")
-                                     :onClick #(onClickSunDisk sun-disk)})))
-          (filter (fn [sun-disk]
-                    (< (::bid/sun-disk highest-bid) sun-disk))
-                  (sort (fn [a b]
-                          (if (nil? a)
-                            1
-                            (if (nil? b)
-                              -1
-                              (if (< a b)
-                                -1
-                                (if (= a b)
-                                  0
-                                  1)))))
-                        (concat (::hand/available-sun-disks hand)))))
-     (when (auction/can-pass? auction hand)
-       [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})]))))
+(defn sun-disk-comparitor [a b]
+  (if (nil? a)
+    1
+    (if (nil? b)
+      -1
+      (if (< a b)
+        -1
+        (if (= a b)
+          0
+          1)))))
+
+(defn ui-bid-actions [hand {:keys [onClickSunDisk auction]}]
+  (let [highest-bid (auction/highest-bid auction)]
+    (dom/div :.flex.space-x-2.h-16.rounded-lg {}
+      (concat
+       (->> (::hand/available-sun-disks hand)
+            (filter (fn [sun-disk]
+                      (< (::bid/sun-disk highest-bid) sun-disk)))
+            (sort sun-disk-comparitor)
+            (map (fn [sun-disk]
+                   (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")
+                                            :onClick #(onClickSunDisk sun-disk)})))))
+       (when (auction/can-pass? auction hand)
+         [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})])))))
 
 (defn ui-action-bar [this {:keys [my-go? hand game auction] :as props}]
   (dom/div :.h-24.flex.justify-center.items-center.relative.flex-col {}
@@ -252,32 +255,37 @@
 
 (defn ui-main-game [this {:keys [game] :as props}]
   (dom/div :.bg-gray-100 {}
-    (dom/div :.flex.flex-col.md:p-2.gap-2.overflow-hidden.container.mx-auto.bg-white {}
-             (menu-bar this props)
-             (dom/div :.flex.flex-col.lg:flex-row {}
-                      (dom/div :.flex.flex-col.lg:w-96 {}
-                               (dom/div :.flex-col.w-screen.lg:w-96 {}
-                                        (dom/div :.font-bold {} "Auction Count")
-                                        (ui-ra-track props))
-                               (dom/div :.flex-col.w-screen.lg:w-96 {}
-                                        (dom/div :.font-bold {} "Tiles")
-                                        (ui-auction-track this props))
-                               (dom/div :.flex.items-center {}
-                                        (dom/div :.font-bold {} "Current Bid Disk")
-                                        (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::game/current-sun-disk game)})))
-                               (dom/hr {})
-                               (dom/div :.lg:order-first.pt-2 {}
-                                        (ui-action-bar this props)
-                                        (dom/hr :.lg:hidden {}))
-                               (dom/div :.hidden.lg:block {}
-                                        (dom/div :.flex-col.w-screen  {}
-                                                 (dom/h3 :.font-bold "Events")
-                                                 (ui-event/ui-items (reverse (::game/events game))))
-                                        (dom/hr {})))
-                      (dom/div :.lg:w-full {}
-                               (dom/h3 :.font-bold "Seats")
-                               (dom/div {}
-                                 (ui-hands this props)))))))
+    (dom/div :.flex.flex-col.p-2.gap-2.overflow-hidden.container.mx-auto.bg-white {}
+      (menu-bar this props)
+      (dom/div :.flex.flex-col.lg:flex-row {}
+        (dom/div :.flex.flex-col.lg:w-96 {}
+          (dom/div :.flex-col.w-screen.lg:w-96 {}
+            (dom/div :.font-bold {} "Auction Count")
+            (ui-ra-track props))
+          (dom/div :.flex-col.w-screen.lg:w-96 {}
+            (dom/div :.font-bold {} "Tiles")
+            (ui-auction-track this props))
+          (dom/div :.flex.items-center {}
+            (dom/div :.font-bold {} "Current Bid Disk")
+            (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::game/current-sun-disk game)})))
+          (dom/hr {})
+          (dom/div :.lg:order-first.pt-2 {}
+            (ui-action-bar this props)
+            (dom/hr :.lg:hidden {}))
+          (dom/div :.hidden.lg:block {}
+            (dom/div :.flex-col.w-screen  {}
+              (dom/h3 :.font-bold "Events")
+              (ui-event/ui-items (reverse (::game/events game))))
+            (dom/hr {})))
+        (dom/div :.lg:w-full {}
+          (dom/h3 :.font-bold "Seats")
+          (dom/div {}
+            (ui-hands this props)))
+        (dom/div :.lg:hidden {}
+          (dom/div :.flex-col.w-screen  {}
+            (dom/h3 :.font-bold "Events")
+            (ui-event/ui-items (reverse (::game/events game))))
+          (dom/hr {}))))))
 
 (defmutation show-score-modal [{:keys [game-id]}]
   (action [env]
