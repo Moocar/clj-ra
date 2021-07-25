@@ -10,40 +10,33 @@
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]))
 
-(defn ui-sun-disks [hand {:keys [onClickSunDisk my-go? highest-bid auction]}]
+(defn ui-sun-disks [hand {:keys [auction]}]
   (let [current-bid (first (filter (fn [bid]
                                      (= (::hand/id (::bid/hand bid))
                                         (::hand/id hand)))
                                    (::auction/bids auction)))]
-    (dom/div :.flex.space-x-2.h-16 {}
-      (concat
-       (map (fn [sun-disk]
-              (let [used? ((set (::hand/used-sun-disks hand)) sun-disk)]
-                (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")}
-                                  (and my-go? (::hand/my-go? hand) auction (< (::bid/sun-disk highest-bid) sun-disk) (not used?))
-                                  (assoc :onClick #(onClickSunDisk sun-disk))
-                                  (and my-go? (::hand/my-go? hand) auction (< sun-disk (::bid/sun-disk highest-bid)) (not used?))
-                                  (assoc :too-low? true)
-                                  used?
-                                  (assoc :used? true)
-                                  (= (::bid/sun-disk current-bid) sun-disk)
-                                  (assoc :large true)))))
-            (concat (::hand/used-sun-disks hand)
-                    (sort (fn [a b]
-                            (if (nil? a)
-                              1
-                              (if (nil? b)
-                                -1
-                                (if (< a b)
-                                  -1
-                                  (if (= a b)
-                                    0
-                                    1)))))
-                          (concat (::hand/available-sun-disks hand)
-                                  (when current-bid
-                                    [(::bid/sun-disk current-bid)])))))
-       (when (and my-go? (::hand/my-go? hand) auction (auction/can-pass? auction hand))
-         [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})])))))
+    (dom/div :.flex.space-x-2.h-16.rounded-lg {}
+      (map (fn [sun-disk]
+             (let [used? ((set (::hand/used-sun-disks hand)) sun-disk)]
+               (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")}
+                                 used?
+                                 (assoc :used? true)
+                                 (= (::bid/sun-disk current-bid) sun-disk)
+                                 (assoc :large true)))))
+           (concat (::hand/used-sun-disks hand)
+                   (sort (fn [a b]
+                           (if (nil? a)
+                             1
+                             (if (nil? b)
+                               -1
+                               (if (< a b)
+                                 -1
+                                 (if (= a b)
+                                   0
+                                   1)))))
+                         (concat (::hand/available-sun-disks hand)
+                                 (when current-bid
+                                   [(::bid/sun-disk current-bid)]))))))))
 
 (defn ui-tiles [hand {:keys [click-god-tile my-go? game]}]
   (let [tiles (::hand/tiles hand)
@@ -75,7 +68,7 @@
            (sort-by (juxt ::tile/type ::tile/title))
            (ui-tile/ui-tiles)))))
 
-(defsc Hand [this hand {:keys [game auction] :as computed}]
+(defsc Hand [this hand {:keys [game auction my-go?] :as computed}]
   {:query [::hand/available-sun-disks
            ::hand/used-sun-disks
            ::hand/my-go?
@@ -85,12 +78,12 @@
            {::hand/tiles (comp/get-query ui-tile/Tile)}
            {::hand/player (comp/get-query ui-player/Player)}]
    :ident ::hand/id}
-  (dom/div :.border-2.border-transparent.py-2.flex.flex-col
-    (if (= (::hand/seat hand) (::hand/seat (::game/current-hand game)))
-      {:classes ["bg-green-200"]}
-      {:classes []})
+  (dom/div :.border-2.border-transparent.py-2.flex.flex-col {}
     (dom/div :.flex.flex-row.justify-between {}
-      (ui-player/ui-player (::hand/player hand))
+      (dom/div :.flex.flex-row {}
+        (ui-player/ui-player (::hand/player hand))
+        (when (::hand/my-go? hand)
+          (dom/div :.pl-4.font-bold.text-red-500 {} "\u2190")))
       (dom/div :.px-4
         (if (and auction
                  (= (::hand/id (::game/last-ra-invoker game))

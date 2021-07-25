@@ -156,7 +156,7 @@
                   (assoc-in (conj [::game/id (::game/id game)] :ui/selected-god-tile) tile-ident)
                   (assoc-in (conj tile-ident ::tile/hand) hand-ident)))))))
 
-(defn ui-hands [this {:keys [auction hands my-player game] :as props}]
+(defn ui-hands [this {:keys [hands my-player game] :as props}]
   (dom/div {}
     (->> (concat hands hands)
          (drop-while (fn [hand]
@@ -165,36 +165,59 @@
          (take (count hands))
          (map (fn [hand]
                 (ui-hand/ui-hand
-                 (if auction
-                   (comp/computed hand (assoc props
-                                              :onClickSunDisk (fn [sun-disk]
-                                                                (js/console.log "bid" sun-disk)
-                                                                (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand)
-                                                                                                   ::game/id (::game/id game)
-                                                                                                   :sun-disk sun-disk})]))
-                                              :highest-bid    (auction/highest-bid auction)))
-                   (comp/computed hand (assoc props
-                                              :click-god-tile (fn [hand tile]
-                                                                (if (:ui/selected-god-tile game)
-                                                                  (m/set-value! this :ui/selected-god-tile nil)
-                                                                  (comp/transact! this [(select-god-tile {:hand hand
-                                                                                                          :game game
-                                                                                                          :tile tile})]))))))))))))
+                 (comp/computed hand (assoc props
+                                            :click-god-tile (fn [hand tile]
+                                                              (if (:ui/selected-god-tile game)
+                                                                (m/set-value! this :ui/selected-god-tile nil)
+                                                                (comp/transact! this [(select-god-tile {:hand hand
+                                                                                                        :game game
+                                                                                                        :tile tile})])))))))))))
 
-(defn ui-action-bar [this props]
-  (dom/div :.h-16.flex.justify-center.items-center {}
-    (if (and (:my-go? props) (not (::game/auction (:game props))))
-      (dom/div :.flex.flex-row.space-x-2 {}
-        (ui-tile-bag this props)
-        (ui-invoke-ra this props)
-        (when (::game/in-disaster? (:game props))
-          (ui-discard-disaster-tiles this props)))
-      (if (and (:my-go? props) (::game/auction (:game props)))
-        (dom/div :.font-bold {}
-          (dom/div :.animate-bounce {} "Your bid"))
-        (dom/div :.font-bold {}
-          (dom/span {} "Waiting for ")
-          (dom/span {} (::player/name (::hand/player (:hand props)))))))))
+(defn ui-bid-actions [hand {:keys [onClickSunDisk highest-bid auction]}]
+  (dom/div :.flex.space-x-2.h-16.rounded-lg {}
+    (concat
+     (map (fn [sun-disk]
+            (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")
+                                     :onClick #(onClickSunDisk sun-disk)})))
+          (filter (fn [sun-disk]
+                    (< (::bid/sun-disk highest-bid) sun-disk))
+                  (sort (fn [a b]
+                          (if (nil? a)
+                            1
+                            (if (nil? b)
+                              -1
+                              (if (< a b)
+                                -1
+                                (if (= a b)
+                                  0
+                                  1)))))
+                        (concat (::hand/available-sun-disks hand)))))
+     (when (auction/can-pass? auction hand)
+       [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})]))))
+
+(defn ui-action-bar [this {:keys [my-go? hand game auction] :as props}]
+  (dom/div :.h-24.flex.justify-center.items-center.relative.flex-col {}
+    (when (and my-go? (::hand/my-go? hand))
+      (dom/div :.animate-bounce.font-bold {}
+        (if auction
+          "Your Bid"
+          "Your turn")))
+    (if (and my-go? (::hand/my-go? hand))
+      (if (not (::game/auction (:game props)))
+        (dom/div :.flex.flex-row.space-x-2.pt-2 {}
+          (ui-tile-bag this props)
+          (ui-invoke-ra this props)
+          (when (::game/in-disaster? (:game props))
+            (ui-discard-disaster-tiles this props)))
+        (ui-bid-actions hand (assoc props
+                                    :onClickSunDisk (fn [sun-disk]
+                                                      (js/console.log "bid" sun-disk)
+                                                      (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand)
+                                                                                         ::game/id (::game/id game)
+                                                                                         :sun-disk sun-disk})])))))
+      (dom/div :.font-bold {}
+        (dom/span {} "Waiting for ")
+        (dom/span {} (::player/name (::hand/player (:hand props))))))))
 
 (defn swap-god-tile [this {:keys [game]} tile]
   (m/set-value! this :ui/selected-god-tile nil)
@@ -243,7 +266,7 @@
                                         (dom/div :.font-bold {} "Current Bid Disk")
                                         (dom/div :.pl-4 {} (ui-sun-disk/ui {:value (::game/current-sun-disk game)})))
                                (dom/hr {})
-                               (dom/div :.lg:order-first {}
+                               (dom/div :.lg:order-first.pt-2 {}
                                         (ui-action-bar this props)
                                         (dom/hr :.lg:hidden {}))
                                (dom/div :.hidden.lg:block {}

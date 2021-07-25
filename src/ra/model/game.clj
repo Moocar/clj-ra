@@ -72,6 +72,10 @@
         (update-when ::game/started-at str)
         (update-when ::game/finished-at str)
         (update ::game/auction-tiles #(vec (sort-by :db/id %)))
+        (update-when ::game/auction (fn [auction]
+                                      (if (contains? auction ::auction/bids)
+                                        auction
+                                        (assoc auction ::auction/bids []))))
         (update ::game/hands
                 (fn [hands]
                   (mapv (fn [hand]
