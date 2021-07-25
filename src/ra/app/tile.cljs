@@ -32,30 +32,30 @@
            ::tile/auction-track-position
            :ui/selected?]
    :ident ::tile/id}
-  (dom/div :.w-20.h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative.shadow-md.flex-shrink-0
-              (cond-> {:classes (concat (type-classes (::tile/type props))
-                                        (cond dimmed?               ["opacity-50"]
-                                              (:ui/selected? props) ["border-2" "border-red-700" "cursor-pointer"])
-                                        (when selectable? ["cursor-pointer"]))}
-                (or selectable? on-click)
-                (assoc :onClick (fn []
-                                  (when selectable?
-                                    (m/toggle! this :ui/selected?))
-                                  (when on-click
-                                    (on-click props)))))
-              (dom/div {}
-                (dom/span :.text-center.align-middle.inline-block.text-sm.z-10 (::tile/title props))
-                (when (::tile/disaster? props)
-                  (dom/span :.text-red-500.absolute.top-0.left-4.text-7xl.opacity-50 {} " X"))
-                (when stack-size
-                  (dom/div :.absolute.bottom-0.right-0.pr-1 {}
-                    (str stack-size)))
-                (when (::tile/scarab? props)
-                  (dom/div :.absolute.bottom-0.left-0.pl-1 {}
-                    "\u267E"))
-                (when (and (tile/pharoah? props) most-pharoahs)
-                  (dom/div :.absolute.top-0.right-0.pr-1 {}
-                    "\u03A3")))))
+  (dom/div :.md:w-20.md:h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative.shadow-md.flex-shrink-0
+    (cond-> {:classes (concat (type-classes (::tile/type props))
+                              (cond dimmed?               ["opacity-50"]
+                                    (:ui/selected? props) ["border-2" "border-red-700" "cursor-pointer"])
+                              (when selectable? ["cursor-pointer"]))}
+      (or selectable? on-click)
+      (assoc :onClick (fn []
+                        (when selectable?
+                          (m/toggle! this :ui/selected?))
+                        (when on-click
+                          (on-click props)))))
+    (dom/div {}
+      (dom/span :.text-center.align-middle.inline-block.text-sm.z-10.px-2.md:px-0.py-1.md:py-0 (::tile/title props))
+      (when (::tile/disaster? props)
+        (dom/span :.text-red-500.absolute.top-0.text-2xl.md:text-7xl.opacity-50.md:text-red {:classes ["inset-x-2/4" "md:left-4"]} " X"))
+      (when stack-size
+        (dom/div :.inline-block.md:absolute.bottom-0.right-0.pr-1 {}
+          (str stack-size)))
+      (when (::tile/scarab? props)
+        (dom/div :.absolute.bottom-0.left-0.pl-1.hidden.md:block {}
+          "\u267E"))
+      (when (and (tile/pharoah? props) most-pharoahs)
+        (dom/div :.absolute.top-0.right-0.pr-1.hidden.md:block {}
+          "\u03A3")))))
 
 (def ui-tile (comp/factory Tile {:keyfn ::tile/id}))
 

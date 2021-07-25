@@ -15,7 +15,7 @@
                                      (= (::hand/id (::bid/hand bid))
                                         (::hand/id hand)))
                                    (::auction/bids auction)))]
-    (dom/div :.flex.space-x-2.h-16.rounded-lg {}
+    (dom/div :.flex.space-x-2.md:h-16.rounded-lg {}
       (map (fn [sun-disk]
              (let [used? ((set (::hand/used-sun-disks hand)) sun-disk)]
                (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")}

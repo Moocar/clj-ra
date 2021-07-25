@@ -125,5 +125,5 @@
 (def ui-item (comp/factory Item {:keyfn ::event/id}))
 
 (defn ui-items [events]
-  (dom/div :.flex.flex-col.overflow-y-scroll.h-48.w-screen.md:w-max.gap-2 {}
+  (dom/div :.flex.flex-col.overflow-y-scroll.h-48.w-96.gap-2 {}
            (map ui-item events)))

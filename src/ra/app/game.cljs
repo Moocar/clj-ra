@@ -193,8 +193,9 @@
                       (< (::bid/sun-disk highest-bid) sun-disk)))
             (sort sun-disk-comparitor)
             (map (fn [sun-disk]
-                   (ui-sun-disk/ui (cond-> {:value (or sun-disk "Pass")
-                                            :onClick #(onClickSunDisk sun-disk)})))))
+                   (ui-sun-disk/ui {:value (or sun-disk "Pass")
+                                    :round true
+                                    :onClick #(onClickSunDisk sun-disk)}))))
        (when (auction/can-pass? auction hand)
          [(ui-sun-disk/ui-pass {:onClick #(onClickSunDisk nil)})])))))
 
