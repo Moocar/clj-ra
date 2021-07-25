@@ -54,25 +54,28 @@
 (defn ^:export refresh []
   (app/mount! client-app/APP Root "app"))
 
+(defn start-server-event-listen! [app]
+  (async/go
+    (loop []
+      (let [game (async/<! client-app/loader-ch)]
+        (merge/merge-component! app
+                                (comp/registry-key->class :ra.app.game/Game)
+                                game
+                                :remove-missing? true)
+        (let [state-map (app/current-state app)]
+          (when (= (::player/id (::hand/player (::game/current-hand game)))
+                   (second (get state-map :ui/current-player)))
+            (audio/play-ding! state-map)))
+        (async/<! (async/timeout 1))
+        (recur)))))
+
 (defn ^:export start []
   (let [app client-app/APP]
     (app/set-root! app Root {:initialize-state? true})
     (dr/change-route! app ["home"])
     (set! (.-onpopstate js/window)
           (fn [_] (routing/handle-window! app)))
-    (async/go
-      (loop []
-        (let [game (async/<! client-app/loader-ch)]
-          (merge/merge-component! app
-                                  (comp/registry-key->class :ra.app.game/Game)
-                                  game
-                                  :remove-missing? true)
-          (let [state-map (app/current-state app)]
-            (when (= (::player/id (::hand/player (::game/current-hand game)))
-                     (second (get state-map :ui/current-player)))
-              (audio/play-ding! state-map)))
-          (async/<! (async/timeout 1))
-          (recur))))
     (app/mount! app Root "app" {:initialize-state? false})
+    (start-server-event-listen! app)
     (m-player/init! app)
     (audio/load-and-store-ding! app)))

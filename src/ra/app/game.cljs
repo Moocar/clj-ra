@@ -302,6 +302,9 @@
                                (routing/to! this ["lobby"]))}
           "Back to lobby")))))
 
+(defn set-title! [title]
+  (set! (.-title js/document) title))
+
 (defsc Game [this props]
   {:query               [{::game/players (comp/get-query ui-player/Player)}
                          {::game/events (comp/get-query ui-event/Item)}
@@ -334,7 +337,35 @@
                                      (assoc :ui/show-score-modal true
                                             :ui/last-hand-scores (:hand-scores (::event/data (last (::game/events game)))))))))
    :componentDidMount   (fn [this]
-                          (set! (.-title js/document) (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
+                          (let [base-title (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))
+                                interval-id-atom (atom nil)
+                                toggle-status (atom false)]
+                            (set-title! base-title)
+                            (.addEventListener
+                             js/document
+                             "visibilitychange"
+                             (fn []
+                               (if (= "visible" (.-visibilityState js/document))
+
+                                 ;; Gained visibility
+                                 (let [interval-id @interval-id-atom]
+                                   (when interval-id
+                                     (js/clearInterval interval-id))
+                                   (reset! interval-id-atom nil)
+                                   (set-title! base-title))
+
+                                 ;; Lost visbility
+                                 (let [interval-id (js/setInterval
+                                                    (fn []
+                                                      (if (my-go? {:hand      (::game/current-hand (comp/props this))
+                                                                   :my-player (:ui/current-player (comp/props this))})
+                                                        (let [on (swap! toggle-status not)]
+                                                          (set-title! (if on "Your Turn" base-title)))
+                                                        (set-title! base-title)))
+                                                    2000)]
+                                   (reset! interval-id-atom interval-id)))))))
+   :componentWillUnmount (fn [this]
+                           (set-title! (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))))
    :route-segment       ["game" ::game/id]
    :will-enter          (fn [app props]
                           (let [game-id (uuid (::game/id props))
