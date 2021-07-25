@@ -8,7 +8,9 @@
             [com.fulcrologic.fulcro.application :as app]
             [ra.specs.hand :as hand]
             [ra.specs.tile :as tile]
-            [ra.specs.auction.bid :as bid]))
+            [ra.specs.auction.bid :as bid]
+            [ra.app.sun-disk :as ui-sun-disk]
+            [ra.app.tile :as ui-tile]))
 
 ;; Events
 ;; Approaches
@@ -27,7 +29,9 @@
   (dom/div :.font-bold {} (::player/name thing)))
 
 (defn ui-tile [tile]
-  (dom/div :.font-bold {} (::tile/title tile)))
+  (dom/div :.rounded.flex.justify-center.px-2
+    {:classes (get ui-tile/type-classes (::tile/type tile))}
+    (::tile/title tile)))
 
 (defmethod ui-body ::event-type/join-game [s _ {:keys [player]}]
   (let [player (get-in s [::player/id (::player/id player)])]
@@ -53,24 +57,28 @@
     (dom/div {} " drew a ")
     (ui-tile tile)))
 
+(defn ui-sun-disk [value]
+  (dom/div :.rounded.bg-red-300.flex.justify-center.px-2 {}
+    (dom/div {} (str value))))
+
 (defmethod ui-body ::event-type/bid [s _ {:keys [hand sun-disk last? winning-bid tiles-won]}]
   (dom/div {} (if last?
-                (dom/div :.flex.flex-col.border-t-2.mt-2 {}
+                (dom/div :.flex.flex-col.border-t-2 {}
                   (if winning-bid
                     (let [hand   (get-in s [::hand/id (::hand/id (::bid/hand winning-bid))])
                           player (get-in s (::hand/player hand))]
                       (dom/div :.flex.flex-row.gap-2 {}
                         (ui-player-name player)
                         " won auction with "
-                        (str (::bid/sun-disk winning-bid))
-                        (dom/ul :.pl-4 (map (fn [t] (dom/li (::tile/title t))) tiles-won))))
+                        (ui-sun-disk (::bid/sun-disk winning-bid))
+                        (dom/ul :.pl-4 (map (fn [t] (dom/li (ui-tile t))) tiles-won))))
                     "Auction finished (everyone passed)"))
                 (let [hand   (get-in s [::hand/id (::hand/id hand)])
                       player (get-in s (::hand/player hand))]
                   (dom/div :.flex.flex-row.gap-2 {}
                     (ui-player-name player)
                     " bid "
-                    (dom/div :.font-bold {} (str (or sun-disk "Pass"))))))))
+                    (dom/div :.font-bold {} (ui-sun-disk (or sun-disk "Pass"))))))))
 
 (defmethod ui-body ::event-type/finish-epoch [_ _ _]
   (dom/div :.flex.flex-col {}
@@ -82,7 +90,7 @@
     (let [hand (get-in s [::hand/id (::hand/id hand)])
           player (get-in s (::hand/player hand))]
       (ui-player-name player))
-    (dom/div {} " invoked Auction")))
+    (dom/div :.rounded.bg-red-500.flex.justify-center.px-2.text-white {} " invoked Auction")))
 
 (defmethod ui-body ::event-type/discard-disaster-tiles [s _ {:keys [hand]}]
   (dom/div :.flex.flex-row.gap-2 {}
@@ -114,5 +122,5 @@
 (def ui-item (comp/factory Item {:keyfn ::event/id}))
 
 (defn ui-items [events]
-  (dom/div :.flex-col.overflow-y-scroll.h-48.w-max {}
+  (dom/div :.flex.flex-col.overflow-y-scroll.h-48.w-max.gap-2 {}
            (map ui-item events)))
