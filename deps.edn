@@ -35,23 +35,25 @@
          aero/aero           {:mvn/version "1.1.6"}
 
          ;; Crux DB
-         datascript/datascript {:mvn/version "1.2.2"}
-         }
+         datascript/datascript {:mvn/version "1.2.2"}}
 
- :aliases {:server-dev {:extra-paths ["dev" "classes"]
-                        :extra-deps  {
-                                      ;; Debugging
-                                      hashp/hashp {:mvn/version "0.2.1"}
+ :aliases {:build {:deps {io.github.clojure/tools.build {:git/tag "v0.1.6" :git/sha "5636e61"}}
+                   :extra-paths ["build"]
+                   :ns-default build}
+           :server-dev {:extra-paths ["dev" "classes"]
+                                 :extra-deps  {
+                                               ;; Debugging
+                                               hashp/hashp {:mvn/version "0.2.1"}
 
-                                      ;; Clojure Spec
-                                      org.clojure/test.check {:mvn/version "1.1.0"}
+                                               ;; Clojure Spec
+                                               org.clojure/test.check {:mvn/version "1.1.0"}
 
-                                      org.clojure/tools.namespace {:mvn/version "1.1.0"}
-                                      com.wsscode/pathom-viz      {:mvn/version "1.0.9"}
+                                               org.clojure/tools.namespace {:mvn/version "1.1.0"}
+                                               com.wsscode/pathom-viz      {:mvn/version "1.0.9"}
 
-                                      ;; Integrant reloaded
-                                      integrant/repl {:mvn/version "0.3.2"}}
-                        :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
+                                               ;; Integrant reloaded
+                                               integrant/repl {:mvn/version "0.3.2"}}
+                                 :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
 
            :ui {:extra-deps {org.clojure/clojurescript           {:mvn/version "1.10.879"}
                              thheller/shadow-cljs                {:mvn/version "2.15.2"}}}
