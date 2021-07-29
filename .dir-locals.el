@@ -36,7 +36,6 @@
                                     ("instant" . "clojure.instant")
 
                                     ("log" . "clojure.tools.logging")
-                                    ("cheshire" . "cheshire.core")
                                     ("ig" . "integrant.core")
                                     ("jdbc" . "next.jdbc")
 

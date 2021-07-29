@@ -9,9 +9,6 @@
          ;; com.wsscode/pathom     {:local/root "/Users/amarcar/dev/github/wilkerlucio/pathom"}
          com.wsscode/pathom                  {:mvn/version "2.4.0"}
 
-         ;; For http requests
-         cheshire/cheshire {:mvn/version "5.10.1"}
-
          ;; Fulcro
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
          com.fulcrologic/fulcro {:mvn/version "3.5.1"}

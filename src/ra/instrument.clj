@@ -36,75 +36,96 @@
         game (d/entity db (:db/id game))]
     (m-game/do-draw-tile env game hand tile)))
 
-(defn rand-bid [{:keys [::pathom/parser]} hand game]
+(defn bid [{:keys [::pathom/parser]} hand game sun-disk]
   (parser {} [`(m-game/bid {::hand/id ~(::hand/id hand)
                             ::game/id ~(::game/id game)
-                            :sun-disk ~(first (::hand/available-sun-disks hand))})]))
+                            :sun-disk ~sun-disk})]))
 
-(defn pass-bid [{:keys [::pathom/parser]} hand game]
-  (parser {} [`(m-game/bid {::hand/id ~(::hand/id hand)
-                            ::game/id ~(::game/id game)
-                            :sun-disk nil})]))
+(defn rand-bid [env hand game]
+  (bid env hand game (first (::hand/available-sun-disks hand))))
+
+(defn pass-bid [env hand game]
+  (bid env hand game nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Scenarios
 
-(defn draws-bid-pass-pass
-  [{:keys [::db/conn ::pathom/parser] :as env}
-   game
-   & {:keys [winner hands]}]
-  (let [[h1 h2 h3] hands]
-    (draw-tile* env game h1 (find-tile-p game tile/civ?))
-    (draw-tile* env game h2 (find-tile-p game tile/pharoah?))
-    (draw-tile* env game h3 (find-tile-p game tile/ra?))
-    (if (= winner h1)
-      (rand-bid env h1 game)
-      (pass-bid env h1 game))
-    (if (= winner h2)
-      (rand-bid env h2 game)
-      (pass-bid env h2 game))
-    (if (= winner h3)
-      (rand-bid env h3 game)
-      (pass-bid env h3 game))
-    (refresh-game @conn game)))
+(defn draw-tile [{:keys [::db/conn] :as env} game hand tile]
+  (draw-tile* env game hand tile)
+  (refresh-game @conn game))
 
-(comment
-  ;; examples
-  (let [game                 (get-game @conn game-short-id)
-        [h1 h2 h3 :as hands] (get-hands game 3)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        _                    (draw-tile* env (first hands) (find-tile-p game tile/monument?))
-        {:keys [game hands]} (refresh-game @conn game)
-        ]
-    (m-game/notify-all-clients! env (::game/id game))
-    nil)
+(defn seat->hand [{:keys [game first-seat] :as env} seat]
+  (assert (< seat (game/player-count game)))
+  (let [target-seat (mod (+ first-seat seat) (game/player-count game))]
+    (->> (::game/hands game)
+         (sort-by ::hand/seat)
+         (repeat 2)
+         (apply concat)
+         (drop-while (fn [hand] (not= (::hand/seat hand) target-seat)))
+         (first))))
 
-  ;; print out all hands
-  (let [db @(:ra.db/conn (s))
-        game (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/short-id "VJFD"])]
-    (map (fn [h] (datascript.core/pull db ra.model.game/hand-q (:db/id h)))
-         (:ra.specs.game/hands game)))
-  )
+(defmulti do-action (fn [game hand action-type options] action-type))
 
-;; Get to the end of the first epoch quickly
-(defn run [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
-  (let [game (get-game @conn game-short-id)
-        [h1 h2 h3 :as hands] (get-hands game 3)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h1 :hands hands)
-        _ (draw-tile* env game (first hands) (find-tile-p game tile/monument?))
-        {:keys [game hands]} (refresh-game @conn game)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h2 :hands hands)
-        _ (draw-tile* env game (first hands) (find-tile-p game tile/monument?))
-        {:keys [game hands]} (refresh-game @conn game)
-        {:keys [game hands]} (draws-bid-pass-pass env game :winner h3 :hands hands)
-;        _ (draw-tile* env (first hands) (find-tile-p game m-tile/ra?))
-        ]
-    (m-game/notify-all-clients! env (::game/id game))
-    nil))
+(defn safe-tile [tile]
+  (and (not (tile/disaster? tile))
+       (not (tile/ra? tile))))
+
+(defmethod do-action :draw
+  [{:keys [game] :as env} hand _ {:keys [tile]}]
+  (let [tile-pred (case tile
+                    :safe (fn [tile] (and (not (tile/disaster? tile))
+                                          (not (tile/ra? tile))))
+                    tile)]
+    (draw-tile* env game hand (find-tile-p game tile-pred))))
+
+(defmethod do-action :bid
+  [{:keys [game] :as env} hand _ {:keys [sun-disk]}]
+  (case sun-disk
+    :pass (pass-bid env hand game)
+    :rand (rand-bid env hand game)
+    (throw (ex-info "unknown bid option" {:sun-disk sun-disk}))))
+
+(defn run-playbook [{:keys [::db/conn] :as env} game playbook]
+  (let [env (assoc env
+                   :first-seat (::hand/seat (::game/current-hand game)))]
+    (loop [game                    game
+           [action & next-actions] playbook]
+      (let [env                        (assoc env :game game)
+            [seat action-type options] action
+            hand                       (seat->hand env seat)]
+        (do-action (assoc env :game game) hand action-type options)
+        (when (seq next-actions)
+          (recur (get-game @conn (::game/short-id game))
+                 next-actions))))
+    (m-game/notify-all-clients! env (::game/id game))))
+
+(defn all-bids-pass [seats]
+  (concat (map (fn [seat] [seat :draw {:tile :safe}]) (butlast seats))
+          [[(last seats) :draw {:tile tile/ra?}]]
+          [[(first seats) :bid {:sun-disk :rand}]]
+          (map (fn [seat] [seat :bid {:sun-disk :pass}]) (rest seats))))
+
+(def test-playbook
+  (concat
+   (all-bids-pass [0 1 2 3])
+   (all-bids-pass [0 1 2 3])
+   (all-bids-pass [0 1 2 3])
+   (all-bids-pass [1 2 3])
+   (all-bids-pass [1 2 3])
+   (all-bids-pass [1 2 3])
+   (all-bids-pass [2 3])
+   (all-bids-pass [2 3])
+   [[2 :draw {:tile :safe}]
+    [3 :draw {:tile :safe}]
+    [2 :draw {:tile :safe}]
+    [3 :draw {:tile :safe}]
+    [2 :draw {:tile :safe}]
+    [3 :draw {:tile :safe}]
+    [2 :draw {:tile :safe}]
+    [3 :draw {:tile :safe}]]))
+
+(defn run [env game-short-id playbook]
+  (run-playbook env (get-game @(::db/conn env) game-short-id) playbook))
 
 (defn reset [{:keys [::db/conn ::pathom/parser] :as env} game-short-id]
   (let [game (get-game @conn game-short-id)]

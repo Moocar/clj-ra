@@ -326,6 +326,11 @@
     (d/transact! conn
                  (concat
                   [[:db/retract ident ::game/started-at]
+                   [:db/retract ident ::game/last-ra-invoker]
+                   [:db/retract ident ::game/auction]
+                   [:db/retract ident ::game/in-disaster?]
+                   [:db/retract ident ::game/ra-tiles]
+                   [:db/retract ident ::game/auction-tiles]
                    [:db/retract ident ::game/tile-bag]
                    [:db/retract ident ::game/epoch]
                    [:db/retract ident ::game/current-sun-disk]

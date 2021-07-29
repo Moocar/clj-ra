@@ -26,10 +26,6 @@
                                            "-d" "cider/cider-nrepl:0.26.0"
                                            "server"]})))
 
-(defn dev [_]
-  (future (tailwind {:watch true}))
-  (future (shadow-cljs {:server true})))
-
 (defn deploy [_]
   (b/process
    {:command-args ["rsync"
@@ -54,6 +50,10 @@
                      ssh-str
                      "--"
                      (format "echo %s | sudo -S systemctl restart ra.service" password)]})))
+
+(defn dev [_]
+  (future (tailwind {:watch true}))
+  (future (shadow-cljs {:server true})))
 
 (defn all [_]
   (yarn-install nil)
