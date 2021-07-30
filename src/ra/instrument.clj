@@ -85,6 +85,11 @@
     :rand (rand-bid env hand game)
     (throw (ex-info "unknown bid option" {:sun-disk sun-disk}))))
 
+(defmethod do-action :invoke-ra
+  [{:keys [::pathom/parser game]} hand _ _]
+  (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id hand)
+                                  ::game/id ~(::game/id game)})]))
+
 (defn run-playbook [{:keys [::db/conn] :as env} game playbook]
   (let [env (assoc env
                    :first-seat (::hand/seat (::game/current-hand game)))]
@@ -118,11 +123,21 @@
    [[2 :draw {:tile :safe}]
     [3 :draw {:tile :safe}]
     [2 :draw {:tile :safe}]
+    [3 :invoke-ra {}]
+    [2 :bid {:sun-disk :rand}]
+    [3 :bid {:sun-disk :pass}]
+
     [3 :draw {:tile :safe}]
-    [2 :draw {:tile :safe}]
+    [3 :invoke-ra {}]
+    [3 :bid {:sun-disk :rand}]
+
     [3 :draw {:tile :safe}]
-    [2 :draw {:tile :safe}]
-    [3 :draw {:tile :safe}]]))
+    [3 :invoke-ra {}]
+    [3 :bid {:sun-disk :rand}]
+
+    [3 :draw {:tile tile/disaster?}]
+    [3 :invoke-ra {}]
+    ]))
 
 (defn run [env game-short-id playbook]
   (run-playbook env (get-game @(::db/conn env) game-short-id) playbook))

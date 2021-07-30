@@ -526,7 +526,7 @@
      [[:db/retract (:db/id game) ::game/auction (:db/id auction)]]
 
      (if winning-bid
-       ;; If there was a winning bid (not everyone passed
+       ;; If there was a winning bid (not everyone passed)
        (concat
         ;; Move auction track tiles to winning hand
         (auction-tiles->hand-tx game (::bid/hand winning-bid))
@@ -617,7 +617,8 @@
         (let [tx (last-bid-tx game auction new-bid winning-bid)
               db-after (:db-after (d/with @conn tx))
               new-game (d/entity db-after (:db/id game))
-              tx (if (sun-disks-in-play? new-game)
+              tx (if (or (sun-disks-in-play? new-game)
+                         (::game/in-disaster? new-game))
                    tx
                    (concat tx (finish-epoch-tx new-game)))]
           (d/transact! conn tx (select-keys input [::game/id]))
@@ -628,33 +629,42 @@
   [:db/retract (:db/id hand) ::hand/tiles (:db/id tile)])
 
 (pc/defmutation discard-disaster-tiles
-  [{:keys [::db/conn]} input]
+    [{:keys [::db/conn]} input]
   {::pc/params    #{::hand/id ::game/id :tile-ids}
    ::pc/transform notify-other-clients-transform
    ::pc/output    [::game/id]}
-  (let [hand                 (d/entity @conn [::hand/id (::hand/id input)])
-        game                 (d/entity @conn [::game/id (::game/id input)])
-        disaster-tiles       (hand/disaster-tiles hand)
-        selected-tiles       (set (map (fn [tile-id] (d/entity @conn [::tile/id tile-id])) (:tile-ids input)))]
+  (let [hand           (d/entity @conn [::hand/id (::hand/id input)])
+        game           (d/entity @conn [::game/id (::game/id input)])
+        disaster-tiles (hand/disaster-tiles hand)
+        selected-tiles (set (map (fn [tile-id] (d/entity @conn [::tile/id tile-id])) (:tile-ids input)))]
     (check-current-hand game hand)
     (when-not (seq disaster-tiles)
       (throw (ex-info "No disaster tiles in hand" {})))
 
     (hand/check-selected-disaster-tiles hand selected-tiles)
 
-    (d/transact! conn
-                 (concat (mapv #(discard-tile-op hand %)
-                               (set/union selected-tiles disaster-tiles))
-                         [[:db/add (:db/id game) ::game/in-disaster? false]
-                          [:db/add (:db/id game) ::game/current-hand (:db/id (next-hand game (::game/last-ra-invoker game)))]]
-                         (event-tx game
-                                   ::event-type/discard-disaster-tiles
-                                   {:hand {::hand/id (::hand/id hand)}}))
-                 (select-keys input [::game/id]))
+    (let [tx (concat (mapv #(discard-tile-op hand %)
+                           (set/union selected-tiles disaster-tiles))
+                     [[:db/add (:db/id game) ::game/in-disaster? false]]
+                     (when (sun-disks-in-play? game)
+                       [[:db/add (:db/id game) ::game/current-hand (:db/id (next-hand game (::game/last-ra-invoker game)))]])
+
+                     ;; Edge case: Picked up disaster tiles while winning bid where all players have spent all sun disks. End epoch
+                     (event-tx game
+                               ::event-type/discard-disaster-tiles
+                               {:hand {::hand/id (::hand/id hand)}}))
+          with-tx-report (d/with @conn tx)
+          db-after       (:db-after with-tx-report)
+          new-game       (d/entity db-after (:db/id game))
+          tx             (if (sun-disks-in-play? new-game)
+                           tx
+                           (concat tx (finish-epoch-tx new-game)))]
+      (d/transact! conn tx
+                   (select-keys input [::game/id])))
     (select-keys input [::game/id])))
 
 (pc/defmutation use-god-tile
-  [{:keys [::db/conn]} input]
+    [{:keys [::db/conn]} input]
   {::pc/params    #{::hand/id ::game/id :god-tile-id :auction-track-tile-id}
    ::pc/transform notify-other-clients-transform
    ::pc/output    [::game/id]}
