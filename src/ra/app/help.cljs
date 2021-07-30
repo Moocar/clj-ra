@@ -4,13 +4,16 @@
             [ra.app.tile :as ui-tile]
             [ra.specs.tile :as tile]
             [ra.specs.tile.type :as tile-type]
-            [ra.app.sun-disk :as ui-sun-disk]))
+            [ra.app.sun-disk :as ui-sun-disk]
+            [com.fulcrologic.fulcro.components :as comp]))
 
 (defn ui-tiles-row [heading tiles description]
   (dom/div :.flex.flex-col.gap-2.pt-4 {}
     (dom/div :.font-bold {} heading)
     (dom/div :.flex.gap-2.flex-wrap {}
-      (map ui-tile/ui-tile tiles))
+      (map (fn [tile]
+             (ui-tile/ui-tile (comp/computed (dissoc tile :stack-size) (select-keys tile [:stack-size]))))
+           tiles))
     description))
 
 (defn ui-help-modal [this]
@@ -27,34 +30,34 @@
         (dom/div :.flex.flex-col.gap-2 {}
           (dom/div :.font-bold.text-xl {} "Special Tiles")
           (ui-tiles-row "Ra"
-                        [{::tile/title "Ra" ::tile/type ::tile-type/ra}]
+                        [{::tile/title "Ra" ::tile/type ::tile-type/ra :stack-size 30}]
                         (dom/div {}
                     "Triggers an auction. Put directly in Ra track. Discard at end of epoch."))
 
           (dom/hr {})
           (ui-tiles-row "Disasters"
-                        [{::tile/title "Earthquake" ::tile/disaster? true ::tile/type ::tile-type/monument}
-                         {::tile/type ::tile-type/civilization ::tile/disaster? true ::tile/title "War"}
-                         {::tile/type ::tile-type/pharoah ::tile/title "Funeral" ::tile/disaster? true}
-                         {::tile/type ::tile-type/river ::tile/title "Drought" ::tile/disaster? true}]
+                        [{::tile/type ::tile-type/monument ::tile/disaster? true ::tile/title "Earthquake" :stack-size 5}
+                         {::tile/type ::tile-type/civilization ::tile/disaster? true ::tile/title "War" :stack-size 4}
+                         {::tile/type ::tile-type/pharoah ::tile/title "Funeral" ::tile/disaster? true :stack-size 2}
+                         {::tile/type ::tile-type/river ::tile/title "Drought" ::tile/disaster? true :stack-size 2}]
                         (dom/div {} "Disaster. Discard two of disaster's type. For Drought, discard floods before niles."))
           (dom/hr {})
           (dom/div :.font-bold.text-xl {} "Scored at end of Epoch")
           (ui-tiles-row "Gold"
-                        [{::tile/title "Gold" ::tile/type ::tile-type/gold}]
+                        [{::tile/title "Gold" ::tile/type ::tile-type/gold :stack-size 5}]
                         (dom/span {} (dom/span :.font-bold "3 points") ". Discard at end of epoch."))
           (dom/hr {})
           (ui-tiles-row "God"
-                        [{::tile/title "God" ::tile/type ::tile-type/god}]
+                        [{::tile/title "God" ::tile/type ::tile-type/god :stack-size 8}]
                         (dom/span {} (dom/span :.font-bold "2 points") ". Or discard to take any auction tile as your action. Discard at end of epoch."))
           (dom/hr {})
           (ui-tiles-row "Art"
-                        [{::tile/title "Art" ::tile/type ::tile-type/civilization}
-                         {::tile/title "Agriculture" ::tile/type ::tile-type/civilization}
-                         {::tile/title "Astronomy" ::tile/type ::tile-type/civilization}
-                         {::tile/title "Writing" ::tile/type ::tile-type/civilization}
-                         {::tile/title "Religion" ::tile/type ::tile-type/civilization}
-                         {::tile/type ::tile-type/civilization ::tile/disaster? true ::tile/title "War"}]
+                        [{::tile/title "Art" ::tile/type ::tile-type/civilization :stack-size 5}
+                         {::tile/title "Agriculture" ::tile/type ::tile-type/civilization :stack-size 5}
+                         {::tile/title "Astronomy" ::tile/type ::tile-type/civilization :stack-size 5}
+                         {::tile/title "Writing" ::tile/type ::tile-type/civilization :stack-size 5}
+                         {::tile/title "Religion" ::tile/type ::tile-type/civilization :stack-size 5}
+                         {::tile/type ::tile-type/civilization ::tile/disaster? true ::tile/title "War" :stack-size 4}]
                         (dom/div :.flex.flex-col {}
                           (dom/div {}
                       "Points awarded for number of unique civilizations. Discard at end of epoch.")
@@ -81,28 +84,28 @@
                                          (dom/td "15"))))))
           (dom/hr {})
           (ui-tiles-row "Rivers"
-                        [{::tile/title "Flood" ::tile/type ::tile-type/river}
-                         {::tile/title "Nile" ::tile/scarab? true ::tile/type ::tile-type/river}
-                         {::tile/type ::tile-type/river ::tile/title "Drought" ::tile/disaster? true}]
+                        [{::tile/title "Nile" ::tile/scarab? true ::tile/type ::tile-type/river :stack-size 25}
+                         {::tile/title "Flood" ::tile/type ::tile-type/river :stack-size 12}
+                         {::tile/type ::tile-type/river ::tile/title "Drought" ::tile/disaster? true :stack-size 2}]
                         (dom/span {} (dom/span :.font-bold "1 point each") ". Niles only count if you have at least one flood. Floods are discarded at end of epoch. In event of drought, floods must be discarded before niles."))
           (dom/hr {})
           (ui-tiles-row "Pharoahs"
-                        [{::tile/title "Pharoah" ::tile/scarab? true ::tile/type ::tile-type/pharoah}
-                         {::tile/type ::tile-type/pharoah ::tile/title "Funeral" ::tile/disaster? true}]
+                        [{::tile/title "Pharoah" ::tile/scarab? true ::tile/type ::tile-type/pharoah :stack-size 25}
+                         {::tile/type ::tile-type/pharoah ::tile/title "Funeral" ::tile/disaster? true :stack-size 2}]
                         (dom/span {} (dom/span :.font-bold "5 points") " for players with most pharoahs. " (dom/span :.font-bold {} "-2 points") " for players with least."))
           (dom/hr {})
           (dom/div :.font-bold.text-xl.pt-8 {} "Scored at end of Game only")
           (ui-tiles-row "Monuments"
-                        [{::tile/title "Temple" ::tile/scarab? true ::tile/type ::tile-type/monument}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Fortress"}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Obelisk"}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Palace"}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Pyramid"}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Temple"}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Statue"}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Step Pyramid"}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Sphinx"}
-                         {::tile/type ::tile-type/monument ::tile/disaster? true ::tile/title "Earthquake"}]
+                        [{::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Temple" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Fortress" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Obelisk" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Palace" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Pyramid" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Temple" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Statue" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Step Pyramid" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Sphinx" :stack-size 5}
+                         {::tile/type ::tile-type/monument ::tile/disaster? true ::tile/title "Earthquake" :stack-size 5}]
                         (dom/div :.flex.flex-col {}
                           (dom/div {} (dom/span :.font-bold "1 point each"))
                           (dom/div {} (dom/span :.font-bold {} "5, 10 or 15 points" ) " per set of 3, 4, or 5. ")
@@ -111,4 +114,5 @@
           (dom/div :.flex.flex-col.gap-2.pt-4 {}
             (dom/div :.font-bold {} "Sun Disks")
             (ui-sun-disk/ui {:value 13 :round true})
-            (dom/div {} (dom/span :.font-bold "5 points") " with highest total. " (dom/span :.font-bold "-5 points") " for player with lowest")))))))
+            (dom/div {} (dom/span :.font-bold "5 points") " for player with highest total.")
+            (dom/div {} (dom/span :.font-bold "-5 points") " for player with lowest total.")))))))
