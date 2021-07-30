@@ -2,46 +2,67 @@
   (:require [clojure.test :as t]
             [com.wsscode.pathom.connect :as pc]
             [com.wsscode.pathom.core :as p]
-            [datascript.core :as d]
+            [integrant.core :as ig]
             [ra.db :as db]
-            [ra.model.game :as sut]
+            [ra.model.game :as m-game]
             [ra.model.player :as m-player]
             [ra.pathom :as pathom]
             [ra.specs.game :as game]
             [ra.specs.player :as player]))
 
-(defn test-parser [{:keys [resolvers extra-env]}]
-  (p/parser
-   {::p/env     {::p/reader                 [p/map-reader
-                                             pc/reader2
-                                             pc/open-ident-reader
-                                             p/env-placeholder-reader
-                                             ]
-                 ::p/placeholder-prefixes   #{">"}
-                 ;; ::p/process-error          process-error
-                 ::pc/mutation-join-globals [:tempids]
-                 }
-    ::p/mutate  pc/mutate
-    ::p/plugins [(pc/connect-plugin {::pc/register resolvers})
-                 (p/env-wrap-plugin #(merge % extra-env))
-                 ;; p/error-handler-plugin
-                 (p/post-process-parser-plugin p/elide-not-found)]}))
-
 (defn new-game [p]
-  (let [r (p {} [`(sut/new-game {})])]
-    (get-in r [`sut/new-game ::game/id])))
+  (let [r (p {} [`(m-game/new-game {})])]
+    (get-in r [`m-game/new-game ::game/id])))
 
-(t/deftest win-disaster
-  (let [resolvers (pathom/make-resolvers)
-        conn      (d/create-conn db/schema)
-        extra-env {::db/conn conn}
-        parser    (test-parser {:resolvers resolvers :extra-env extra-env})
-        p1-id "1"
-        p2-id "2"]
+(defn make-serial-parser [{:keys [resolvers extra-env]}]
+  (let [p (p/parser
+           {::p/env     {::p/reader                 [p/map-reader
+                                                     pc/reader2
+                                                     pc/open-ident-reader
+                                                     p/env-placeholder-reader
+                                                     ]
+                         ::p/placeholder-prefixes   #{">"}
+                         ::pc/mutation-join-globals [:tempids]
+                         }
+            ::p/mutate  pc/mutate
+            ::p/plugins [(pc/connect-plugin {::pc/register resolvers})
+                         (p/env-wrap-plugin #(merge % extra-env))
+                         (p/post-process-parser-plugin p/elide-not-found)]})]
+    (fn wrapped-parser [env tx]
+      (try
+        (p env tx)
+        (catch Exception e
+          e)))))
+
+(defmethod ig/init-key ::parser [_ extra-env]
+  (make-serial-parser {:resolvers (pathom/make-resolvers)
+                       :extra-env extra-env}))
+
+(defn start-env []
+  (let [system-config {:ra.db/conn             {}
+                       :ra.model.game/ref-data {:ra.db/conn (ig/ref :ra.db/conn)}
+                       ::parser                {:ra.db/conn (ig/ref :ra.db/conn)
+                                                :ref-data   (ig/ref :ra.model.game/ref-data)}}
+        _             (ig/load-namespaces system-config)
+        env           (ig/init system-config)]
+    env))
+
+(t/deftest need-2-players-to-start
+  (let [{:keys [::parser]} (start-env)
+        p1-id              (db/uuid)]
     (parser {} [`(m-player/new-player {::player/id ~p1-id})])
-    (parser {} [`(m-player/new-player {::player/id ~p2-id})])
     (let [game-id (new-game parser)]
-      (parser {} [`(sut/join-game {::game/id ~game-id ::player/id ~p1-id})])
-      (parser {} [`(sut/join-game {::game/id ~game-id ::player/id ~p2-id})])
-      (parser {} [`(sut/start-game {::game/id ~game-id})]))
-    (t/is (= 4 (+ 2 2)))))
+      (parser {} [`(m-game/join-game {::game/id ~game-id ::player/id ~p1-id})])
+      (let [r (parser {} [`(m-game/start-game {::game/id ~game-id})])]
+        (t/is (= "Need at least two players" (ex-message r)))))))
+
+(t/deftest max-5-players
+  (let [{:keys [::parser]} (start-env)
+        player-ids (repeatedly 6 db/uuid)]
+    (doseq [player-id player-ids]
+      (parser {} [`(m-player/new-player {::player/id ~player-id})]))
+    (let [game-id (new-game parser)]
+      (doseq [player-id (butlast player-ids)]
+        (parser {} [`(m-game/join-game {::game/id ~game-id ::player/id ~player-id})]))
+      (let [r (parser {} [`(m-game/join-game {::game/id ~game-id ::player/id ~(last player-ids)})])]
+        (t/is (= "Maximum players already reached" (ex-message r)))))))

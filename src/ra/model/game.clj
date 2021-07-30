@@ -182,11 +182,11 @@
 
 ;; full env
 (defn notify-all-clients! [env game-id]
-  (let [websockets (:ra.server/websockets env)
-        connected-uids (:any @(:connected-uids (:websockets websockets)))
-        websockets (:websockets websockets)
-        cids connected-uids]
-    (notify-clients websockets cids (load-game @(::db/conn env) game-q game-id))))
+  (when-let [websockets (:ra.server/websockets env)]
+    (let [connected-uids (:any @(:connected-uids (:websockets websockets)))
+          websockets     (:websockets websockets)
+          cids           connected-uids]
+      (notify-clients websockets cids (load-game @(::db/conn env) game-q game-id)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Txs

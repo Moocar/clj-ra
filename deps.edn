@@ -37,7 +37,7 @@
  :aliases {:build {:deps {io.github.clojure/tools.build {:git/tag "v0.1.6" :git/sha "5636e61"}}
                    :extra-paths ["build"]
                    :ns-default build}
-           :server-dev {:extra-paths ["dev" "classes"]
+           :server-dev {:extra-paths ["dev" "classes" "test"]
                                  :extra-deps  {
                                                ;; Debugging
                                                hashp/hashp {:mvn/version "0.2.1"}

@@ -3,10 +3,17 @@
             [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
             [ra.app.routing :as routing]
             [ra.specs.game :as game]
-            [ra.specs.tile :as tile]))
+            [ra.specs.tile :as tile]
+            [ra.specs.player :as player]))
 
 (defn game-component []
   (comp/registry-key->class :ra.app.game/Game))
+
+(defmutation join-game [_]
+  (remote [env]
+    (-> env
+        (m/returning (game-component))
+        (m/with-target [:ui/current-game]))))
 
 (defmutation new-game [_]
   (remote [env]
@@ -15,13 +22,9 @@
         (m/with-target [:ui/current-game])))
   (ok-action [{:keys [result] :as env}]
     (let [game-id (get-in result [:body `new-game ::game/id])]
+      (comp/transact! (:app env) [(join-game {::game/id   game-id
+                                              ::player/id (get-in @(:state env) [:ui/current-player 1])})])
       (routing/to! (:app env) ["game" (str game-id)]))))
-
-(defmutation join-game [_]
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
 
 (defmutation start-game [_]
   (remote [env]

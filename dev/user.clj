@@ -6,7 +6,7 @@
 
 (repl/disable-reload! (find-ns 'user))
 
-(repl/set-refresh-dirs "src")
+(repl/set-refresh-dirs "src" "test")
 
 (defn reset []
   (integrant.repl/reset)

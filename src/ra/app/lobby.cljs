@@ -18,17 +18,20 @@
   (action [env]
     (swap! (:state env) assoc :ui/current-game ident)))
 
-(defn click-join-game [this short-id]
+(defn click-join-game [this current-player-id short-id]
   (df/load! this [::game/short-id short-id] ui-game/Game
             {:post-action (fn [env]
                             (if-let [game-id (get-in env [:result :body [::game/short-id short-id] ::game/id])]
                               (do (merge/merge-component! this ui-game/Game (get-in env [:result :body [::game/short-id short-id]]))
-                                  (comp/transact! this [(set-current-game {:ident [::game/id game-id]})])
+                                  (comp/transact! this [(set-current-game {:ident [::game/id game-id]})
+                                                        (m-game/join-game {::game/id   game-id
+                                                                           ::player/id current-player-id})])
                                   (routing/to! this ["game" (str game-id)]))
                               (m-error/set-error! this "Game doesn't exist")))}))
 
 (defsc JoinGameModal [this props]
-  {:query               [:ui/join-game-code]
+  {:query               [:ui/join-game-code
+                         {[:ui/current-player '_] [::player/id]}]
    :ident               (fn [_] [:component/id :join-game])
    :initial-state       {:ui/join-game-code ""}
    :route-segment       ["lobby" "join-game"]
@@ -41,28 +44,30 @@
    :componentDidMount   (fn [this _ _]
                           (when-let [name-field (gobj/get this "name")]
                             (.focus name-field)))}
-  (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
-    (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center.gap-4 {}
-      (dom/label :.block.text-gray-700.text-sm.font-bold.mb-2 {:htmlFor "game-code"}
-        "Enter Game Code")
-      (dom/div {}
-        (ui/input props :ui/join-game-code
-          {:id          "game-code"
-           :type        "text"
-           :placeholder "E.g AXKQ"
-           :ref         (comp/get-state this :save-ref)
-           :onKeyUp     (fn [evt]
-                          (when (= (.-keyCode evt) 13)
-                            (click-join-game this (:ui/join-game-code props))))
-           :onChange    (fn [evt _]
-                          (m/set-string!! this :ui/join-game-code :event evt))}))
-      (ui/button {:onClick (fn []
-                             (click-join-game this (:ui/join-game-code props)))}
-        "Load Game")
-      (ui/button {:onClick (fn []
-                             ;; Ugly
-                             (routing/back! this ["lobby"]))}
-        "Back"))))
+  (letfn [(join-game [] (click-join-game this
+                                         (::player/id (:ui/current-player props))
+                                         (:ui/join-game-code props)))]
+    (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
+      (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center.gap-4 {}
+        (dom/label :.block.text-gray-700.text-sm.font-bold.mb-2 {:htmlFor "game-code"}
+          "Enter Game Code")
+        (dom/div {}
+          (ui/input props :ui/join-game-code
+            {:id          "game-code"
+             :type        "text"
+             :placeholder "E.g AXKQ"
+             :ref         (comp/get-state this :save-ref)
+             :onKeyUp     (fn [evt]
+                            (when (= (.-keyCode evt) 13)
+                              (join-game)))
+             :onChange    (fn [evt _]
+                            (m/set-string!! this :ui/join-game-code :event evt))}))
+        (ui/button {:onClick (fn [] (join-game))}
+          "Load Game")
+        (ui/button {:onClick (fn []
+                               ;; Ugly
+                               (routing/back! this ["lobby"]))}
+          "Back")))))
 
 (def ui-join-game-modal (comp/factory JoinGameModal))
 
