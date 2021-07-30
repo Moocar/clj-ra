@@ -219,9 +219,11 @@
                                                       (comp/transact! this [(m-game/bid {::hand/id (::hand/id hand)
                                                                                          ::game/id (::game/id game)
                                                                                          :sun-disk sun-disk})])))))
-      (dom/div :.font-bold {}
-        (dom/span {} "Waiting for ")
-        (dom/span {} (::player/name (::hand/player (:hand props))))))))
+      (dom/div :.flex.flex-col {}
+        (dom/div :.font-bold {}
+          (dom/span {} "Waiting for ")
+          (dom/span {} (::player/name (::hand/player (:hand props)))))
+        (dom/div :.invisible.h-16 {})))))
 
 (defn swap-god-tile [this {:keys [game]} tile]
   (m/set-value! this :ui/selected-god-tile nil)
