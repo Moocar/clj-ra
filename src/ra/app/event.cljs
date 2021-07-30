@@ -72,9 +72,11 @@
                           (ui-player-name player)
                           " won auction with "
                           (ui-sun-disk (::bid/sun-disk winning-bid)))
-                        (dom/div :.flex.flex-row.gap-2 {}
+                        (dom/div :.pl-4.flex.flex-row.gap-2 {}
                           (dom/div {} "Won:")
-                          (map (fn [t] (ui-tile t)) tiles-won))))
+                          (dom/div :.flex.flex-row.flex-wrap.gap-2 {}
+                            (concat [(ui-sun-disk (:won-sun-disk winning-bid))]
+                                    (map (fn [t] (ui-tile t)) tiles-won))))))
                     "Auction finished (everyone passed)"))
                 (let [hand   (get-in s [::hand/id (::hand/id hand)])
                       player (get-in s (::hand/player hand))]

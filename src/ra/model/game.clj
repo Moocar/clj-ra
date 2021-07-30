@@ -541,9 +541,10 @@
                   {:hand        {::hand/id (::hand/id (::bid/hand new-bid))}
                    :sun-disk    (::bid/sun-disk new-bid)
                    :last?       true
-                   :winning-bid {::bid/hand {::hand/id (::hand/id (::bid/hand winning-bid))}
-                                 ::bid/sun-disk (::bid/sun-disk winning-bid)}
-                   :tiles-won (map #(select-keys % tile-q) (::game/auction-tiles game))})
+                   :winning-bid {::bid/hand     {::hand/id (::hand/id (::bid/hand winning-bid))}
+                                 ::bid/sun-disk (::bid/sun-disk winning-bid)
+                                 :won-sun-disk  (::game/current-sun-disk game)}
+                   :tiles-won   (map #(select-keys % tile-q) (::game/auction-tiles game))})
         (when (some ::tile/disaster? (::game/auction-tiles game))
           [[:db/add (:db/id game) ::game/in-disaster? true]])
 
@@ -561,9 +562,9 @@
 
         (event-tx game
                   ::event-type/bid
-                  {:hand        {::hand/id (::hand/id (::bid/hand new-bid))}
-                   :sun-disk    (::bid/sun-disk new-bid)
-                   :last?       true})
+                  {:hand     {::hand/id (::hand/id (::bid/hand new-bid))}
+                   :sun-disk (::bid/sun-disk new-bid)
+                   :last?    true})
         ;; If everyone passed
         (if (::auction/tiles-full? auction)
           ;; If the auction track is full, then we discard all the tiles
