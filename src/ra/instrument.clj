@@ -110,6 +110,19 @@
           [[(first seats) :bid {:sun-disk :rand}]]
           (map (fn [seat] [seat :bid {:sun-disk :pass}]) (rest seats))))
 
+(def step-pyramid
+  [[0 :draw {:tile (fn [tile] (= (::tile/title tile) "Step Pyramid"))}]
+   [1 :draw {:tile (fn [tile] (= (::tile/title tile) "Step Pyramid"))}]
+   [0 :draw {:tile :safe}]
+   [1 :draw {:tile :safe}]
+   [0 :draw {:tile :safe}]
+   [1 :draw {:tile :safe}]
+   [0 :draw {:tile :safe}]
+   [1 :draw {:tile :safe}]
+   [0 :invoke-ra {}]
+   [1 :bid {:sun-disk :pass}]
+   [0 :bid {:sun-disk :rand}]])
+
 (def test-playbook
   (concat
    (all-bids-pass [0 1 2 3])

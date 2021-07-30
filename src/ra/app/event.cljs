@@ -95,7 +95,7 @@
     (let [hand (get-in s [::hand/id (::hand/id hand)])
           player (get-in s (::hand/player hand))]
       (ui-player-name player))
-    (dom/div :.rounded.bg-red-500.flex.justify-center.px-2.text-white {} " invoked Auction")))
+    (dom/div :.rounded.bg-red-500.flex.justify-center.px-2.text-white {} " Invoked Auction")))
 
 (defmethod ui-body ::event-type/discard-disaster-tiles [s _ {:keys [hand]}]
   (dom/div :.flex.flex-row.gap-2 {}
