@@ -675,6 +675,8 @@
         auction-track-tile (d/entity @conn [::tile/id (:auction-track-tile-id input)])
         game (d/entity db [::game/id (::game/id input)])]
     (check-current-hand game hand)
+    (when (::game/auction game)
+      (throw (ex-info "Can't use god tile during auction" {})))
     (when (= (::tile/type auction-track-tile) ::tile-type/god)
       (throw (ex-info "Can't use god tile on a god tile" {})))
     (d/transact! conn

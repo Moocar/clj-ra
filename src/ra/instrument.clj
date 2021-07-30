@@ -78,6 +78,22 @@
                     tile)]
     (draw-tile* env game hand (find-tile-p game tile-pred))))
 
+(defmethod do-action :use-god-tile
+  [{:keys [::pathom/parser game]} hand _ {:keys [tile]}]
+  (assert (seq (::game/auction-tiles game)))
+  (let [tile-pred (case tile
+                    :safe (fn [tile] (and (not (tile/disaster? tile))
+                                          (not (tile/god? tile))))
+                    tile)
+        tile      (first (filter tile-pred (::game/auction-tiles game)))
+        god-tile  (first (filter tile/god? (::hand/tiles hand)))]
+    (assert god-tile)
+    (assert tile)
+    (parser {} [`(m-game/use-god-tile {::hand/id              ~(::hand/id hand)
+                                       ::game/id              ~(::game/id game)
+                                       :god-tile-id           ~(::tile/id tile)
+                                       :auction-track-tile-id ~(::tile/id tile)})])))
+
 (defmethod do-action :bid
   [{:keys [game] :as env} hand _ {:keys [sun-disk]}]
   (case sun-disk
@@ -91,6 +107,7 @@
                                   ::game/id ~(::game/id game)})]))
 
 (defn run-playbook [{:keys [::db/conn] :as env} game playbook]
+  (assert (::game/started-at game))
   (let [env (assoc env
                    :first-seat (::hand/seat (::game/current-hand game)))]
     (loop [game                    game
