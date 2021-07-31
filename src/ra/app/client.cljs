@@ -57,11 +57,16 @@
 (defn start-server-event-listen! [app]
   (async/go
     (loop []
-      (let [game (async/<! client-app/loader-ch)]
+      (let [{:keys [game new-events]} (async/<! client-app/loader-ch)]
         (merge/merge-component! app
-                                (comp/registry-key->class :ra.app.game/Game)
+                                (comp/registry-key->class :ra.app.game/GameWithoutEvents)
                                 game
                                 :remove-missing? true)
+        (doseq [event new-events]
+          (merge/merge-component! app
+                                  (comp/registry-key->class :ra.app.event/Item)
+                                  event
+                                  :append [::game/id (::game/id game) ::game/events]))
         (let [state-map (app/current-state app)]
           (when (= (::player/id (::hand/player (::game/current-hand game)))
                    (second (get state-map :ui/current-player)))

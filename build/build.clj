@@ -44,6 +44,7 @@
                    (str ssh-str ":" prod-deploy-dir)]}))
 
 (defn restart [_]
+  (print "Password: ")
   (let [password (read-line)]
     (b/process
      {:command-args ["ssh"

@@ -91,8 +91,8 @@
                        (count ra-tiles))]
     (dom/div :.flex.flex-row.flex-wrap.gap-2 {}
       (concat (map (fn [_] (dom/div
-                             {:style {"animation-name"     "drawtile"
-                                      "animation-duration" "1s"
+                             {:style {"animationName"     "drawtile"
+                                      "animationDuration" "1s"
                                       "transform"          "scale(1, 1)"}}
                              (ui-tile/ra-tile)))
                    ra-tiles)
@@ -222,7 +222,9 @@
       (dom/div :.flex.flex-col {}
         (dom/div :.font-bold {}
           (dom/span {} "Waiting for ")
-          (dom/span {} (::player/name (::hand/player (:hand props)))))
+          (dom/span {} (::player/name (::hand/player (:hand props))))
+          (when (::game/in-disaster? game)
+            (dom/span {} " to discard disaster tiles")))
         (dom/div :.invisible.h-16 {})))))
 
 (defn swap-god-tile [this {:keys [game]} tile]
@@ -315,6 +317,29 @@
 
 (defn set-title! [title]
   (set! (.-title js/document) title))
+
+;; This exists so that merging in a server pushed game doesn't remove events. Terrible Hack
+(defsc GameWithoutEvents [this props]
+  {:query               [{::game/players (comp/get-query ui-player/Player)}
+                         ::game/current-sun-disk
+                         ::game/epoch
+                         {::game/auction (comp/get-query Auction)}
+                         {:ui/selected-god-tile [::tile/id {::tile/hand [::hand/id]}]}
+                         ::game/in-disaster?
+                         {::game/last-ra-invoker [::hand/id]}
+                         {::game/current-hand (comp/get-query ui-hand/Hand)}
+                         {::game/ra-tiles (comp/get-query ui-tile/Tile)}
+                         {::game/auction-tiles (comp/get-query ui-tile/Tile)}
+                         {::game/hands (comp/get-query ui-hand/Hand)}
+                         ::game/started-at
+                         ::game/finished-at
+                         ::game/short-id
+                         :ui/show-help-modal
+                         :ui/show-score-modal
+                         :ui/last-hand-scores
+                         {[:ui/current-player '_] (comp/get-query ui-player/Player)}
+                         ::game/id]
+   :ident               ::game/id})
 
 (defsc Game [this props]
   {:query               [{::game/players (comp/get-query ui-player/Player)}
