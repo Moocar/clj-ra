@@ -57,11 +57,16 @@
 (defn start-server-event-listen! [app]
   (async/go
     (loop []
-      (let [{:keys [game new-events]} (async/<! client-app/loader-ch)]
+      (let [{:keys [game new-events events-included?]} (async/<! client-app/loader-ch)]
+        (assert (not (and (seq new-events) events-included?)))
         (merge/merge-component! app
                                 (comp/registry-key->class :ra.app.game/GameWithoutEvents)
                                 game
                                 :remove-missing? true)
+        (when events-included?
+          (merge/merge-component! app
+                                  (comp/registry-key->class :ra.app.game/Game)
+                                  (select-keys game [::game/id ::game/events])))
         (doseq [event new-events]
           (merge/merge-component! app
                                   (comp/registry-key->class :ra.app.event/Item)

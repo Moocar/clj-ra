@@ -167,15 +167,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Notify
 
-(defn notify-clients [websockets cids game new-events]
+(defn notify-clients [websockets cids obj]
   (doseq [o cids]
-    (fws-protocols/push websockets o :refresh {:game game
-                                               :new-events new-events})))
+    (fws-protocols/push websockets o :refresh obj)))
 
-(defn notify-other-clients! [env game new-events]
+(defn notify-other-clients! [env obj]
   (when (:connected-uids env)
     (let [other-cids (disj (:any @(:connected-uids env)) (:cid env))]
-      (notify-clients (:websockets env) other-cids game new-events))))
+      (notify-clients (:websockets env) other-cids obj))))
 
 (defn notify-other-clients-transform [{:keys [::pc/mutate] :as mutation}]
   (assoc mutation
@@ -184,8 +183,8 @@
            (let [result (mutate env params)]
              (when (:connected-uids env)
                (when-let [game-id (::game/id result)]
-                 (let [game (load-game @conn game-q game-id {:include-events? false})]
-                   (notify-other-clients! env game []))))
+                 (let [game (load-game @conn game-q game-id {:include-events? true})]
+                   (notify-other-clients! env {:game game :events-included? true}))))
              result))))
 
 ;; full env
@@ -196,8 +195,8 @@
           cids           connected-uids]
       (notify-clients websockets
                       cids
-                      (load-game @(::db/conn env) game-q game-id {:include-events? false})
-                      new-events))))
+                      {:game       (load-game @(::db/conn env) game-q game-id {:include-events? false})
+                       :new-events new-events}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
@@ -227,8 +226,8 @@
   (let [events (tx->events tx)]
     (d/transact! conn tx {::game/id game-id})
     (notify-other-clients! env
-                           (load-game @conn game-q game-id {:include-events? false})
-                           events)))
+                           {:game       (load-game @conn game-q game-id {:include-events? false})
+                            :new-events events})))
 
 (defn next-hand
   "Returns the hand to the left of the given hand that has one or more
@@ -484,7 +483,10 @@
                  (concat
                   [[:db/add (:db/id game) ::game/in-auction? true]]
                   (rotate-current-hand-tx game hand)))]
-        (transact-and-notify! env (::game/id game) tx)))))
+        (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
+        (notify-other-clients! env
+                               {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
+                                :events-included? true})))))
 
 (pc/defmutation draw-tile [{:keys [::db/conn] :as env} input]
   {::pc/params [::hand/id ::game/id]
@@ -646,7 +648,10 @@
                                (::game/in-disaster? new-game))
                          tx
                          (concat tx (finish-epoch-tx new-game)))]
-          (transact-and-notify! env (::game/id game) tx)))
+          (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
+          (notify-other-clients! env
+                                 {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
+                                  :events-included? true})))
       (select-keys input [::game/id]))))
 
 (defn discard-tile-op [hand tile]
@@ -682,7 +687,10 @@
           tx             (if (sun-disks-in-play? new-game)
                            tx
                            (concat tx (finish-epoch-tx new-game)))]
-      (transact-and-notify! env (::game/id input) tx))
+      (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
+      (notify-other-clients! env
+                             {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
+                              :events-included? true}))
     (select-keys input [::game/id])))
 
 (pc/defmutation use-god-tile
