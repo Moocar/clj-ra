@@ -19,7 +19,10 @@
             [ra.model.player :as m-player]
             [ra.specs.player :as player]
             [ra.specs.game :as game]
-            [ra.specs.hand :as hand]))
+            [ra.specs.hand :as hand]
+            [ra.specs.auction.bid :as bid]
+            [ra.specs.auction :as auction]
+            [ra.model.game :as m-game]))
 
 (defsc Home [_ _]
   {:query []
@@ -75,8 +78,19 @@
         (let [state-map (app/current-state app)]
           (when (= (::player/id (::hand/player (::game/current-hand game)))
                    (second (get state-map :ui/current-player)))
-            (audio/play-ding! state-map)))
-        (async/<! (async/timeout 1))
+            (audio/play-ding! state-map))
+          (let [auction     (::game/auction game)
+                hand        (::game/current-hand game)
+                highest-bid (auction/highest-bid auction)
+                can-bid?    (empty? (filter (fn [sun-disk]
+                                              (< (::bid/sun-disk highest-bid) sun-disk))
+                                            (::hand/available-sun-disks hand)))
+                my-go?      (= (:ui/current-player state-map)
+                               [::player/id (::player/id (::hand/player hand))])]
+            (when (and auction my-go? can-bid?)
+              (comp/transact! app [(m-game/bid {::hand/id (::hand/id hand)
+                                                ::game/id (::game/id game)
+                                                :sun-disk nil})]))))
         (recur)))))
 
 (defn ^:export start []
