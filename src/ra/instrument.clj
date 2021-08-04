@@ -119,7 +119,7 @@
         (when (seq next-actions)
           (recur (get-game @conn (::game/short-id game))
                  next-actions))))
-    (m-game/notify-all-clients! env (::game/id game))))
+    (m-game/notify-all-clients! env (::game/id game) [])))
 
 (defn all-bids-pass [seats]
   (concat (map (fn [seat] [seat :draw {:tile :safe}]) (butlast seats))
@@ -176,8 +176,11 @@
   (let [game (get-game @conn game-short-id)]
     (assert game)
     (parser {} [`(m-game/reset {::game/id ~(::game/id game)})])
-    (m-game/notify-all-clients! env (::game/id game))
+    (m-game/notify-all-clients! env (::game/id game) [])
     nil))
 
 (defn clear-bots! [{:keys [::db/conn ::pathom/parser] :as env}]
   (reset! (:listeners (meta conn)) {}))
+
+(comment
+  (ra.instrument/run (s) "ABDS" []))

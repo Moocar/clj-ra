@@ -247,9 +247,9 @@
                  (sort-by ::tile/auction-track-position)
                  (map (fn [tile]
                         (dom/div
-                          {:style {"animation-name"     "drawtile"
-                                   "animation-duration" "1s"
-                                   "transform"          "scale(1, 1)"}}
+                          {:style {"animationName"     "drawtile"
+                                   "animationDuration" "1s"
+                                   "transform"         "scale(1, 1)"}}
                           (ui-tile/ui-tile (comp/computed tile (cond-> {}
                                                                  (and (:ui/selected-god-tile game)
                                                                       (not (tile/god? tile))

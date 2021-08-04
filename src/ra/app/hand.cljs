@@ -38,7 +38,7 @@
                                  (when current-bid
                                    [(::bid/sun-disk current-bid)]))))))))
 
-(defn ui-tiles [hand {:keys [click-god-tile my-go? game]}]
+(defn ui-tiles [hand {:keys [click-god-tile my-go? game auction]}]
   (let [tiles (::hand/tiles hand)
         discard-disaster-tiles? (seq (filter ::tile/disaster? tiles))
         disaster-types (set (map ::tile/type (filter ::tile/disaster? tiles)))]
@@ -58,7 +58,7 @@
            (map (fn [[_ [tile :as tiles]]]
                   (comp/computed tile
                                  (merge {:stack-size (count tiles)}
-                                        (if (and (tile/god? tile) my-go? (::hand/my-go? hand))
+                                        (if (and (tile/god? tile) my-go? (::hand/my-go? hand) (not auction))
                                           {:selectable? true
                                            :on-click    (fn [tile] (click-god-tile hand tile))}
                                           {})
