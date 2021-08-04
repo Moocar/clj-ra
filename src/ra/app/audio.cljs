@@ -6,6 +6,10 @@
   (action [env]
     (swap! (:state env) assoc :ui/ding-buffer buffer)))
 
+(defmutation store-ra [{:keys [buffer]}]
+  (action [env]
+    (swap! (:state env) update :ui/ra-buffers conj buffer)))
+
 (defonce audio-ctx
   (let [AudioContext (or js/window.AudioContext js/window.webkitAudioCOntext)]
     (AudioContext.)))
@@ -19,12 +23,30 @@
                            (fn [audio-buffer]
                              (comp/transact! app [(store-ding {:buffer audio-buffer})]))))))))
 
+(defn load-and-store-ras! [app]
+  (doseq [file ["/Ra1.mp3" "/Ra2.mp3" "/Ra3.mp3" "/Ra4.mp3"]]
+    (.then (.fetch js/window file)
+           (fn [response]
+             (.then (.arrayBuffer response)
+                    (fn [array-buffer]
+                      (.then (.decodeAudioData audio-ctx array-buffer)
+                             (fn [audio-buffer]
+                               (comp/transact! app [(store-ra {:buffer audio-buffer})])))))))))
+
+(defn play-buffer! [buffer]
+  (let [source    (.createBufferSource audio-ctx)
+        gain-node (.createGain audio-ctx)]
+    (set! (.. source -buffer) buffer)
+    (set! (.. gain-node -gain -value) 0.5) ;; 50% volume
+    (.connect gain-node (.-destination audio-ctx))
+    (.connect source gain-node)
+    (.start source)))
+
 (defn play-ding! [state-map]
   (when-let [buffer (get state-map :ui/ding-buffer)]
-    (let [source (.createBufferSource audio-ctx)
-          gain-node (.createGain audio-ctx)]
-      (set! (.. source -buffer) buffer)
-      (set! (.. gain-node -gain -value) 0.5) ;; 50% volume
-      (.connect gain-node (.-destination audio-ctx))
-      (.connect source gain-node)
-      (.start source))))
+    (play-buffer! buffer)))
+
+(defn play-random-ra! [state-map]
+  (when-let [ra-buffers (get state-map :ui/ra-buffers)]
+    (let [buffer (rand-nth ra-buffers)]
+      (play-buffer! buffer))))

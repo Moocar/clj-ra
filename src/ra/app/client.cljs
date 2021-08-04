@@ -75,22 +75,23 @@
                                   (comp/registry-key->class :ra.app.event/Item)
                                   event
                                   :append [::game/id (::game/id game) ::game/events]))
-        (let [state-map (app/current-state app)]
-          (when (= (::player/id (::hand/player (::game/current-hand game)))
-                   (second (get state-map :ui/current-player)))
-            (audio/play-ding! state-map))
-          (let [auction     (::game/auction game)
-                hand        (::game/current-hand game)
-                highest-bid (auction/highest-bid auction)
-                can-bid?    (empty? (filter (fn [sun-disk]
-                                              (< (::bid/sun-disk highest-bid) sun-disk))
-                                            (::hand/available-sun-disks hand)))
-                my-go?      (= (:ui/current-player state-map)
-                               [::player/id (::player/id (::hand/player hand))])]
-            (when (and auction my-go? can-bid?)
-              (comp/transact! app [(m-game/bid {::hand/id (::hand/id hand)
-                                                ::game/id (::game/id game)
-                                                :sun-disk nil})]))))
+        (let [state-map (app/current-state app)
+              hand      (::game/current-hand game)
+              my-go?    (= (:ui/current-player state-map)
+                           [::player/id (::player/id (::hand/player hand))])
+              auction   (::game/auction game)]
+          (if (and auction (empty? (::auction/bids auction)))
+            (audio/play-random-ra! state-map)
+            (when my-go?
+              (audio/play-ding! state-map)
+              (let [highest-bid (auction/highest-bid auction)
+                    can-bid?    (empty? (filter (fn [sun-disk]
+                                                  (< (::bid/sun-disk highest-bid) sun-disk))
+                                                (::hand/available-sun-disks hand)))]
+                (when (and auction can-bid?)
+                  (comp/transact! app [(m-game/bid {::hand/id (::hand/id hand)
+                                                    ::game/id (::game/id game)
+                                                    :sun-disk nil})]))))))
         (recur)))))
 
 (defn ^:export start []
@@ -102,4 +103,6 @@
     (app/mount! app Root "app" {:initialize-state? false})
     (start-server-event-listen! app)
     (m-player/init! app)
-    (audio/load-and-store-ding! app)))
+    (audio/load-and-store-ding! app)
+    (audio/load-and-store-ras! app)
+    ))
