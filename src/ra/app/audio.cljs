@@ -21,7 +21,10 @@
 
 (defn play-ding! [state-map]
   (when-let [buffer (get state-map :ui/ding-buffer)]
-    (let [source (.createBufferSource audio-ctx)]
+    (let [source (.createBufferSource audio-ctx)
+          gain-node (.createGain audio-ctx)]
       (set! (.. source -buffer) buffer)
-      (.connect source (.-destination audio-ctx))
+      (set! (.. gain-node -gain -value) 0.5) ;; 50% volume
+      (.connect gain-node (.-destination audio-ctx))
+      (.connect source gain-node)
       (.start source))))

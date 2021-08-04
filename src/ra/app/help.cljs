@@ -28,6 +28,7 @@
         {:onClick (fn [] (m/set-value! this :ui/show-help-modal false))} "Close")
       (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}
         (dom/div :.flex.flex-col.gap-2 {}
+          (dom/div {} "Bottom right number is the number of tiles in the bag")
           (dom/div :.font-bold.text-xl {} "Special Tiles")
           (ui-tiles-row "Ra"
                         [{::tile/title "Ra" ::tile/type ::tile-type/ra :stack-size 30}]
@@ -51,7 +52,7 @@
                         [{::tile/title "God" ::tile/type ::tile-type/god :stack-size 8}]
                         (dom/span {} (dom/span :.font-bold "2 points") ". Or discard to take any auction tile as your action. Discard at end of epoch."))
           (dom/hr {})
-          (ui-tiles-row "Art"
+          (ui-tiles-row "Civilization"
                         [{::tile/title "Art" ::tile/type ::tile-type/civilization :stack-size 5}
                          {::tile/title "Agriculture" ::tile/type ::tile-type/civilization :stack-size 5}
                          {::tile/title "Astronomy" ::tile/type ::tile-type/civilization :stack-size 5}
@@ -96,8 +97,7 @@
           (dom/hr {})
           (dom/div :.font-bold.text-xl.pt-8 {} "Scored at end of Game only")
           (ui-tiles-row "Monuments"
-                        [{::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Temple" :stack-size 5}
-                         {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Fortress" :stack-size 5}
+                        [{::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Fortress" :stack-size 5}
                          {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Obelisk" :stack-size 5}
                          {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Palace" :stack-size 5}
                          {::tile/type ::tile-type/monument ::tile/scarab? true ::tile/title "Pyramid" :stack-size 5}
