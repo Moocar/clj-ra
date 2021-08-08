@@ -1,5 +1,5 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure    {:mvn/version "1.11.0-alpha1"}
+ :deps  {org.clojure/clojure {:mvn/version "1.11.0-alpha1"}
 
          ;; For clojure spec
          org.clojure/spec.alpha {:mvn/version "0.2.194"}
@@ -7,11 +7,11 @@
 
          ;; For Graphql requests
          ;; com.wsscode/pathom     {:local/root "/Users/amarcar/dev/github/wilkerlucio/pathom"}
-         com.wsscode/pathom                  {:mvn/version "2.4.0"}
+         com.wsscode/pathom {:mvn/version "2.4.0"}
 
          ;; Fulcro
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
-         com.fulcrologic/fulcro {:mvn/version "3.5.1"}
+         com.fulcrologic/fulcro {:mvn/version "3.5.2"}
 
          ;; Websockets
          ;; com.fulcrologic/fulcro-websockets {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro-websockets"}
@@ -25,47 +25,54 @@
          ;; TODO instead of generating html in server. Move into build system to
          ;; generate and move to resources/public/index.html. Wait till
          ;; clojure.build
-         hiccup/hiccup     {:mvn/version "1.0.5"}
+         hiccup/hiccup {:mvn/version "1.0.5"}
 
          ;; Integrant
          integrant/integrant {:mvn/version "0.8.0"}
          aero/aero           {:mvn/version "1.1.6"}
 
          ;; Crux DB
-         datascript/datascript {:mvn/version "1.2.2"}}
+         datascript/datascript {:mvn/version "1.2.5"}}
 
- :aliases {:build {:deps {io.github.clojure/tools.build {:git/tag "v0.1.6" :git/sha "5636e61"}}
+ :aliases {:build {:deps        {io.github.clojure/tools.build {:git/tag "v0.1.7" :git/sha "8a3abc2"}}
                    :extra-paths ["build"]
-                   :ns-default build}
+                   :ns-default  build}
+
+           ;; Server world
+           :nrepl      {:extra-deps {nrepl/nrepl                   {:mvn/version "0.9.0-beta1"}
+                                     refactor-nrepl/refactor-nrepl {:mvn/version "2.5.1"}
+                                     cider/cider-nrepl             {:mvn/version "0.26.0"}}}
            :server-dev {:extra-paths ["dev" "classes" "test"]
-                                 :extra-deps  {
-                                               ;; Debugging
-                                               hashp/hashp {:mvn/version "0.2.1"}
+                        :extra-deps  {
+                                      ;; Debugging
+                                      hashp/hashp {:mvn/version "0.2.1"}
 
-                                               ;; Clojure Spec
-                                               org.clojure/test.check {:mvn/version "1.1.0"}
+                                      ;; Clojure Spec
+                                      org.clojure/test.check {:mvn/version "1.1.0"}
 
-                                               org.clojure/tools.namespace {:mvn/version "1.1.0"}
-                                               com.wsscode/pathom-viz      {:mvn/version "1.0.9"}
+                                      org.clojure/tools.namespace {:mvn/version "1.1.0"}
+                                      com.wsscode/pathom-viz      {:mvn/version "1.0.9"}
 
-                                               ;; Integrant reloaded
-                                               integrant/repl {:mvn/version "0.3.2"}}
-                                 :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
+                                      ;; Integrant reloaded
+                                      integrant/repl {:mvn/version "0.3.2"}}
+                        :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
 
-           :ui {:extra-deps {org.clojure/clojurescript           {:mvn/version "1.10.879"}
-                             thheller/shadow-cljs                {:mvn/version "2.15.2"}}}
+           ;; UI world
+           :ui {:extra-deps {org.clojure/clojurescript {:mvn/version "1.10.879"}
+                             thheller/shadow-cljs      {:mvn/version "2.15.2"}}}
 
-           :ui-dev {:extra-deps {binaryage/devtools {:mvn/version "1.0.3"}
-                                 ;; Debugging
-                                 hashp/hashp {:mvn/version "0.2.1"}
-                                 }
-                    :jvm-opts   ["-Dnashorn.args=--no-deprecation-warning"]}}}
+           :ui-dev     {:extra-deps {binaryage/devtools {:mvn/version "1.0.3"}
+                                     ;; Debugging
+                                     hashp/hashp        {:mvn/version "0.2.1"}
+                                     }
+                        :jvm-opts   ["-Dnashorn.args=--no-deprecation-warning"]}
+           ;; shadow cljs nrepl stuff is in ~/.shadow-cljs.config.edn
+}}
 
-;; Run client watch with npx shadow-cljs -d nrepl/nrepl:0.8.3 -d cider/piggieback:0.5.2 -d refactor-nrepl/refactor-nrepl:2.5.1 -d cider/cider-nrepl:0.26.0 server
-
-
-;; -- old YMMV
-
-;; Run server with clj -Anrepl:server:server-dev
-
-;; Run client npx shadow-cljs server
+;; To develop
+;;
+;; 1. Run clj -T:build dev
+;; 2. In emacs, M-x cider-connect-cljs localhost 9001
+;; 3. In emacs, M-x cider-connect-clj localhost default port
+;; 4. (go)
+;; 5. Open browser at localhost:8081

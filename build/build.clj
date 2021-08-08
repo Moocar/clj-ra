@@ -18,13 +18,13 @@
 
 (defn shadow-cljs [{:keys [release server]}]
   (cond release (b/process {:command-args ["npx" "shadow-cljs" "release" "main"]})
-        server  (b/process {:command-args ["npx"
-                                           "shadow-cljs"
-                                           "-d" "nrepl/nrepl:0.8.3"
-                                           "-d" "cider/piggieback:0.5.2"
-                                           "-d" "refactor-nrepl/refactor-nrepl:2.5.1"
-                                           "-d" "cider/cider-nrepl:0.26.0"
-                                           "server"]})))
+        server  (b/process {:command-args ["npx" "shadow-cljs" "server"]})))
+
+(defn nrepl-server [{}]
+  (b/process {:command-args ["clojure"
+                             "-A:server-dev:nrepl"
+                             "-m" "nrepl.cmdline"
+                             "--middleware" "[refactor-nrepl.middleware/wrap-refactor,cider.nrepl/cider-middleware]"]}))
 
 (defn deploy [_]
   (b/process
@@ -45,6 +45,7 @@
 
 (defn restart [_]
   (print "Password: ")
+  (flush)
   (let [password (read-line)]
     (b/process
      {:command-args ["ssh"
@@ -52,13 +53,14 @@
                      "--"
                      (format "echo %s | sudo -S systemctl restart ra.service" password)]})))
 
-(defn dev [_]
-  (future (tailwind {:watch true}))
-  (future (shadow-cljs {:server true})))
-
 (defn all [_]
   (yarn-install nil)
   (tailwind {:release true})
   (shadow-cljs {:release true})
   (deploy nil)
   (restart nil))
+
+(defn dev [_]
+  (future (tailwind {:watch true}))
+  (future (nrepl-server {}))
+  (future (shadow-cljs {:server true})))

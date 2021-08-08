@@ -48,12 +48,11 @@
                  :error-action (fn [env]
                                  (if-let [errors (:com.wsscode.pathom.core/errors (:body (:result env)))]
                                    (if (= 1 (count errors))
-                                     (let [error (:error (val (first errors)))
-                                           data  (:data error)]
-                                       (if (= (:error data) :entity-id/missing)
+                                     (let [error (:error (val (first errors)))]
+                                       (if (= (:msg error) "Player not found")
                                          (init-new-player! app)
-                                         (js/console.error "Unpected error" (str error))))
-                                     (js/console.error "Unpected number of errors" (str errors)))
+                                         (js/console.error "Unexpected error" (str error))))
+                                     (js/console.error "Unexpected number of errors" (str errors)))
                                    (js/console.error "error action triggered, but no error" (str (:result env)))))}))
     (init-new-player! app)))
 

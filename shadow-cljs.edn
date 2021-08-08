@@ -1,5 +1,5 @@
-{:deps  {:aliases [:ui-dev :ui ;; :shadow-nrepl
-                   ]}
+{:deps  {:aliases [:ui-dev :ui]}
+ ;; nrepl stuff is in ~/.shadow-cljs.config.edn
  :nrepl {:port 9001
          :middleware [refactor-nrepl.middleware/wrap-refactor]}
 

@@ -9,6 +9,10 @@
   (cider-save-file-on-load . t)
   (cider-filter-regexps . '(".*nrepl" "^cider.nrepl"))
 
+  (cider-default-cljs-repl . shadow)
+  (cider-shadow-default-options . "main")
+  (cider-offer-to-open-cljs-app-in-browser . nil)
+
   (eval . (define-clojure-indent
             (div :defn)
 	    (p :defn)
@@ -49,10 +53,6 @@
                                     ("m" . "com.fulcrologic.fulcro.mutations")
                                     ("app" . "com.fulcrologic.fulcro.application"))))
 
- (clojurescript-mode
-  (cider-default-cljs-repl . shadow)
-  (cider-shadow-default-options . "main")
-  (cider-offer-to-open-cljs-app-in-browser . nil))
  (cider-repl-mode
   (cider-repl-history-file . "/Users/amarcar/dev/moocar.me/ra-game/.cider-repl-history"))
  )

@@ -10,13 +10,10 @@
    ::player/id])
 
 (defn load-with-error [db q id]
-  (try
-    (d/pull db q [::player/id id])
-    (catch Throwable e
-      (let [data (ex-data e)]
-        (if (= :entity-id/missing (:error data))
-          (throw (ex-info "Player not found" (merge {:user-error? true} data) e))
-          (throw e))))))
+  (let [response (d/pull db q [::player/id id])]
+    (if (nil? response)
+      (throw (ex-info "Player not found" {:user-error? true}))
+      response)))
 
 (pc/defresolver player-resolver [{:keys [::db/conn ::p/parent-query]}
                                {:keys [::player/id]}]
