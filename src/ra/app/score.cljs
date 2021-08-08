@@ -7,6 +7,10 @@
             [ra.specs.player :as player]
             [ra.specs.game :as game]))
 
+(defn tally-hand [hand-score]
+  (+ (reduce + (vals (:tile-scores hand-score)))
+     (or (:sun-disks hand-score) 0)))
+
 (defn ui-table [s hand-scores game]
   (let [last-epoch? (::game/finished-at game)]
     (dom/table :.text-left {}
@@ -24,24 +28,25 @@
                            (dom/th {} "Sun Disks"))
                          (dom/th {} "Total")))
       (dom/tbody {}
-                 (map (fn [hand-score]
-                        (let [tile-scores (:tile-scores hand-score)
-                              hand        (get-in s [::hand/id (::hand/id hand-score)])
-                              player      (get-in s (::hand/player hand))]
-                          (dom/tr {}
-                                  (dom/td :.font-bold {} (::player/name player))
-                                  (dom/td {} (::tile-type/gold tile-scores))
-                                  (dom/td {} (::tile-type/god tile-scores))
-                                  (dom/td {} (::tile-type/civilization tile-scores))
-                                  (dom/td {} (::tile-type/river tile-scores))
-                                  (dom/td {} (::tile-type/pharoah tile-scores))
-                                  (when last-epoch?
-                                    (dom/td {} (::tile-type/monument tile-scores)))
-                                  (when last-epoch?
-                                    (dom/td {} (str (:sun-disks hand-score))))
-                                  (dom/td :.font-bold {} (+ (reduce + (vals tile-scores))
-                                                            (or (:sun-disks hand-scores) 0))))))
-                      hand-scores)))))
+                 (->> hand-scores
+                      (sort-by tally-hand)
+                      (reverse)
+                      (map (fn [hand-score]
+                             (let [tile-scores (:tile-scores hand-score)
+                                   hand        (get-in s [::hand/id (::hand/id hand-score)])
+                                   player      (get-in s (::hand/player hand))]
+                               (dom/tr {}
+                                       (dom/td :.font-bold {} (::player/name player))
+                                       (dom/td {} (::tile-type/gold tile-scores))
+                                       (dom/td {} (::tile-type/god tile-scores))
+                                       (dom/td {} (::tile-type/civilization tile-scores))
+                                       (dom/td {} (::tile-type/river tile-scores))
+                                       (dom/td {} (::tile-type/pharoah tile-scores))
+                                       (when last-epoch?
+                                         (dom/td {} (::tile-type/monument tile-scores)))
+                                       (when last-epoch?
+                                         (dom/td {} (str (:sun-disks hand-score))))
+                                       (dom/td :.font-bold {} (tally-hand hand-score)))))))))))
 
 (defn ui-final-scores [hands]
   (dom/table {}
