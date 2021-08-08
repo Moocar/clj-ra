@@ -22,7 +22,8 @@
             [ra.specs.hand :as hand]
             [ra.specs.auction.bid :as bid]
             [ra.specs.auction :as auction]
-            [ra.model.game :as m-game]))
+            [ra.model.game :as m-game]
+            [ra.specs.auction.reason :as auction-reason]))
 
 (defsc Home [_ _]
   {:query []
@@ -80,7 +81,7 @@
               my-go?    (= (:ui/current-player state-map)
                            [::player/id (::player/id (::hand/player hand))])
               auction   (::game/auction game)]
-          (if (and auction (empty? (::auction/bids auction)))
+          (if (and auction (empty? (::auction/bids auction)) (= ::auction-reason/draw (::auction/reason auction)))
             (audio/play-random-ra! state-map)
             (when my-go?
               (audio/play-ding! state-map)
