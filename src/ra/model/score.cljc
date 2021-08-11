@@ -1,27 +1,28 @@
 (ns ra.model.score
-  (:require [ra.specs.hand :as hand]
-            [ra.specs.tile :as tile]
+  (:require [ra.specs.tile :as tile]
+            [ra.specs.hand :as hand]
             [ra.specs.tile.type :as tile-type]
-            [ra.specs.game :as game]))
+            [ra.specs.epoch-hand :as epoch-hand]))
 
-(defn count-sun-disks [hand]
-  (reduce + (concat (::hand/available-sun-disks hand)
-                    (::hand/used-sun-disks hand))))
+(defn tally-hand [hand-score]
+  (+ (reduce + (vals (:tile-scores hand-score)))
+     (or (:sun-disks hand-score) 0)))
 
-(defn score-epoch [game]
-  (assert (< (::game/epoch game) 4))
-  (let [hands                 (::game/hands game)
-        sort-by-pharoah-count (sort
-                               (map (fn [hand]
-                                      (count (filter tile/pharoah? (::hand/tiles hand))))
-                                    hands))
-        most-pharoahs         (last sort-by-pharoah-count)
-        least-pharoas         (first sort-by-pharoah-count)
-        sun-disk-totals       (sort (map count-sun-disks hands))]
-    (map (fn [hand]
-           (let [tiles (::hand/tiles hand)]
-             (cond-> {::hand/id    (::hand/id hand)
-                      :db/id       (:db/id hand)
+(defn count-sun-disks [epoch-hand]
+  (reduce + (concat (::hand/available-sun-disks (::epoch-hand/hand epoch-hand))
+                    (::hand/used-sun-disks (::epoch-hand/hand epoch-hand)))))
+
+(defn score-epoch [epoch-hands]
+  (let [sort-by-pharoah-count (sort
+                               (map (fn [epoch-hand]
+                                      (count (filter tile/pharoah? #p (::epoch-hand/tiles epoch-hand))))
+                                    epoch-hands))
+        most-pharoahs         #p (last sort-by-pharoah-count)
+        least-pharoas         #p (first sort-by-pharoah-count)
+        sun-disk-totals       (sort (map count-sun-disks epoch-hands))]
+    (map (fn [epoch-hand]
+           (let [tiles (::epoch-hand/tiles epoch-hand)]
+             (cond-> {:hand (::epoch-hand/hand epoch-hand)
                       :tile-scores (cond-> {::tile-type/river
                                             (let [flood-count (count (filter tile/flood? tiles))
                                                   nile-count  (count (filter tile/nile? tiles))]
@@ -50,7 +51,7 @@
                                                                         (= pharoah-count least-pharoas) -2
                                                                         :else 0))})}
                ;; last epoch
-               (= (::game/epoch game) 3)
+               (= (::epoch-hand/epoch epoch-hand) 3)
                (-> (assoc-in [:tile-scores ::tile-type/monument]
                              (let [monument-groups (group-by ::tile/monument-type (filter tile/monument? tiles))]
                                (+ (case (count monument-groups)
@@ -65,16 +66,12 @@
                                                 5 15
                                                 0)))
                                        (reduce + 0)))))
-                   (assoc :sun-disks (+ (if (= (count-sun-disks hand)
-                                               (first sun-disk-totals))
-                                          -5
-                                          0)
-                                        (if (= (count-sun-disks hand)
-                                               (last sun-disk-totals))
-                                          5
-                                          0)))))))
-         hands)))
-
-(defn tally-hand [hand-scores]
-  (+ (reduce + (vals (:tile-scores hand-scores)))
-     (or (:sun-disks hand-scores) 0)))
+                   (assoc :sun-disk-scores (+ (if (= (count-sun-disks epoch-hand)
+                                                     (first sun-disk-totals))
+                                                -5
+                                                0)
+                                              (if (= (count-sun-disks epoch-hand)
+                                                     (last sun-disk-totals))
+                                                5
+                                                0)))))))
+         epoch-hands)))

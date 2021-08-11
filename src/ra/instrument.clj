@@ -119,7 +119,7 @@
         (when (seq next-actions)
           (recur (get-game @conn (::game/short-id game))
                  next-actions))))
-    (m-game/notify-all-clients! env (::game/id game) [])))
+    (m-game/notify-all-clients! env (::game/id game))))
 
 (defn all-bids-pass [seats]
   (concat (map (fn [seat] [seat :draw {:tile :safe}]) (butlast seats))
@@ -169,6 +169,61 @@
     [3 :invoke-ra {}]
     ]))
 
+(def end-of-epoch
+  [[0 :draw {:tile tile/civ?}]
+   [1 :draw {:tile tile/pharoah?}]
+   [0 :draw {:tile tile/ra?}]
+   [1 :bid {:sun-disk :pass}]
+   [0 :bid {:sun-disk :rand}]
+   ;; [1 :draw {:tile tile/civ?}]
+   ;; [0 :draw {:tile tile/pharoah?}]
+   [1 :draw {:tile tile/ra?}]
+   [0 :bid {:sun-disk :pass}]
+   [1 :bid {:sun-disk :rand}]
+   [0 :draw {:tile tile/ra?}]
+   [1 :bid {:sun-disk :pass}]
+   [0 :bid {:sun-disk :pass}]
+   [1 :draw {:tile tile/ra?}]
+   [0 :bid {:sun-disk :pass}]
+   [1 :bid {:sun-disk :pass}]
+   [0 :draw {:tile tile/ra?}]
+   [1 :bid {:sun-disk :pass}]
+   [0 :bid {:sun-disk :pass}]
+   [1 :draw {:tile tile/ra?}]])
+
+(def end-of-game
+  (let [two-full-ras [[0 :draw {:tile tile/ra?}]
+                      [1 :bid {:sun-disk :pass}]
+                      [0 :bid {:sun-disk :pass}]
+                      [1 :draw {:tile tile/ra?}]
+                      [0 :bid {:sun-disk :pass}]
+                      [1 :bid {:sun-disk :pass}]]]
+    (concat
+
+     ;; Epoch 2
+     two-full-ras
+     two-full-ras
+     [[0 :draw {:tile tile/ra?}]
+      [1 :bid {:sun-disk :pass}]
+      [0 :bid {:sun-disk :pass}]
+      [1 :draw {:tile tile/ra?}]]
+
+     ;; Epoch 2
+     two-full-ras
+     two-full-ras
+     [[0 :draw {:tile tile/ra?}]
+      [1 :bid {:sun-disk :pass}]
+      [0 :bid {:sun-disk :pass}]
+      [1 :draw {:tile tile/ra?}]]
+
+     ;; Epoch 3
+     two-full-ras
+     two-full-ras
+     [[0 :draw {:tile tile/ra?}]
+      [1 :bid {:sun-disk :pass}]
+      [0 :bid {:sun-disk :pass}]
+      [1 :draw {:tile tile/ra?}]])))
+
 (defn run [env game-short-id playbook]
   (run-playbook env (get-game @(::db/conn env) game-short-id) playbook))
 
@@ -176,11 +231,12 @@
   (let [game (get-game @conn game-short-id)]
     (assert game)
     (parser {} [`(m-game/reset {::game/id ~(::game/id game)})])
-    (m-game/notify-all-clients! env (::game/id game) [])
+    (m-game/notify-all-clients! env (::game/id game))
     nil))
 
 (defn clear-bots! [{:keys [::db/conn ::pathom/parser] :as env}]
   (reset! (:listeners (meta conn)) {}))
 
 (comment
-  (ra.instrument/run (s) "ABDS" []))
+  (ra.instrument/run (s) "ABDS" [])
+  (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/short-id "HRAY"]))

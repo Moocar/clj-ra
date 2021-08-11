@@ -30,6 +30,9 @@
            ::tile/type
            ::tile/scarab?
            ::tile/auction-track-position
+           ::tile/river-type
+           ::tile/civilization-type
+           ::tile/monument-type
            :ui/selected?]
    :ident ::tile/id}
   (dom/div :.md:w-20.md:h-20.flex.items-center.justify-center.border-2.rounded-md.inline-block.cursor-default.relative.shadow-md.flex-shrink-0

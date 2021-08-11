@@ -305,10 +305,10 @@
 (defn ui-finished [this props]
   (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
     (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center
-      (dom/h2 :.text-lg.font-bold.pb-4 {} "Game Finished")
-      (ui-score/ui-content (app/current-state this)
-                           {:hand-scores (:ui/last-hand-scores props)
-                            :game        props})
+      (dom/h2 :.text-lg.font-bold.pb-4 {}
+              (let [winner (first (reverse (sort-by ::hand/score (::game/hands props))))]
+                (str (get-in winner [::hand/player ::player/name]) " Won!")))
+      (ui-score/ui-epoch-content (app/current-state this) props)
       (dom/div :.flex.flex-row.gap-4.pt-4 {}
         (ui/button {:onClick (fn []
                                (routing/to! this ["lobby"]))}
@@ -330,12 +330,12 @@
                          {::game/ra-tiles (comp/get-query ui-tile/Tile)}
                          {::game/auction-tiles (comp/get-query ui-tile/Tile)}
                          {::game/hands (comp/get-query ui-hand/Hand)}
+                         {::game/epoch-hands (comp/get-query ui-score/EpochHand)}
                          ::game/started-at
                          ::game/finished-at
                          ::game/short-id
                          :ui/show-help-modal
                          :ui/show-score-modal
-                         :ui/last-hand-scores
                          {[:ui/current-player '_] (comp/get-query ui-player/Player)}
                          ::game/id]
    :ident               ::game/id})
@@ -353,12 +353,12 @@
                          {::game/ra-tiles (comp/get-query ui-tile/Tile)}
                          {::game/auction-tiles (comp/get-query ui-tile/Tile)}
                          {::game/hands (comp/get-query ui-hand/Hand)}
+                         {::game/epoch-hands (comp/get-query ui-score/EpochHand)}
                          ::game/started-at
                          ::game/finished-at
                          ::game/short-id
                          :ui/show-help-modal
                          :ui/show-score-modal
-                         :ui/last-hand-scores
                          {[:ui/current-player '_] (comp/get-query ui-player/Player)}
                          ::game/id]
    :ident               ::game/id
@@ -369,8 +369,7 @@
                                    (cond-> data-tree
                                      (and (not= ::merge/not-found (::game/events game))
                                           (= ::event-type/finish-epoch (::event/type (last (::game/events game)))))
-                                     (assoc :ui/show-score-modal true
-                                            :ui/last-hand-scores (:hand-scores (::event/data (last (::game/events game)))))))))
+                                     (assoc :ui/show-score-modal true)))))
    :componentDidMount   (fn [this]
                           (let [base-title (str "Game " (::game/short-id (comp/props this)) (str " | Ra?"))
                                 interval-id-atom (atom nil)
@@ -438,8 +437,7 @@
       (ui-help/ui-help-modal this))
     (when (and (not (::game/finished-at props))
                (:ui/show-score-modal props))
-      (ui-score/ui-modal this {:hand-scores (:ui/last-hand-scores props)
-                               :game        props
+      (ui-score/ui-modal this {:game        props
                                :close-prop  :ui/show-score-modal}))))
 
 (def ui-game (comp/factory Game {:keyfn ::game/id}))

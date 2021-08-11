@@ -16,6 +16,7 @@
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
             [ra.specs.auction.reason :as auction-reason]
+            [ra.specs.epoch-hand :as epoch-hand]
             [ra.specs.game :as game]
             [ra.specs.game.event :as event]
             [ra.specs.game.event.type :as event-type]
@@ -113,6 +114,9 @@
    ::tile/disaster?
    ::tile/scarab?
    ::tile/type
+   ::tile/river-type
+   ::tile/civilization-type
+   ::tile/monument-type
    ::tile/auction-track-position])
 
 (def hand-q
@@ -130,6 +134,11 @@
    ::event/type
    ::event/data])
 
+(def epoch-hand-q
+  [{::epoch-hand/hand [::hand/id {::hand/player [::player/name]}]}
+   {::epoch-hand/tiles tile-q}
+   ::epoch-hand/epoch])
+
 (def game-q
   [::game/current-sun-disk
    ::game/epoch
@@ -138,6 +147,7 @@
    ::game/in-disaster?
    ::game/short-id
    ::game/started-at
+   {::game/epoch-hands epoch-hand-q}
    {::game/auction auction-q}
    {::game/auction-tiles tile-q}
    {::game/current-hand hand-q}
@@ -188,15 +198,15 @@
              result))))
 
 ;; full env
-(defn notify-all-clients! [env game-id new-events]
+(defn notify-all-clients! [env game-id]
   (when-let [websockets (:ra.server/websockets env)]
     (let [connected-uids (:any @(:connected-uids (:websockets websockets)))
           websockets     (:websockets websockets)
           cids           connected-uids]
       (notify-clients websockets
                       cids
-                      {:game       (load-game @(::db/conn env) game-q game-id {:include-events? false})
-                       :new-events new-events}))))
+                      {:game             (load-game @(::db/conn env) game-q game-id {:include-events? true})
+                       :events-included? true}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
@@ -360,6 +370,7 @@
                    [:db/retract ident ::game/in-disaster?]
                    [:db/retract ident ::game/ra-tiles]
                    [:db/retract ident ::game/auction-tiles]
+                   [:db/retract ident ::game/epoch-hands]
                    [:db/retract ident ::game/tile-bag]
                    [:db/retract ident ::game/epoch]
                    [:db/retract ident ::game/current-sun-disk]
@@ -416,26 +427,43 @@
               [:db/retract (:db/id hand) ::hand/tiles (:db/id tile)]))))
 
 (defn finish-epoch-tx [game]
-  (let [hand-scores  (m-score/score-epoch game)]
+  (let [epoch-hands (map (fn [hand]
+                           {::epoch-hand/hand  hand
+                            ::epoch-hand/tiles (::hand/tiles hand)
+                            ::epoch-hand/epoch (::game/epoch game)})
+                         (::game/hands game))
+        hand-scores (m-score/score-epoch epoch-hands)]
     (assert (< (::game/epoch game) 4))
     (concat
      ;; Calculate and store score on each hand
-     (mapv (fn [hand hand-scores]
+     (mapv (fn [hand hand-score]
              [:db/add (:db/id hand) ::hand/score (+ (::hand/score hand)
-                                                    (m-score/tally-hand hand-scores))])
+                                                    (m-score/tally-hand hand-score))])
            (::game/hands game)
            hand-scores)
 
      (if (= (::game/epoch game) 3)
 
        ;; End of the game
-       [[:db/add (:db/id game) ::game/finished-at (date/zdt)]]
+       [{:db/id (:db/id game)
+         ::game/epoch-hands (map (fn [epoch-hand]
+                                   (-> epoch-hand
+                                       (update ::epoch-hand/hand :db/id)
+                                       (update ::epoch-hand/tiles #(map :db/id %))))
+                                 epoch-hands)
+         ::game/finished-at (date/zdt)}]
 
        ;; Normal epoch
        (concat
         (mapcat flip-sun-disks-tx (::game/hands game))
         (mapcat discard-non-scarabs-tx (::game/hands game))
-        [[:db/add (:db/id game) ::game/epoch (inc (::game/epoch game))]
+        [{:db/id (:db/id game)
+          ::game/epoch (inc (::game/epoch game))
+          ::game/epoch-hands (map (fn [epoch-hand]
+                                    (-> epoch-hand
+                                        (update ::epoch-hand/hand :db/id)
+                                        (update ::epoch-hand/tiles #(map :db/id %))))
+                                  epoch-hands)}
          [:db/retract (:db/id game) ::game/last-ra-invoker]
          [:db/retract (:db/id game) ::game/auction]
          [:db/retract (:db/id game) ::game/in-disaster?]
@@ -444,11 +472,7 @@
         ;; The first hand of the next epoch is the one with the highest sun disk
         (let [leading-hand (game/hand-with-highest-sun-disk game)]
           [[:db/add (:db/id game) ::game/current-hand (:db/id leading-hand)]])))
-     (event-tx game
-               ::event-type/finish-epoch
-               {:hand-scores (map (fn [hand-score]
-                                    (select-keys hand-score [::hand/id :tile-scores :sun-disks]))
-                                  hand-scores)}))))
+     (event-tx game ::event-type/finish-epoch {}))))
 
 (defn do-draw-tile [env game hand tile]
   (check-current-hand game hand)
