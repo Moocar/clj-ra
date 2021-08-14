@@ -15,10 +15,10 @@
 (defn score-epoch [epoch-hands]
   (let [sort-by-pharoah-count (sort
                                (map (fn [epoch-hand]
-                                      (count (filter tile/pharoah? #p (::epoch-hand/tiles epoch-hand))))
+                                      (count (filter tile/pharoah? (::epoch-hand/tiles epoch-hand))))
                                     epoch-hands))
-        most-pharoahs         #p (last sort-by-pharoah-count)
-        least-pharoas         #p (first sort-by-pharoah-count)
+        most-pharoahs         (last sort-by-pharoah-count)
+        least-pharoas         (first sort-by-pharoah-count)
         sun-disk-totals       (sort (map count-sun-disks epoch-hands))]
     (map (fn [epoch-hand]
            (let [tiles (::epoch-hand/tiles epoch-hand)]
