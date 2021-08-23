@@ -238,5 +238,5 @@
   (reset! (:listeners (meta conn)) {}))
 
 (comment
-  (ra.instrument/run (s) "ABDS" [])
-  (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/short-id "HRAY"]))
+  ;; See dev/user.clj
+  )

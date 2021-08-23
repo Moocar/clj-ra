@@ -1,8 +1,10 @@
 (ns ra.main
-  (:require ra.integrant))
+  (:require ra.integrant
+            ra.log))
 
 (defn run []
   (ra.integrant/start-system))
 
 (defn -main [& _]
-  (run))
+  (with-redefs [ra.log/*verbose* true]
+    (run)))

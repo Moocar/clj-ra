@@ -24,7 +24,7 @@
                              (comp/transact! app [(store-ding {:buffer audio-buffer})]))))))))
 
 (defn load-and-store-ras! [app]
-  (doseq [file ["/Ra1.mp3" "/Ra2.mp3" "/Ra3.mp3" "/Ra4.mp3"]]
+  (doseq [file ["/Ra1.mp3" "/Ra2.mp3" "/Ra3.mp3" "/Ra4.mp3" "/Mum-Ra1.mp3" "/Mum-Ra2.mp3" "/Dad-Ra1.mp3"]]
     (.then (.fetch js/window file)
            (fn [response]
              (.then (.arrayBuffer response)

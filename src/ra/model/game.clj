@@ -23,7 +23,8 @@
             [ra.specs.hand :as hand]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [ra.specs.tile.type :as tile-type]))
+            [ra.specs.tile.type :as tile-type]
+            ra.log))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Small helpers
@@ -52,6 +53,15 @@
 
 (defn load-player [db player-id]
   (d/entity db [::player/id player-id]))
+
+(defn log [hand action & props]
+  (when ra.log/*verbose*
+    (println
+     (format "%d %-10s %s %s"
+             (::hand/seat hand)
+             (apply str (take 10 (::player/name (::hand/player hand))))
+             (name action)
+             (str/join ", " props)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Bigger helpers
@@ -400,7 +410,7 @@
   (assert (::hand/id input))
   (let [hand  (d/entity @conn [::hand/id (::hand/id input)])
         game  (d/entity @conn [::game/id (::game/id input)])]
-    (println [(::hand/seat hand) ::event-type/invoke-ra])
+    (log hand ::event-type/invoke-ra)
     (check-current-hand game hand)
     (let [tx (concat
               (start-auction-tx {:hand           hand
@@ -475,6 +485,7 @@
      (event-tx game ::event-type/finish-epoch {}))))
 
 (defn do-draw-tile [env game hand tile]
+  (log hand ::event-type/draw-tile (::tile/title tile))
   (check-current-hand game hand)
   (check-has-sun-disks game hand)
   (when (game/auction-tiles-full? game)
@@ -518,7 +529,6 @@
   (let [hand (d/entity @conn [::hand/id (::hand/id input)])
         game (d/entity @conn [::game/id (::game/id input)])
         tile (d/entity @conn (sample-tile @conn game))]
-    (println [(::hand/seat hand) ::event-type/draw-tile])
     (do-draw-tile env game hand tile)
     (select-keys input [::game/id])))
 
@@ -637,7 +647,7 @@
         new-bid {::bid/hand     hand
                  ::bid/sun-disk sun-disk}
         winning-bid (calc-winning-bid auction new-bid)]
-    (println [(::hand/seat hand) ::event-type/bid sun-disk])
+    (log hand ::event-type/bid (or sun-disk "pass"))
     (check-current-hand game hand)
     (check-has-sun-disks game hand)
     (when (= (count (::auction/bids auction))

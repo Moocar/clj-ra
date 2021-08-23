@@ -1,7 +1,8 @@
 (ns user
-  (:require [integrant.repl :refer [clear go halt prep init reset-all]]
-            [hashp.core]
-            [clojure.tools.namespace.repl :as repl]
+  (:require [clojure.tools.namespace.repl :as repl]
+            integrant.repl
+            integrant.repl.state
+            ra.log
             ra.integrant))
 
 (repl/disable-reload! (find-ns 'user))
@@ -9,6 +10,7 @@
 (repl/set-refresh-dirs "src" "test")
 
 (defn reset []
+  (alter-var-root #'ra.log/*verbose* (constantly true))
   (integrant.repl/reset)
   :ok)
 
@@ -17,3 +19,12 @@
 (defn s [] integrant.repl.state/system)
 
 (defn c [] integrant.repl.state/config)
+
+(comment
+  (require 'clojure.test)
+  (clojure.test/run-all-tests #"ra.*-test")
+
+  (require 'ra.instrument)
+  (require 'datascript.core)
+  (ra.instrument/run (s) "ABDS" [])
+  (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/short-id "HRAY"]))
