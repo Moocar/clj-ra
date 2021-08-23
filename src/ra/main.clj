@@ -6,5 +6,5 @@
   (ra.integrant/start-system))
 
 (defn -main [& _]
-  (with-redefs [ra.log/*verbose* true]
-    (run)))
+  (alter-var-root #'ra.log/*verbose* (constantly true))
+  (run))

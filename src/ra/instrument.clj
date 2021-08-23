@@ -1,5 +1,6 @@
 (ns ra.instrument
-  (:require [datascript.core :as d]
+  (:require [clojure.pprint :as pprint]
+            [datascript.core :as d]
             [ra.db :as db]
             [ra.model.game :as m-game]
             [ra.pathom :as pathom]
@@ -100,6 +101,14 @@
     :pass (pass-bid env hand game)
     :rand (rand-bid env hand game)
     (throw (ex-info "unknown bid option" {:sun-disk sun-disk}))))
+
+(defmethod do-action :print-hand
+  [{:keys [game] :as env} hand _ {:keys []}]
+  (pprint/pprint (d/touch (d/entity @(::db/conn env) (:db/id hand)))))
+
+(defmethod do-action :print-game
+  [{:keys [game] :as env} hand _ {:keys []}]
+  (pprint/pprint (d/touch (d/entity @(::db/conn env) (:db/id game)))))
 
 (defmethod do-action :invoke-ra
   [{:keys [::pathom/parser game]} hand _ _]

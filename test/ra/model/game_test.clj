@@ -11,7 +11,8 @@
             [ra.specs.game :as game]
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
-            [datascript.core :as d])
+            [datascript.core :as d]
+            [ra.specs.tile.type :as tile-type])
   (:import (clojure.lang ExceptionInfo)))
 
 (defn make-serial-parser [{:keys [resolvers extra-env]}]
@@ -99,6 +100,46 @@
     (t/is (thrown-with-msg? ExceptionInfo
                             #"Can't use god tile during auction"
                             (ins/run-playbook env game playbook)))))
+
+;; Doesn't actually test anything. Feel free to adapt
+(t/deftest end-epoch-with-disaster-in-auction-track
+  (let [env                       (start-env)
+        game                      (setup-game env 2)
+        playbook (concat [[0 :draw {:tile tile/ra?}]
+                          [1 :bid {:sun-disk :rand}]
+                          [0 :bid {:sun-disk :pass}]
+
+                          [1 :draw {:tile tile/ra?}]
+                          [0 :bid {:sun-disk :rand}]
+                          [1 :bid {:sun-disk :pass}]
+
+                          [0 :draw {:tile tile/ra?}]
+                          [1 :bid {:sun-disk :rand}]
+                          [0 :bid {:sun-disk :pass}]
+
+                          [1 :draw {:tile tile/ra?}]
+                          [0 :bid {:sun-disk :rand}]
+                          [1 :bid {:sun-disk :pass}]
+
+                          [0 :draw {:tile tile/ra?}]
+                          [1 :bid {:sun-disk :rand}]
+                          [0 :bid {:sun-disk :pass}]
+
+                          [1 :invoke-ra {}]
+                          [0 :bid {:sun-disk :rand}]
+                          [1 :bid {:sun-disk :pass}]
+
+                          [0 :invoke-ra {}]
+                          [1 :bid {:sun-disk :rand}]
+                          [0 :bid {:sun-disk :pass}]
+
+                          [0 :draw {:tile (fn [t] (and (tile/disaster? t) (tile/type= t ::tile-type/pharoah)))}]
+                          [0 :draw {:tile tile/pharoah?}]
+
+                          [0 :draw {:tile tile/ra?}]
+                          [0 :print-game]
+                          ])]
+    (ins/run-playbook env game playbook)))
 
 ;; Doesn't actually test anything. Feel free to adapt
 (t/deftest end-epoch-by-using-all-sun-disks

@@ -10,8 +10,8 @@
 (repl/set-refresh-dirs "src" "test")
 
 (defn reset []
-  (alter-var-root #'ra.log/*verbose* (constantly true))
   (integrant.repl/reset)
+  (alter-var-root #'ra.log/*verbose* (constantly true))
   :ok)
 
 (integrant.repl/set-prep! ra.integrant/prep)

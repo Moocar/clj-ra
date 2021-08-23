@@ -515,9 +515,7 @@
                  ;; finish epoch
                  (finish-epoch-tx game)
                  ;; normal ra tile
-                 (concat
-                  [[:db/add (:db/id game) ::game/in-auction? true]]
-                  (rotate-current-hand-tx game hand)))]
+                 (rotate-current-hand-tx game hand))]
         (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
         (notify-other-clients! env
                                {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
@@ -655,7 +653,7 @@
       (throw (ex-info "Auction finished" {})))
     (assert (= hand (::game/current-hand game)))
     (when-not (::game/auction game)
-      (throw (ex-info "Not in an auction" {})))
+      (throw (ex-info "Not in an auction" {:sun-disk sun-disk ::hand/id (::hand/id input)})))
 
     (let [tx (let [bid-id -1]
                (concat
