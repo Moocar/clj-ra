@@ -31,6 +31,7 @@
    {:command-args ["rsync"
                    "-v"
                    "-r"
+                   "--delete"
                    "--exclude" "node_modules/"
                    "--exclude" ".clj-kondo/"
                    "--exclude" ".git/"
