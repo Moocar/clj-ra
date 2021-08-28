@@ -613,20 +613,13 @@
                    :tiles-won   (map #(select-keys % tile-q) (::game/auction-tiles game))})
         ;; If the player picks up a disaster tile, go into disaster resolution mode
         (when (some ::tile/disaster? (::game/auction-tiles game))
-          [[:db/add (:db/id game) ::game/in-disaster? true]])
-
-        (let [the-next-hand (if (some ::tile/disaster? (::game/auction-tiles game))
-                              (::bid/hand winning-bid)
-                              (next-hand game (::game/last-ra-invoker game)))]
-          [[:db/add (:db/id game) ::game/current-hand (:db/id the-next-hand)]]))
+          [[:db/add (:db/id game) ::game/in-disaster? true]]))
 
        ;; TODO If they win a disaster tile, but they have no choices, then
        ;; discard for them and move to the next hand
 
        ;; If everyone passed
        (concat
-        [[:db/add (:db/id game) ::game/current-hand (:db/id (next-hand game (::game/last-ra-invoker game)))]]
-
         (event-tx game
                   ::event-type/bid
                   {:hand     {::hand/id (::hand/id (::bid/hand new-bid))}
@@ -681,10 +674,14 @@
       (when (waiting-on-last-bid? game auction)
         ;; Perform a fake tx to find out if we have run out of sun disks. And if so,
         ;; finish the epoch
-        (let [tx       (last-bid-tx game auction new-bid winning-bid)
-              db-after (:db-after (d/with @conn tx))
-              new-game (d/entity db-after (:db/id game))
-              tx       (if (or (sun-disks-in-play? new-game)
+        (let [tx            (last-bid-tx game auction new-bid winning-bid)
+              db-after      (:db-after (d/with @conn tx))
+              new-game      (d/entity db-after (:db/id game))
+              the-next-hand (if (and winning-bid (some ::tile/disaster? (::game/auction-tiles game)))
+                              (::bid/hand winning-bid)
+                              (next-hand new-game (::game/last-ra-invoker new-game)))
+              tx            (concat tx [[:db/add (:db/id game) ::game/current-hand (:db/id the-next-hand)]])
+              tx            (if (or (sun-disks-in-play? new-game)
                                (::game/in-disaster? new-game))
                          tx
                          (concat tx (finish-epoch-tx new-game)))]
