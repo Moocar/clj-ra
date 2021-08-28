@@ -23,6 +23,7 @@
     (map (fn [epoch-hand]
            (let [tiles (::epoch-hand/tiles epoch-hand)]
              (cond-> {:hand (::epoch-hand/hand epoch-hand)
+                      :epoch (::epoch-hand/epoch epoch-hand)
                       :tile-scores (cond-> {::tile-type/river
                                             (let [flood-count (count (filter tile/flood? tiles))
                                                   nile-count  (count (filter tile/nile? tiles))]

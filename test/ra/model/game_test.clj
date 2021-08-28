@@ -13,7 +13,8 @@
             [ra.specs.tile :as tile]
             [datascript.core :as d]
             [ra.specs.tile.type :as tile-type]
-            [ra.specs.hand :as hand])
+            [ra.specs.hand :as hand]
+            [ra.model.score :as m-score])
   (:import (clojure.lang ExceptionInfo)))
 
 (defn make-serial-parser [{:keys [resolvers extra-env]}]
@@ -155,12 +156,121 @@
     (ins/run-playbook env game playbook)
     (t/is (= true true))))
 
+(t/deftest end-of-game-equal-sun-disks
+  (let [env      (start-env)
+        game     (setup-game env 2)
+        env      (assoc env
+                        :first-seat (::hand/seat (::game/current-hand game))
+                        :game game)
+        game     (ins/override-sun-disks env game {0 #{9 6 5 2}
+                                                   1 #{8 7 4 3}})
+        playbook [;;Epoch 1
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk 9}]
+
+                  [1 :invoke-ra {}]
+                  [0 :bid {:sun-disk 6}]
+                  [1 :bid {:sun-disk :pass}]
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk 5}]
+
+                  [1 :invoke-ra {}]
+                  [0 :bid {:sun-disk 2}]
+                  [1 :bid {:sun-disk :pass}]
+
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 8}]
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 7}]
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 4}]
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 3}]
+
+                  ;; 0 has 1 9 6 5
+                  ;; 1 has 2 8 7 4
+                  ;; Middle = 3
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk 1}]
+
+                  [1 :invoke-ra {}]
+                  [0 :bid {:sun-disk 9}]
+                  [1 :bid {:sun-disk :pass}]
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk 6}]
+
+                  [1 :invoke-ra {}]
+                  [0 :bid {:sun-disk 5}]
+                  [1 :bid {:sun-disk :pass}]
+
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 2}]
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 8}]
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 7}]
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 4}]
+
+                  ;; 0 has 1 6 9 3:
+                  ;; 1 has 2 5 8 7:
+                  ;; Middle has 4
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk 1}]
+
+                  [1 :invoke-ra {}]
+                  [0 :bid {:sun-disk 6}]
+                  [1 :bid {:sun-disk :pass}]
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk 9}]
+
+                  [1 :invoke-ra {}]
+                  [0 :bid {:sun-disk :pass}]
+                  [1 :bid {:sun-disk 2}]
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk 5}]
+                  [0 :bid {:sun-disk :pass}]
+
+                  [1 :invoke-ra {}]
+                  [0 :bid {:sun-disk :pass}]
+                  [1 :bid {:sun-disk 8}]
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk 3}]
+
+                  [1 :invoke-ra {}]
+                  [1 :bid {:sun-disk 7}]
+
+                  ;; 0 has 4 1 6 8:
+                  ;; 1 has 9 2 5 3:
+                  ;; Middle has 7
+                  ]]
+    (ins/run-playbook env game playbook)
+    (t/is (= [0 0] (->> (::game/epoch-hands (d/entity @(::db/conn env) (:db/id game)))
+                        (m-score/score-epoch)
+                        (filter #(= 3 (:epoch %)))
+                        (map :sun-disk-scores)))
+          "Sun disks should be no points")))
+
 (t/deftest real-test
   (let [env      (start-env)
         game     (setup-game env 3)
         env      (assoc env
-                        :first-seat (::hand/seat (::game/current-hand game)))
-        env      (assoc env :game game)
+                        :first-seat (::hand/seat (::game/current-hand game))
+                        :game game)
         game     (ins/override-sun-disks env game {0 #{13 8 5 2}
                                                    1 #{12 9 6 3}
                                                    2 #{11 10 7 4}})

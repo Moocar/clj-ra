@@ -49,7 +49,7 @@
                                      (when last-epoch?
                                        (dom/td {} (::tile-type/monument tile-scores)))
                                      (when last-epoch?
-                                       (dom/td {} (str (:sun-disks hand-score))))
+                                       (dom/td {} (str (:sun-disk-scores hand-score))))
                                      (dom/td :.font-bold {} (m-score/tally-hand hand-score))))))))))
 
 (defn ui-final-scores [hands]
