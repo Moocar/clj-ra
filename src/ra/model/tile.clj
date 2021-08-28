@@ -82,7 +82,7 @@
 
    {::tile/type ::tile-type/pharoah
     ::tile/scarab? true
-    ::tile/title "Pharaoh"} 25
+    ::tile/title "Pharoah"} 25
    {::tile/type ::tile-type/pharoah
     ::tile/title "Funeral"
     ::tile/disaster? true} 2

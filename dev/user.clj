@@ -21,10 +21,25 @@
 (defn c [] integrant.repl.state/config)
 
 (comment
+  ;; Turn on verbose logging
+  (alter-var-root #'ra.log/*verbose* (constantly true))
+
+  (require 'ra.model.game-test)
   (require 'clojure.test)
+
+  ;; run all tests
   (clojure.test/run-all-tests #"ra.*-test")
+
+  ;; Run a single test:
+  (ra.model.game-test/use-up-last-tile-but-still-go)
 
   (require 'ra.instrument)
   (require 'datascript.core)
+
+  ;; Run a playboox
   (ra.instrument/run (s) "ABDS" [])
-  (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/short-id "HRAY"]))
+
+  ;; Get the current game db
+  (datascript.core/entity @(:ra.db/conn (s)) [:ra.specs.game/short-id "HRAY"])
+
+  )

@@ -28,6 +28,28 @@
 (defn find-tile-p [game pred]
   (first (filter pred (::game/tile-bag game))))
 
+(defn seat->hand [{:keys [game first-seat] :as env} seat]
+  (assert (< seat (game/player-count game)))
+  (let [target-seat (mod (+ first-seat seat) (game/player-count game))]
+    (->> (::game/hands game)
+         (sort-by ::hand/seat)
+         (repeat 2)
+         (apply concat)
+         (drop-while (fn [hand] (not= (::hand/seat hand) target-seat)))
+         (first))))
+
+(defn override-sun-disks [{:keys [::db/conn] :as env} game specs]
+  (let [tx (mapcat (fn [[seat sun-disks]]
+                     (let [hand (seat->hand env seat)]
+                       (concat
+                        [[:db/retract (:db/id hand) ::hand/available-sun-disks]]
+                        (map (fn [sun-disk]
+                               [:db/add (:db/id hand) ::hand/available-sun-disks sun-disk])
+                             sun-disks))))
+                   specs)]
+    (d/transact! conn tx)
+    (d/entity @conn (:db/id game))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Actions
 
@@ -54,16 +76,6 @@
 (defn draw-tile [{:keys [::db/conn] :as env} game hand tile]
   (draw-tile* env game hand tile)
   (refresh-game @conn game))
-
-(defn seat->hand [{:keys [game first-seat] :as env} seat]
-  (assert (< seat (game/player-count game)))
-  (let [target-seat (mod (+ first-seat seat) (game/player-count game))]
-    (->> (::game/hands game)
-         (sort-by ::hand/seat)
-         (repeat 2)
-         (apply concat)
-         (drop-while (fn [hand] (not= (::hand/seat hand) target-seat)))
-         (first))))
 
 (defmulti do-action (fn [game hand action-type options] action-type))
 
@@ -100,7 +112,9 @@
   (case sun-disk
     :pass (pass-bid env hand game)
     :rand (rand-bid env hand game)
-    (throw (ex-info "unknown bid option" {:sun-disk sun-disk}))))
+    (if (number? sun-disk)
+      (bid env hand game sun-disk)
+      (throw (ex-info "unknown bid option" {:sun-disk sun-disk})))))
 
 (defmethod do-action :print-hand
   [{:keys [game] :as env} hand _ {:keys []}]
@@ -115,6 +129,23 @@
   (parser {} [`(m-game/invoke-ra {::hand/id ~(::hand/id hand)
                                   ::game/id ~(::game/id game)})]))
 
+(defmethod do-action :discard
+  [{:keys [::pathom/parser game]} hand _ {:keys [tiles]}]
+  (let [tiles    (loop [selected   #{}
+                        hand-tiles (set (::hand/tiles hand))
+                        tile-preds tiles]
+                (if (empty? tile-preds)
+                  selected
+                  (let [found (first (filter (first tile-preds) hand-tiles))]
+                    (assert found)
+                    (recur (conj selected found)
+                           (disj hand-tiles found)
+                           (rest tile-preds)))))
+        tile-ids (map ::tile/id tiles)]
+    (parser {} [`(m-game/discard-disaster-tiles {::hand/id ~(::hand/id hand)
+                                                 ::game/id ~(::game/id game)
+                                                 :tile-ids ~tile-ids})])))
+
 (defn run-playbook [{:keys [::db/conn] :as env} game playbook]
   (assert (::game/started-at game))
   (let [env (assoc env
@@ -124,7 +155,12 @@
       (let [env                        (assoc env :game game)
             [seat action-type options] action
             hand                       (seat->hand env seat)]
-        (do-action (assoc env :game game) hand action-type options)
+        (try
+          (do-action (assoc env :game game) hand action-type options)
+          (catch Exception e
+            (let [data (ex-data e)
+                  msg (ex-message e)]
+              (throw (ex-info msg (assoc data :action action) e)))))
         (when (seq next-actions)
           (recur (get-game @conn (::game/short-id game))
                  next-actions))))

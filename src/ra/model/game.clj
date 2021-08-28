@@ -43,6 +43,13 @@
     (throw (ex-info "You have no sun disks"
                     {:current-hand (::hand/seat (game/current-hand game))}))))
 
+(defn check-sun-disk-available [game hand sun-disk]
+  (when (and (not (nil? sun-disk)) (not (some #{sun-disk} (::hand/available-sun-disks hand))))
+    (throw (ex-info "Sun disk not available"
+                    {:current-hand (::hand/seat (game/current-hand game))
+                     :sun-disk sun-disk
+                     :available-sun-disks (::hand/available-sun-disks hand)}))))
+
 (defn move-thing-tx
   "Moves something from from to to"
   [thing from to]
@@ -595,7 +602,6 @@
          ;; Set the current epoch's sun disk (middle of the board) to the
          ;; winning disk
          [:db/add (:db/id game) ::game/current-sun-disk (::bid/sun-disk winning-bid)]]
-        ;; If the player picks up a disaster tile, go into disaster resolution mode
         (event-tx game
                   ::event-type/bid
                   {:hand        {::hand/id (::hand/id (::bid/hand new-bid))}
@@ -605,6 +611,7 @@
                                  ::bid/sun-disk (::bid/sun-disk winning-bid)
                                  :won-sun-disk  (::game/current-sun-disk game)}
                    :tiles-won   (map #(select-keys % tile-q) (::game/auction-tiles game))})
+        ;; If the player picks up a disaster tile, go into disaster resolution mode
         (when (some ::tile/disaster? (::game/auction-tiles game))
           [[:db/add (:db/id game) ::game/in-disaster? true]])
 
@@ -648,6 +655,7 @@
     (log hand ::event-type/bid (or sun-disk "pass"))
     (check-current-hand game hand)
     (check-has-sun-disks game hand)
+    (check-sun-disk-available game hand sun-disk)
     (when (= (count (::auction/bids auction))
              (game/player-count game))
       (throw (ex-info "Auction finished" {})))
@@ -697,6 +705,7 @@
         game           (d/entity @conn [::game/id (::game/id input)])
         disaster-tiles (hand/disaster-tiles hand)
         selected-tiles (set (map (fn [tile-id] (d/entity @conn [::tile/id tile-id])) (:tile-ids input)))]
+    (apply log hand ::event-type/discard (map ::tile/title selected-tiles))
     (check-current-hand game hand)
     (when-not (seq disaster-tiles)
       (throw (ex-info "No disaster tiles in hand" {})))
@@ -734,6 +743,7 @@
         hand (d/entity db [::hand/id (::hand/id input)])
         auction-track-tile (d/entity @conn [::tile/id (:auction-track-tile-id input)])
         game (d/entity db [::game/id (::game/id input)])]
+    (log hand ::event-type/use-god-tile (::tile/title auction-track-tile))
     (check-current-hand game hand)
     (when (::game/auction game)
       (throw (ex-info "Can't use god tile during auction" {})))
