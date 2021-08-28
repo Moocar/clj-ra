@@ -679,12 +679,15 @@
               new-game      (d/entity db-after (:db/id game))
               the-next-hand (if (and winning-bid (some ::tile/disaster? (::game/auction-tiles game)))
                               (::bid/hand winning-bid)
-                              (next-hand new-game (::game/last-ra-invoker new-game)))
-              tx            (concat tx [[:db/add (:db/id game) ::game/current-hand (:db/id the-next-hand)]])
+                              (when (sun-disks-in-play? new-game)
+                                (next-hand new-game (::game/last-ra-invoker new-game))))
+              tx            (if the-next-hand
+                              (concat tx [[:db/add (:db/id game) ::game/current-hand (:db/id the-next-hand)]])
+                              tx)
               tx            (if (or (sun-disks-in-play? new-game)
-                               (::game/in-disaster? new-game))
-                         tx
-                         (concat tx (finish-epoch-tx new-game)))]
+                                    (::game/in-disaster? new-game))
+                              tx
+                              (concat tx (finish-epoch-tx new-game)))]
           (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
           (notify-other-clients! env
                                  {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})

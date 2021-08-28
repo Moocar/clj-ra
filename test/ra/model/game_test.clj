@@ -102,6 +102,59 @@
                             #"Can't use god tile during auction"
                             (ins/run-playbook env game playbook)))))
 
+(t/deftest end-of-epoch-with-all-sun-disks-used-up
+  (let [env      (start-env)
+        game     (setup-game env 3)
+        playbook [[0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [2 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk :rand}]
+
+                  [1 :invoke-ra {}]
+                  [2 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk :rand}]
+                  [1 :bid {:sun-disk :pass}]
+
+                  [2 :invoke-ra {}]
+                  [0 :bid {:sun-disk :rand}]
+                  [1 :bid {:sun-disk :pass}]
+                  [2 :bid {:sun-disk :pass}]
+
+                  [0 :invoke-ra {}]
+                  [1 :bid {:sun-disk :pass}]
+                  [2 :bid {:sun-disk :pass}]
+                  [0 :bid {:sun-disk :rand}]
+
+                  [1 :invoke-ra {}]
+                  [2 :bid {:sun-disk :pass}]
+                  [1 :bid {:sun-disk :rand}]
+
+                  [2 :invoke-ra {}]
+                  [1 :bid {:sun-disk :rand}]
+                  [2 :bid {:sun-disk :pass}]
+
+                  [1 :invoke-ra {}]
+                  [2 :bid {:sun-disk :pass}]
+                  [1 :bid {:sun-disk :rand}]
+
+                  [2 :invoke-ra {}]
+                  [1 :bid {:sun-disk :rand}]
+                  [2 :bid {:sun-disk :pass}]
+
+                  [2 :invoke-ra {}]
+                  [2 :bid {:sun-disk :rand}]
+
+                  [2 :invoke-ra {}]
+                  [2 :bid {:sun-disk :rand}]
+
+                  [2 :invoke-ra {}]
+                  [2 :bid {:sun-disk :rand}]
+
+                  [2 :invoke-ra {}]
+                  [2 :bid {:sun-disk :rand}]]]
+    (ins/run-playbook env game playbook)
+    (t/is (= true true))))
+
 (t/deftest real-test
   (let [env      (start-env)
         game     (setup-game env 3)
@@ -208,209 +261,3 @@
                   [2 :bid {:sun-disk :pass}]]]
     (ins/run-playbook env game playbook)
     (t/is (= true true))))
-
-;; Was supposed to trigger a fail, but it doesn't :(
-(t/deftest use-up-last-tile-but-still-go
-  (let [env      (start-env)
-        game     (setup-game env 3)
-        playbook [[0 :draw {:tile tile/ra?}]
-                  [1 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :rand}]
-
-                  [1 :draw {:tile tile/ra?}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :rand}]
-                  [1 :bid {:sun-disk :pass}]
-
-                  [2 :draw {:tile tile/ra?}]
-                  [0 :bid {:sun-disk :rand}]
-                  [1 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :pass}]
-
-                  ;; 3 ras drawn. Seat 0 has 1 sun disk left
-
-                  [0 :draw {:tile tile/ra?}]
-                  [1 :bid {:sun-disk :rand}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  [1 :draw {:tile tile/ra?}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-                  [1 :bid {:sun-disk :rand}]
-
-                  [2 :draw {:tile tile/ra?}]
-                  [0 :bid {:sun-disk :pass}]
-                  [1 :bid {:sun-disk :rand}]
-                  [2 :bid {:sun-disk :pass}]
-
-                  ;; 6 ras drawn. Seat 0 and 1 have 1 sun disk left
-
-                  [0 :draw {:tile tile/ra?}]
-                  [1 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :rand}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  ;; 7 ras drawn. Seat 0 and 1 have 1 sun disk. Seat 2 has 3 sun disks
-
-                  [1 :draw {:tile tile/civ?}]
-
-                  [2 :invoke-ra {}]
-                  [0 :bid {:sun-disk :pass}]
-                  [1 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :rand}]
-
-                  [0 :invoke-ra {}]
-                  [1 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :rand}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  [1 :invoke-ra {}]
-                  [2 :bid {:sun-disk :rand}]
-                  [0 :bid {:sun-disk :pass}]
-                  [1 :bid {:sun-disk :pass}]
-
-                  ;; Seat 2 is out of sun disks
-
-                  [0 :invoke-ra {}]
-                  [1 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :rand}]
-
-                  ;; Seat 0 is out of sun disks. Bug was that it was still their turn
-
-                  [1 :draw {:tile tile/civ?}]
-                  ]]
-    (ins/run-playbook env game playbook)
-    (t/is (= true true))))
-
-;; Doesn't actually test anything. Feel free to adapt
-(t/deftest end-epoch-with-disaster-in-auction-track
-  (let [env                       (start-env)
-        game                      (setup-game env 2)
-        playbook (concat [[0 :draw {:tile tile/ra?}]
-                          [1 :bid {:sun-disk :rand}]
-                          [0 :bid {:sun-disk :pass}]
-
-                          [1 :draw {:tile tile/ra?}]
-                          [0 :bid {:sun-disk :rand}]
-                          [1 :bid {:sun-disk :pass}]
-
-                          [0 :draw {:tile tile/ra?}]
-                          [1 :bid {:sun-disk :rand}]
-                          [0 :bid {:sun-disk :pass}]
-
-                          [1 :draw {:tile tile/ra?}]
-                          [0 :bid {:sun-disk :rand}]
-                          [1 :bid {:sun-disk :pass}]
-
-                          [0 :draw {:tile tile/ra?}]
-                          [1 :bid {:sun-disk :rand}]
-                          [0 :bid {:sun-disk :pass}]
-
-                          [1 :invoke-ra {}]
-                          [0 :bid {:sun-disk :rand}]
-                          [1 :bid {:sun-disk :pass}]
-
-                          [0 :invoke-ra {}]
-                          [1 :bid {:sun-disk :rand}]
-                          [0 :bid {:sun-disk :pass}]
-
-                          [0 :draw {:tile (fn [t] (and (tile/disaster? t) (tile/type= t ::tile-type/pharoah)))}]
-                          [0 :draw {:tile tile/pharoah?}]
-
-                          [0 :draw {:tile tile/ra?}]
-                          [0 :print-game]
-                          ])]
-    (ins/run-playbook env game playbook)))
-
-;; Doesn't actually test anything. Feel free to adapt
-(t/deftest end-epoch-by-using-all-sun-disks
-  (let [env                       (start-env)
-        game                      (setup-game env 3)
-        invoke-rand-pass-pass-x-3 [[0 :invoke-ra {}]
-                                   [1 :bid {:sun-disk :rand}]
-                                   [2 :bid {:sun-disk :pass}]
-                                   [0 :bid {:sun-disk :pass}]
-
-                                   [1 :invoke-ra {}]
-                                   [2 :bid {:sun-disk :rand}]
-                                   [0 :bid {:sun-disk :pass}]
-                                   [1 :bid {:sun-disk :pass}]
-
-                                   [2 :invoke-ra {}]
-                                   [0 :bid {:sun-disk :rand}]
-                                   [1 :bid {:sun-disk :pass}]
-                                   [2 :bid {:sun-disk :pass}]]
-        playbook (concat invoke-rand-pass-pass-x-3
-                         invoke-rand-pass-pass-x-3
-                         invoke-rand-pass-pass-x-3
-                         [[0 :invoke-ra {}]
-                          [1 :bid {:sun-disk :rand}]
-                          [2 :bid {:sun-disk :pass}]
-                          [0 :bid {:sun-disk :pass}]
-
-                          [2 :invoke-ra {}]
-                          [0 :bid {:sun-disk :rand}]
-                          [2 :bid {:sun-disk :pass}]
-
-                          [2 :invoke-ra {}]
-                          [2 :bid {:sun-disk :rand}]])]
-    (ins/run-playbook env game playbook)))
-
-;; Doesn't actually test anything. Feel free to adapt
-(t/deftest end-epoch-by-ra-depletion-one-player-out
-  (let [env                       (start-env)
-        game                      (setup-game env 3)
-        playbook [;; Seat 1 exhausts all sun disks
-                  [0 :invoke-ra {}]
-                  [1 :bid {:sun-disk :rand}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  [1 :invoke-ra {}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-                  [1 :bid {:sun-disk :rand}]
-
-                  [2 :invoke-ra {}]
-                  [0 :bid {:sun-disk :pass}]
-                  [1 :bid {:sun-disk :rand}]
-                  [2 :bid {:sun-disk :pass}]
-
-                  [0 :invoke-ra {}]
-                  [1 :bid {:sun-disk :rand}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  ;; Rest Ras
-                  [2 :draw {:tile tile/ra?}]
-                  [0 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :pass}]
-
-                  [0 :draw {:tile tile/ra?}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  [2 :draw {:tile tile/ra?}]
-                  [0 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :pass}]
-
-                  [0 :draw {:tile tile/ra?}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  [2 :draw {:tile tile/ra?}]
-                  [0 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :pass}]
-
-                  [0 :draw {:tile tile/ra?}]
-                  [2 :bid {:sun-disk :pass}]
-                  [0 :bid {:sun-disk :pass}]
-
-                  [2 :draw {:tile tile/ra?}]
-                  [0 :bid {:sun-disk :pass}]
-                  [2 :bid {:sun-disk :pass}]
-
-                  [0 :draw {:tile tile/ra?}]]]
-    (ins/run-playbook env game playbook)))
