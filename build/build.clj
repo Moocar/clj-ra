@@ -44,10 +44,14 @@
                    "./"
                    (str ssh-str ":" prod-deploy-dir)]}))
 
+(defn read-password [prompt]
+  ;; Based on https://groups.google.com/forum/#!topic/clojure/ymDZj7T35x4
+  (let [console (System/console)
+        chars   (.readPassword console "%s" (into-array [prompt]))]
+    (apply str chars)))
+
 (defn restart [_]
-  (print "Password: ")
-  (flush)
-  (let [password (read-line)]
+  (let [password (read-password "Password: ")]
     (b/process
      {:command-args ["ssh"
                      ssh-str

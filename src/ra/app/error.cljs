@@ -8,7 +8,8 @@
    :ident (fn [_] [:component/id :error])
    :initial-state {}}
   (when-let [err (:ui/global-error props)]
-    (dom/div :.h-screen.w-screen.flex.justify-center.items-center.absolute.z-50.top-0 {}
+    (dom/div :.h-screen.w-screen.flex.justify-center.items-center.absolute.z-50.top-0
+      {:onClick (fn [] (comp/transact! this [(m-error/clear-error {})]))}
       (dom/div :.relative {}
         (dom/div :.font-bold.right-2.top-1.absolute.text-md.cursor-pointer
           {:onClick (fn [] (comp/transact! this [(m-error/clear-error {})]))}

@@ -24,7 +24,8 @@
             [ra.specs.player :as player]
             [ra.specs.tile :as tile]
             [ra.specs.tile.type :as tile-type]
-            ra.log))
+            ra.log
+            [com.fulcrologic.fulcro.components :as comp]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Small helpers
@@ -688,10 +689,19 @@
                                     (::game/in-disaster? new-game))
                               tx
                               (concat tx (finish-epoch-tx new-game)))]
+
           (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
           (notify-other-clients! env
                                  {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
-                                  :events-included? true})))
+                                  :events-included? true})
+
+          ;; Seperate finish-epoch so we get a last event on UI
+          (when-not (or (sun-disks-in-play? new-game)
+                        (::game/in-disaster? new-game))
+            (d/transact! (::db/conn env) (finish-epoch-tx new-game))
+            (notify-other-clients! env
+                                 {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
+                                  :events-included? true}))))
       (select-keys input [::game/id]))))
 
 (defn discard-tile-op [hand tile]
