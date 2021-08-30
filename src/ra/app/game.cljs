@@ -24,7 +24,8 @@
             [ra.app.routing :as routing]
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
-            [com.fulcrologic.fulcro.application :as app]))
+            [com.fulcrologic.fulcro.application :as app]
+            [ra.model.score :as m-score]))
 
 (declare Game)
 
@@ -306,7 +307,7 @@
   (dom/div :.h-screen.w-screen.flex.justify-center.items-center {}
     (dom/div :.flex.flex-col.justify-center.shadow-md.rounded.bg-gray-50.px-8.pt-6.pb-8.mb-4.items-center
       (dom/h2 :.text-lg.font-bold.pb-4 {}
-              (let [winner (first (reverse (sort-by ::hand/score (::game/hands props))))]
+              (let [winner (first (m-score/order-hands-winning (::game/hands props)))]
                 (str (get-in winner [::hand/player ::player/name]) " Won!")))
       (ui-score/ui-epoch-content (app/current-state this) props)
       (dom/div :.flex.flex-row.gap-4.pt-4 {}

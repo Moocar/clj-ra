@@ -76,3 +76,13 @@
                                                 5
                                                 0)))))))
          epoch-hands)))
+
+(defn order-hands-winning [hands]
+  (->> hands
+       (sort (fn [a b]
+               (if (= (::hand/score a) (::hand/score b))
+                 (compare (hand/highest-sun-disk a)
+                          (hand/highest-sun-disk b))
+                 (compare (::hand/score a)
+                          (::hand/score b)))))
+       reverse))

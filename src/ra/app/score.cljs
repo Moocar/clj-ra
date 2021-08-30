@@ -55,9 +55,7 @@
 (defn ui-final-scores [hands]
   (dom/table {}
     (dom/tbody {}
-               (->> hands
-                    (sort-by ::hand/score)
-                    reverse
+               (->> (m-score/order-hands-winning hands)
                     (map (fn [hand]
                            (dom/tr {}
                                    (dom/td :.font-bold {} (::player/name (::hand/player hand)))
