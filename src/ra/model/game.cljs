@@ -10,10 +10,7 @@
   (comp/registry-key->class :ra.app.game/Game))
 
 (defmutation join-game [_]
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))
 
 (defmutation new-game [_]
   (remote [env]
@@ -27,42 +24,24 @@
       (routing/to! (:app env) ["game" (str game-id)]))))
 
 (defmutation start-game [_]
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))
 
 (defmutation leave-game [_]
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game])))
+  (remote [_] true)
   (ok-action [env]
     (swap! (:state env) assoc :ui/current-game nil)))
 
 (defmutation reset [_]
-  (remote [env] true
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))
 
 (defmutation draw-tile [input]
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))
 
 (defmutation invoke-ra [_]
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))
 
 (defmutation bid [_]
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))
 
 (defn unselect-tile [state-map tile-id]
   (assoc-in state-map [::tile/id tile-id :ui/selected?] false))
@@ -72,15 +51,9 @@
     (swap! (:state env)
            (fn [s]
              (reduce unselect-tile s (:tile-ids input)))))
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))
 
 (defmutation use-god-tile [input]
   (action [env]
     (swap! (:state env) unselect-tile (:auction-track-tile-id input)))
-  (remote [env]
-    (-> env
-        (m/returning (game-component))
-        (m/with-target [:ui/current-game]))))
+  (remote [_] true))

@@ -84,8 +84,8 @@
                       (invoke-ra! env game current-hand)
                       (draw-tile! env current-hand game)))))
               (let [game (m-game/load-game @conn m-game/game-q game-id)]
-                (m-game/notify-clients (:websockets env) (:any @(:connected-uids env)) {:game game
-                                                                                        :all-events (::game/events game)}))))
+                (m-game/notify-clients! env {:game       game
+                                             :all-events (::game/events game)}))))
           (catch Exception e
             (println ["error in hand" (::hand/seat current-hand) (::player/name player)])
             (throw e)))))))

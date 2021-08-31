@@ -110,7 +110,6 @@
                (not auction)
                (not (game/auction-tiles-full? game)))
         {:onClick (fn []
-                    (js/console.log "draw tile")
                     (comp/transact! this [(m-game/draw-tile {::hand/id (::hand/id hand)
                                                              ::game/id (::game/id game)})]))}
         {:disabled true})

@@ -195,14 +195,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Notify
 
-(defn notify-clients [websockets cids obj]
-  (doseq [o cids]
-    (fws-protocols/push websockets o :refresh obj)))
-
-(defn notify-other-clients! [env obj]
+(defn notify-clients! [env obj]
   (when (:connected-uids env)
-    (let [other-cids (disj (:any @(:connected-uids env)) (:cid env))]
-      (notify-clients (:websockets env) other-cids obj))))
+    (doseq [cid (:any @(:connected-uids env))]
+      (fws-protocols/push (:websockets env) cid :refresh obj))))
 
 (defn notify-other-clients-transform [{:keys [::pc/mutate] :as mutation}]
   (assoc mutation
@@ -212,7 +208,7 @@
              (when (:connected-uids env)
                (when-let [game-id (::game/id result)]
                  (let [game (load-game @conn game-q game-id {:include-events? true})]
-                   (notify-other-clients! env {:game game :events-included? true}))))
+                   (notify-clients! env {:game game :events-included? true}))))
              result))))
 
 ;; full env
@@ -221,10 +217,9 @@
     (let [connected-uids (:any @(:connected-uids (:websockets websockets)))
           websockets     (:websockets websockets)
           cids           connected-uids]
-      (notify-clients websockets
-                      cids
-                      {:game             (load-game @(::db/conn env) game-q game-id {:include-events? true})
-                       :events-included? true}))))
+      (doseq [o cids]
+        (fws-protocols/push websockets o :refresh {:game             (load-game @(::db/conn env) game-q game-id {:include-events? true})
+                                                   :events-included? true})))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
@@ -253,7 +248,7 @@
   [{:keys [::db/conn] :as env} game-id tx]
   (let [events (tx->events tx)]
     (d/transact! conn tx {::game/id game-id})
-    (notify-other-clients! env
+    (notify-clients! env
                            {:game       (load-game @conn game-q game-id {:include-events? false})
                             :new-events events})))
 
@@ -525,7 +520,7 @@
                  ;; normal ra tile
                  (rotate-current-hand-tx game hand))]
         (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
-        (notify-other-clients! env
+        (notify-clients! env
                                {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
                                 :events-included? true})))))
 
@@ -687,7 +682,7 @@
                               tx)]
 
           (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
-          (notify-other-clients! env
+          (notify-clients! env
                                  {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
                                   :events-included? true})
 
@@ -695,7 +690,7 @@
           (when-not (or (sun-disks-in-play? new-game)
                         (::game/in-disaster? new-game))
             (d/transact! (::db/conn env) (finish-epoch-tx new-game))
-            (notify-other-clients! env
+            (notify-clients! env
                                  {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
                                   :events-included? true}))))
       (select-keys input [::game/id]))))
@@ -735,7 +730,7 @@
                            tx
                            (concat tx (finish-epoch-tx new-game)))]
       (d/transact! (::db/conn env) tx {::game/id (::game/id game)})
-      (notify-other-clients! env
+      (notify-clients! env
                              {:game             (load-game @(::db/conn env) game-q (::game/id game) {:include-events? true})
                               :events-included? true}))
     (select-keys input [::game/id])))

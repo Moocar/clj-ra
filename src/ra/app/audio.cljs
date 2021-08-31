@@ -1,6 +1,7 @@
 (ns ra.app.audio
   (:require [com.fulcrologic.fulcro.components :as comp]
-            [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]))
+            [com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]
+            [clojure.core.async :as async]))
 
 (defmutation store-ding [{:keys [buffer]}]
   (action [env]
@@ -46,7 +47,21 @@
   (when-let [buffer (get state-map :ui/ding-buffer)]
     (play-buffer! buffer)))
 
-(defn play-random-ra! [state-map]
+(defn -play-random-ra! [state-map]
   (when-let [ra-buffers (get state-map :ui/ra-buffers)]
     (let [buffer (rand-nth ra-buffers)]
       (play-buffer! buffer))))
+
+(defonce ra-chan (async/chan))
+
+(defn start-ra-listen-loop! []
+  (let [last-ra (atom (js/Date.now))]
+    (async/go-loop []
+      (when-let [state-map (async/<! ra-chan)]
+        (when (< (inc @last-ra) (js/Date.now))
+          (reset! last-ra (js/Date.now))
+          (-play-random-ra! state-map))
+        (recur)))))
+
+(defn play-random-ra! [state-map]
+  (async/put! ra-chan state-map))
