@@ -4,7 +4,8 @@
             [ra.specs :as rs]
             [ra.core :as core]
             [ra.specs.hand :as hand]
-            [ra.specs.auction :as auction]))
+            [ra.specs.auction :as auction]
+            [ra.specs.epoch-hand :as epoch-hand]))
 
 (s/def ::id nat-int?)
 (s/def ::epoch #{1 2 3})
@@ -89,3 +90,12 @@
   "Returns the highest number of pharoahs in a hand"
   [game]
   (last (sort (map hand/pharoah-count (::hands game)))))
+
+(defn get-epoch-hands [game epoch]
+  (filter #(= epoch (::epoch-hand/epoch %))
+          (::epoch-hands game)))
+
+(defn get-current-epoch-hands [game]
+  (get-epoch-hands game (if (::finished-at game)
+                          3
+                          (dec (::epoch game)))))

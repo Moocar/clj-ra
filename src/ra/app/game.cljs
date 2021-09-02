@@ -25,7 +25,8 @@
             [ra.specs.auction :as auction]
             [ra.specs.auction.bid :as bid]
             [com.fulcrologic.fulcro.application :as app]
-            [ra.model.score :as m-score]))
+            [ra.model.score :as m-score]
+            [ra.specs.epoch-hand :as epoch-hand]))
 
 (declare Game)
 
@@ -308,7 +309,12 @@
       (dom/h2 :.text-lg.font-bold.pb-4 {}
               (let [winner (first (m-score/order-hands-winning (::game/hands props)))]
                 (str (get-in winner [::hand/player ::player/name]) " Won!")))
-      (ui-score/ui-epoch-content (app/current-state this) props)
+      (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain.space-y-4 {}
+        (let [state-map (app/current-state this)]
+          (ui-score/ui-last-epoch state-map (::game/epoch-hands props)))
+        (dom/div :.flex.flex-col.w-full.justify-center {}
+          (dom/div :.text-lg.font-bold.pb-2.text-center.pt-4 {} "Final scores")
+          (ui-score/ui-final-scores (::game/hands props))))
       (dom/div :.flex.flex-row.gap-4.pt-4 {}
         (ui/button {:onClick (fn []
                                (routing/to! this ["lobby"]))}

@@ -16,41 +16,63 @@
            {::epoch-hand/tiles (comp/get-query ui-tile/Tile)}
            ::epoch-hand/epoch]})
 
-(defn ui-table [s hand-scores last-epoch?]
-  (dom/table :.text-left {}
-    (dom/thead {}
-               (dom/tr {}
-                       (dom/th {} "")
-                       (dom/th {} "Gold")
-                       (dom/th {} "Gods")
-                       (dom/th {} "Civs")
-                       (dom/th {} "Rivers")
-                       (dom/th {} "Pharoahs")
-                       (when last-epoch?
-                         (dom/th {} "Monuments"))
-                       (when last-epoch?
-                         (dom/th {} "Sun Disks"))
-                       (dom/th {} "Total")))
-    (dom/tbody {}
-               (->> hand-scores
-                    (sort-by m-score/tally-hand)
-                    (reverse)
-                    (map (fn [hand-score]
-                           (let [tile-scores (:tile-scores hand-score)
-                                 hand        (get-in s [::hand/id (::hand/id (:hand hand-score))])
-                                 player      (get-in s (::hand/player hand))]
-                             (dom/tr {}
-                                     (dom/td :.font-bold {} (::player/name player))
-                                     (dom/td {} (::tile-type/gold tile-scores))
-                                     (dom/td {} (::tile-type/god tile-scores))
-                                     (dom/td {} (::tile-type/civilization tile-scores))
-                                     (dom/td {} (::tile-type/river tile-scores))
-                                     (dom/td {} (::tile-type/pharoah tile-scores))
-                                     (when last-epoch?
-                                       (dom/td {} (::tile-type/monument tile-scores)))
-                                     (when last-epoch?
-                                       (dom/td {} (str (:sun-disk-scores hand-score))))
-                                     (dom/td :.font-bold {} (m-score/tally-hand hand-score))))))))))
+(defn ui-epoch-headings [last-epoch?]
+  (dom/thead {}
+             (dom/tr {}
+                     (dom/th {} "")
+                     (dom/th {} "Gold")
+                     (dom/th {} "Gods")
+                     (dom/th {} "Civs")
+                     (dom/th {} "Rivers")
+                     (dom/th {} "Pharoahs")
+                     (when last-epoch?
+                       (dom/th {} "Monuments"))
+                     (when last-epoch?
+                       (dom/th {} "Sun Disks"))
+                     (dom/th {} "Total"))))
+
+(defn ui-epoch-rows [state-map epoch-hands]
+  (let [hand-scores (m-score/score-epoch epoch-hands)]
+    (->> hand-scores
+         #_(sort-by m-score/tally-hand)
+         #_(reverse)
+         (map (fn [hand-score]
+                (let [tile-scores (:tile-scores hand-score)
+                      hand        (get-in state-map [::hand/id (::hand/id (:hand hand-score))])
+                      player      (get-in state-map (::hand/player hand))]
+                  (dom/tr {}
+                          (dom/td :.font-bold {} (::player/name player))
+                          (dom/td {} (::tile-type/gold tile-scores))
+                          (dom/td {} (::tile-type/god tile-scores))
+                          (dom/td {} (::tile-type/civilization tile-scores))
+                          (dom/td {} (::tile-type/river tile-scores))
+                          (dom/td {} (::tile-type/pharoah tile-scores))
+                          (dom/td {} (when-let [monument (::tile-type/monument tile-scores)]
+                                       monument))
+                          (dom/td {} (when-let [sun-disks (:sun-disk-scores hand-score)]
+                                       (str sun-disks)))
+                          (dom/td :.font-bold {} (m-score/tally-hand hand-score)))))))))
+
+(defn ui-epoch [state-map epoch-hands]
+  (let [last-epoch? (= 3 (::epoch-hand/epoch (first epoch-hands)))]
+    (dom/table :.text-left {}
+      (ui-epoch-headings last-epoch?)
+      (dom/tbody {}
+                 (ui-epoch-rows state-map epoch-hands)))))
+
+(defn ui-last-epoch [state-map game-epoch-hands]
+  (let [last-epoch? (some #(= 3 (::epoch-hand/epoch %)) game-epoch-hands)]
+    (dom/table :.text-left {}
+      (ui-epoch-headings last-epoch?)
+      (dom/tbody {}
+                 (->> game-epoch-hands
+                      (group-by ::epoch-hand/epoch)
+                      (sort-by first)
+                      (mapcat (fn [[epoch epoch-hands]]
+                                (concat
+                                 [(dom/tr {} (dom/td :.pt-6.pb-2.underline {} (str "Epoch " epoch)))]
+                                 (ui-epoch-rows state-map epoch-hands)
+                                 ))))))))
 
 (defn ui-final-scores [hands]
   (dom/table {}
@@ -60,20 +82,6 @@
                            (dom/tr {}
                                    (dom/td :.font-bold {} (::player/name (::hand/player hand)))
                                    (dom/td {} (str (::hand/score hand))))))))))
-
-(defn ui-epoch-content [state-map game]
-  (let [epoch-hands (filter #(= (if (::game/finished-at game)
-                                  3
-                                  (dec (::game/epoch game)))
-                                (::epoch-hand/epoch %))
-                            (::game/epoch-hands game))
-        hand-scores (m-score/score-epoch epoch-hands)]
-   (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}
-     (ui-table state-map hand-scores (::game/finished-at game))
-     (when (::game/finished-at game)
-       (dom/div :.flex.flex-col.w-full.justify-center {}
-         (dom/div :.text-lg.font-bold.pb-2.text-center.pt-4 {} "Final scores")
-         (ui-final-scores (::game/hands game)))))))
 
 (defn ui-modal [this {:keys [game close-prop]}]
   (let [state-map (app/current-state this)]
@@ -87,4 +95,5 @@
           (dom/div :.text-lg.font-bold.pb-2 {} "Epoch Finished"))
         (dom/div :.text.lg.font-bold.cursor-pointer.absolute.top-2.right-2
           {:onClick (fn [] (m/set-value! this close-prop false))} "Close")
-        (ui-epoch-content state-map game)))))
+        (dom/div :.flex.flex-col.overflow-y-scroll.overscroll-contain {}
+          (ui-epoch state-map (game/get-current-epoch-hands game)))))))
