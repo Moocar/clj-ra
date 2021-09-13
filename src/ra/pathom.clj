@@ -26,6 +26,9 @@
         (throw result)
         (get result key)))))
 
+(pc/defresolver server-version-resolver [{:keys [:ra.server/version]} _]
+  {:ra.server/version version})
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parser
 
@@ -45,6 +48,7 @@
   [m-game/resolvers
    m-player/resolvers
    m-bot/resolvers
+   server-version-resolver
    index-explorer])
 
 (defn process-error [env err]

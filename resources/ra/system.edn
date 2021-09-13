@@ -12,17 +12,20 @@
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;; Pathom
 
- :ra.pathom/parser {:ra.db/conn #ig/ref :ra.db/conn
-                    :ref-data   #ig/ref :ra.model.game/ref-data}
+ :ra.pathom/parser {:ra.db/conn        #ig/ref :ra.db/conn
+                    :ra.server/version #ig/ref :ra.server/version
+                    :ref-data          #ig/ref :ra.model.game/ref-data}
 
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;; Server
 
  :ra.server/websockets   {:pathom-parser #ig/ref :ra.pathom/parser}
  :ra.server/manifest-edn {:resource-name "public/js/main/manifest.edn"}
+ :ra.server/version-edn {:resource-name ".version.edn"}
 
  :ra.server/main-js-path {:manifest-edn #ig/ref :ra.server/manifest-edn
                           :asset-path   "/js/main"}
+ :ra.server/version {:version-edn #ig/ref :ra.server/version-edn}
 
  :ra.server/handler {:pathom-parser #ig/ref :ra.pathom/parser
                      :websockets    #ig/ref :ra.server/websockets

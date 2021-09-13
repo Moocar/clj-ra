@@ -23,7 +23,8 @@
             [ra.specs.auction.bid :as bid]
             [ra.specs.auction :as auction]
             [ra.model.game :as m-game]
-            [ra.specs.auction.reason :as auction-reason]))
+            [ra.specs.auction.reason :as auction-reason]
+            [com.fulcrologic.fulcro.data-fetch :as df]))
 
 (defsc Home [_ _]
   {:query []
@@ -48,10 +49,13 @@
 
 (defsc Root [_ props]
   {:query         [{:ui/router (comp/get-query RootRouter)}
+                   [:ra.server/version '_]
                    {:>/global-error (comp/get-query ui-error/Error)}]
    :initial-state {:ui/router {}
                    :>/global-error {}}}
   (dom/div :.relative.bg-gray-50 {}
+    (when-let [version (:ra.server/version props)]
+      (dom/div :.absolute.bottom-0.right-0.p-2 {} version))
     (ui-root-router (:ui/router props))
     (ui-error/ui-modal (:>/global-error props))))
 
@@ -105,5 +109,6 @@
     (start-server-event-listen! app)
     (audio/start-ra-listen-loop!)
     (m-player/init! app)
+    (df/load! app :ra.server/version nil)
     (audio/load-and-store-ding! app)
     (audio/load-and-store-ras! app)))

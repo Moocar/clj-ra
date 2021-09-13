@@ -201,6 +201,12 @@
 (defmethod ig/init-key ::manifest-edn [_ {:keys [resource-name]}]
   (edn/read-string (slurp (io/resource resource-name))))
 
+(defmethod ig/init-key ::version-edn [_ {:keys [resource-name]}]
+  (edn/read-string (slurp (io/resource resource-name))))
+
+(defmethod ig/init-key ::version [_ {:keys [version-edn]}]
+  (:version version-edn))
+
 (defmethod ig/pre-init-spec ::manifest-edn [_]
   (s/keys :req-un [::resource-name]))
 

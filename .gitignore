@@ -13,3 +13,4 @@
 /.cider-repl-history
 /resources/public/styles.css
 /report*.json
+/resources/.version.edn

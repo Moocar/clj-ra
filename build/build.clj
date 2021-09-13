@@ -1,17 +1,23 @@
 (ns build
   (:require [clojure.tools.build.api :as b]))
 
-(def public-dir "resources/public")
+(def resources-dir "resources")
+(def public-dir (str resources-dir "/public"))
 (def prod-user "anthony")
 (def prod-machine "slang-service.bnr.la")
 (def prod-home-dir (str "/home/" prod-user))
 (def prod-deploy-dir (str prod-home-dir "/ra"))
 (def ssh-str (format "%s@%s" prod-user prod-machine))
+(def version (format "1.0.%s" (b/git-count-revs nil)))
 
 (defn capture-process [response]
   (let [{:keys [exit]} response]
     (when (not= 0 exit)
       (throw (ex-info "Process returned error" response)))))
+
+(defn write-version [_]
+  (b/write-file {:path (str resources-dir "/.version.edn")
+                 :content {:version version}}))
 
 (defn yarn-install [_]
   (capture-process (b/process {:command-args ["yarn" "install"]})))
@@ -68,6 +74,7 @@
                      (format "echo %s | sudo -S systemctl restart ra.service" password)]})))
 
 (defn all [_]
+  (write-version {})
   (yarn-install nil)
   (tailwind {:release true})
   (shadow-cljs {:release true})
@@ -75,6 +82,7 @@
   (restart nil))
 
 (defn dev [_]
+  (write-version {})
   (future (tailwind {:watch true}))
   (future (nrepl-server {}))
   (future (shadow-cljs {:server true})))
