@@ -220,12 +220,12 @@
 (defmethod ig/init-key ::handler [_ config]
   (make-middleware config))
 
-(defmethod ig/init-key ::server [_ {:keys [handler port]}]
+(defmethod ig/init-key ::server [_ {:keys [handler port version]}]
   (println "initializing server")
   (let [handler (atom (delay handler))
         result {:handler handler
                 :server  (http/run-server #(@@handler %) {:port port})}]
-    (println "server started")
+    (println "server started. Version" version)
     result))
 
 (defmethod ig/halt-key! ::server [_ {:keys [server]}]
