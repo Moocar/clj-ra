@@ -153,7 +153,11 @@
    ::event/data])
 
 (def epoch-hand-q
-  [{::epoch-hand/hand [::hand/id {::hand/player [::player/name]}]}
+  [{::epoch-hand/hand [::hand/id
+                       ::hand/available-sun-disks
+                       ::hand/used-sun-disks
+                       ::hand/score
+                       {::hand/player [::player/name]}]}
    {::epoch-hand/tiles tile-q}
    ::epoch-hand/epoch])
 

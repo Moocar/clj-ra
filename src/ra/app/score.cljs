@@ -12,7 +12,11 @@
             [ra.specs.tile.type :as tile-type]))
 
 (defsc EpochHand [_ _]
-  {:query [{::epoch-hand/hand [::hand/id {::hand/player [::player/name]}]}
+  {:query [{::epoch-hand/hand [::hand/id
+                               ::hand/available-sun-disks
+                               ::hand/used-sun-disks
+                               ::hand/score
+                               {::hand/player [::player/name]}]}
            {::epoch-hand/tiles (comp/get-query ui-tile/Tile)}
            ::epoch-hand/epoch]})
 

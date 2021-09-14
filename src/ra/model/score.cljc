@@ -6,20 +6,22 @@
 
 (defn tally-hand [hand-score]
   (+ (reduce + (vals (:tile-scores hand-score)))
-     (or (:sun-disks hand-score) 0)))
+     (or (:sun-disk-scores hand-score) 0)))
 
 (defn count-sun-disks [epoch-hand]
   (reduce + (concat (::hand/available-sun-disks (::epoch-hand/hand epoch-hand))
                     (::hand/used-sun-disks (::epoch-hand/hand epoch-hand)))))
 
 (defn score-epoch [epoch-hands]
-  (let [sort-by-pharoah-count (sort
-                               (map (fn [epoch-hand]
-                                      (count (filter tile/pharoah? (::epoch-hand/tiles epoch-hand))))
-                                    epoch-hands))
-        most-pharoahs         (last sort-by-pharoah-count)
-        least-pharoas         (first sort-by-pharoah-count)
-        sun-disk-totals       (sort (map count-sun-disks epoch-hands))]
+  (let [sort-by-pharoah-count   (sort
+                                 (map (fn [epoch-hand]
+                                        (count (filter tile/pharoah? (::epoch-hand/tiles epoch-hand))))
+                                      epoch-hands))
+        most-pharoahs           (last sort-by-pharoah-count)
+        least-pharoas           (first sort-by-pharoah-count)
+        sun-disk-totals         (sort (map count-sun-disks epoch-hands))
+        lowest-sun-disks-total  (first sun-disk-totals)
+        highest-sun-disks-total (last sun-disk-totals)]
     (map (fn [epoch-hand]
            (let [tiles (::epoch-hand/tiles epoch-hand)]
              (cond-> {:hand (::epoch-hand/hand epoch-hand)
@@ -67,14 +69,10 @@
                                                 5 15
                                                 0)))
                                        (reduce + 0)))))
-                   (assoc :sun-disk-scores (+ (if (= (count-sun-disks epoch-hand)
-                                                     (first sun-disk-totals))
-                                                -5
-                                                0)
-                                              (if (= (count-sun-disks epoch-hand)
-                                                     (last sun-disk-totals))
-                                                5
-                                                0)))))))
+                   (assoc :sun-disk-scores (condp = (count-sun-disks epoch-hand)
+                                             lowest-sun-disks-total  -5
+                                             highest-sun-disks-total 5
+                                             :else                   0))))))
          epoch-hands)))
 
 (defn order-hands-winning [hands]
