@@ -1,5 +1,5 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure {:mvn/version "1.11.0-alpha1"}
+ :deps  {org.clojure/clojure {:mvn/version "1.11.0-alpha2"}
 
          ;; For clojure spec
          org.clojure/spec.alpha {:mvn/version "0.2.194"}
@@ -11,7 +11,7 @@
 
          ;; Fulcro
          ;; com.fulcrologic/fulcro {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro"}
-         com.fulcrologic/fulcro {:mvn/version "3.5.2"}
+         com.fulcrologic/fulcro {:mvn/version "3.5.5"}
 
          ;; Websockets
          ;; com.fulcrologic/fulcro-websockets {:local/root "/Users/amarcar/dev/github/fulcrologic/fulcro-websockets"}
@@ -32,14 +32,14 @@
          aero/aero           {:mvn/version "1.1.6"}
 
          ;; Crux DB
-         datascript/datascript {:mvn/version "1.2.5"}}
+         datascript/datascript {:mvn/version "1.2.8"}}
 
  :aliases {:build {:deps        {io.github.clojure/tools.build {:git/tag "v0.1.7" :git/sha "8a3abc2"}}
                    :extra-paths ["build"]
                    :ns-default  build}
 
            ;; Server world
-           :nrepl      {:extra-deps {nrepl/nrepl                   {:mvn/version "0.9.0-beta1"}
+           :nrepl      {:extra-deps {nrepl/nrepl                   {:mvn/version "0.9.0-beta2"}
                                      refactor-nrepl/refactor-nrepl {:mvn/version "2.5.1"}
                                      cider/cider-nrepl             {:mvn/version "0.26.0"}}}
            :server-dev {:extra-paths ["dev" "classes" "test"]
