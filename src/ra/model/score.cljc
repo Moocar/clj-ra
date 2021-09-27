@@ -72,7 +72,7 @@
                    (assoc :sun-disk-scores (condp = (count-sun-disks epoch-hand)
                                              lowest-sun-disks-total  -5
                                              highest-sun-disks-total 5
-                                             :else                   0))))))
+                                             0))))))
          epoch-hands)))
 
 (defn order-hands-winning [hands]
