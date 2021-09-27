@@ -34,7 +34,7 @@
          ;; Crux DB
          datascript/datascript {:mvn/version "1.2.8"}}
 
- :aliases {:build {:deps        {io.github.clojure/tools.build {:git/tag "v0.1.7" :git/sha "8a3abc2"}}
+ :aliases {:build {:deps        {io.github.clojure/tools.build {:git/tag "v0.5.0" :git/sha "7d77952"}}
                    :extra-paths ["build"]
                    :ns-default  build}
 
